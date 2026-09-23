@@ -1,0 +1,299 @@
+//@version=6
+// ハイトレFX式（非公式・再現版）環境認識 × エリオット1波-2波 サインツール
+// ・上位足2本のダウ理論＋移動平均線で「目線」を決める
+// ・執行足で最後の戻り高値（押し安値）を抜けた波を「仮1波」とみなす
+// ・2波の押し戻し（フィボ38.2〜78.6%）から反転したところで3波狙いのサインを出す
+// ※ハイトレFXさん公式のツールではありません。公開情報を元にルール化したものです。
+indicator("ハイトレ式 環境認識×2波サイン", shorttitle = "HT Signal", overlay = true, max_labels_count = 500, max_lines_count = 500)
+
+// ───────── 入力 ─────────
+const string G_ENV = "① 環境認識（上位足）"
+tfHigh     = input.timeframe("240", "上位足A（大局）", group = G_ENV)
+tfMid      = input.timeframe("60", "上位足B（中期）", group = G_ENV)
+envPivot   = input.int(5, "上位足のスイング判定本数", minval = 2, group = G_ENV)
+envMaLen   = input.int(20, "環境認識MA期間（SMA）", minval = 2, group = G_ENV)
+filterMode = input.string("両方一致", "上位足フィルター", options = ["両方一致", "上位足Bのみ", "逆行しなければOK", "なし"], group = G_ENV)
+useRoom    = input.bool(true, "上位足の水平線まで1R以上の余地を要求", group = G_ENV)
+
+const string G_ENT = "② エントリー（執行足）"
+pivotLen  = input.int(3, "執行足のスイング判定本数", minval = 1, group = G_ENT)
+fibMin    = input.float(0.382, "2波 押し戻しの下限", minval = 0.1, maxval = 0.9, step = 0.01, group = G_ENT)
+fibMax    = input.float(0.786, "2波 押し戻しの上限", minval = 0.2, maxval = 0.99, step = 0.01, group = G_ENT)
+minW1Atr  = input.float(1.0, "1波の最小サイズ（ATR倍）", minval = 0, step = 0.1, group = G_ENT)
+trigLen   = input.int(3, "反転確認：直近N本の高値（安値）抜け", minval = 1, group = G_ENT)
+expireBar = input.int(60, "セットアップの有効期限（本）", minval = 5, group = G_ENT)
+
+const string G_RISK = "③ 損切り・利確"
+slMode   = input.string("2波の先端", "損切り位置", options = ["2波の先端", "1波の始点"], group = G_RISK)
+slBufAtr = input.float(0.2, "損切りバッファ（ATR倍）", minval = 0, step = 0.05, group = G_RISK)
+tpExt    = input.float(1.618, "TP2：3波目標（1波の倍率）", minval = 0.5, step = 0.1, group = G_RISK)
+minRR    = input.float(1.5, "最低リスクリワード（TP2基準）", minval = 0, step = 0.1, group = G_RISK)
+
+const string G_VIEW = "④ 表示"
+showMA      = input.bool(true, "移動平均線（20/75）", group = G_VIEW)
+showZone    = input.bool(true, "2波の押し目ゾーン", group = G_VIEW)
+showLevels  = input.bool(true, "上位足の水平線", group = G_VIEW)
+showSkipped = input.bool(true, "フィルターで見送ったサイン（×）", group = G_VIEW)
+showTable   = input.bool(true, "環境認識パネル", group = G_VIEW)
+
+atr = ta.atr(14)
+
+// ───────── 環境認識 ─────────
+// ダウ理論：直近スイング高値を終値で上抜け→上昇、直近スイング安値を下抜け→下降
+// 判定：ダウが上昇 かつ 終値がMAより上 → 上昇（1）／逆 → 下降（-1）／それ以外 → レンジ・調整（0）
+f_env(int len, int mLen) =>
+    float ph = ta.pivothigh(high, len, len)
+    float pl = ta.pivotlow(low, len, len)
+    var float lastH = na
+    var float lastL = na
+    var int dow = 0
+    if not na(ph)
+        lastH := ph
+    if not na(pl)
+        lastL := pl
+    if not na(lastH) and close > lastH
+        dow := 1
+    if not na(lastL) and close < lastL
+        dow := -1
+    float ma = ta.sma(close, mLen)
+    int maDir = ma > ma[1] ? 1 : ma < ma[1] ? -1 : 0
+    int pos = close > ma ? 1 : -1
+    int trend = dow == 1 and pos == 1 ? 1 : dow == -1 and pos == -1 ? -1 : 0
+    [trend, dow, maDir, lastH, lastL]
+
+// 確定足の値だけを使う（リペイント防止）
+f_envConfirmed(int len, int mLen) =>
+    [t, d, m, h, l] = f_env(len, mLen)
+    [t[1], d[1], m[1], h[1], l[1]]
+
+[hTrend, hDow, hMa, hSwH, hSwL] = request.security(syminfo.tickerid, tfHigh, f_envConfirmed(envPivot, envMaLen), lookahead = barmerge.lookahead_on)
+[mTrend, mDow, mMa, mSwH, mSwL] = request.security(syminfo.tickerid, tfMid, f_envConfirmed(envPivot, envMaLen), lookahead = barmerge.lookahead_on)
+[cTrend, cDow, cMa, cSwH, cSwL] = f_env(pivotLen, envMaLen)
+
+// ───────── 執行足のスイングとブレイク ─────────
+float ph = ta.pivothigh(high, pivotLen, pivotLen)
+float pl = ta.pivotlow(low, pivotLen, pivotLen)
+float lowAfterPivot  = ta.lowest(low, pivotLen)
+float highAfterPivot = ta.highest(high, pivotLen)
+
+var float swH = na            // 直近の戻り高値（スイング高値）
+var float swL = na            // 直近の押し安値（スイング安値）
+var float lowSinceSwH  = na   // 戻り高値以降の最安値 = 上昇1波の始点候補
+var float highSinceSwL = na   // 押し安値以降の最高値 = 下降1波の始点候補
+var bool  swHBroken = false
+var bool  swLBroken = false
+var int   legDir = 0          // 執行足のダウ（ブレイク前の状態を転換判定に使う）
+
+lowSinceSwH  := na(lowSinceSwH) ? low : math.min(lowSinceSwH, low)
+highSinceSwL := na(highSinceSwL) ? high : math.max(highSinceSwL, high)
+if not na(ph)
+    swH := ph
+    swHBroken := false
+    lowSinceSwH := lowAfterPivot
+if not na(pl)
+    swL := pl
+    swLBroken := false
+    highSinceSwL := highAfterPivot
+
+bool brkUp = false
+bool brkDn = false
+if not na(swH) and not swHBroken and close > swH
+    brkUp := true
+    swHBroken := true
+if not na(swL) and not swLBroken and close < swL
+    brkDn := true
+    swLBroken := true
+bool revUp = brkUp and legDir == -1   // 下降中の戻り高値抜け = 転換型の1波
+bool revDn = brkDn and legDir == 1
+if brkUp
+    legDir := 1
+if brkDn
+    legDir := -1
+
+// ───────── 1波→2波→反転 のステートマシン ─────────
+// 売り側は価格の符号を反転させ、買い側と同じロジックで処理する
+type Setup
+    int   dir
+    int   phase = 0    // 0:なし 1:1波進行中 2:2波（押し目ゾーン内） 3:サイン済
+    float w1Start
+    float w1Top
+    float w2Ext
+    int   startBar
+    int   zoneBar
+    bool  reversal = false
+
+method step(Setup s, float H, float L, float C, float trig, bool brk, float legStart, bool rev) =>
+    bool sig = false
+    if brk
+        s.phase    := 1
+        s.w1Start  := legStart
+        s.w1Top    := H
+        s.w2Ext    := na
+        s.startBar := bar_index
+        s.reversal := rev
+    else if s.phase > 0 and s.phase < 3 and bar_index - s.startBar > expireBar
+        s.phase := 0
+    if s.phase == 1
+        s.w1Top := math.max(s.w1Top, H)
+        float rng = s.w1Top - s.w1Start
+        if L < s.w1Start
+            s.phase := 0
+        else if rng >= minW1Atr * atr and L <= s.w1Top - fibMin * rng
+            s.phase   := 2
+            s.w2Ext   := L
+            s.zoneBar := bar_index
+    else if s.phase == 2
+        s.w2Ext := math.min(s.w2Ext, L)
+        float rng = s.w1Top - s.w1Start
+        if s.w2Ext < s.w1Top - fibMax * rng
+            s.phase := 0   // 押しが深すぎる → 1波否定
+        else if bar_index > s.zoneBar and C > trig and barstate.isconfirmed
+            sig     := true
+            s.phase := 3
+        else if H > s.w1Top
+            s.phase := 0   // 反転確認前に1波の先端を更新 → 見送り
+    sig
+
+method zone(Setup s, float f) =>
+    s.phase == 2 ? s.dir * (s.w1Top - f * (s.w1Top - s.w1Start)) : na
+
+var Setup longS  = Setup.new(1)
+var Setup shortS = Setup.new(-1)
+
+float trigUp = ta.highest(high, trigLen)[1]
+float trigDn = ta.lowest(low, trigLen)[1]
+
+bool rawBuy  = longS.step(high, low, close, trigUp, brkUp, lowSinceSwH, revUp)
+bool rawSell = shortS.step(-low, -high, -close, -trigDn, brkDn, -highSinceSwL, revDn)
+
+// ───────── フィルター・損切り・利確 ─────────
+f_plan(Setup s, int hT, int mT, float lvlA, float lvlB) =>
+    int d = s.dir
+    bool envOK = switch filterMode
+        "両方一致"       => hT == d and mT == d
+        "上位足Bのみ"     => mT == d
+        "逆行しなければOK" => hT != -d and mT != -d
+        => true
+    float entry = close
+    float slT   = (slMode == "2波の先端" ? s.w2Ext : s.w1Start) - slBufAtr * atr   // 符号反転空間
+    float sl    = d * slT
+    float tp1   = d * s.w1Top
+    float tp2   = d * (s.w2Ext + tpExt * (s.w1Top - s.w1Start))
+    float risk  = math.abs(entry - sl)
+    float rr    = risk > 0 ? math.abs(tp2 - entry) / risk : 0.0
+    // 進行方向にある上位足の水平線までの距離
+    float eT = d * entry
+    float obst = na
+    if not na(lvlA) and d * lvlA > eT
+        obst := d * lvlA
+    if not na(lvlB) and d * lvlB > eT
+        obst := na(obst) ? d * lvlB : math.min(obst, d * lvlB)
+    bool roomOK = not useRoom or na(obst) or obst - eT >= risk
+    bool rrOK   = rr >= minRR
+    string why  = not envOK ? "上位足と逆行" : not roomOK ? "上位足の水平線が近い" : not rrOK ? "RR不足" : ""
+    [envOK and roomOK and rrOK, entry, sl, tp1, tp2, rr, why]
+
+[buyOK, bEntry, bSL, bTP1, bTP2, bRR, bWhy]  = f_plan(longS, hTrend, mTrend, hSwH, mSwH)
+[sellOK, sEntry, sSL, sTP1, sTP2, sRR, sWhy] = f_plan(shortS, hTrend, mTrend, hSwL, mSwL)
+
+bool buySig   = rawBuy and buyOK
+bool sellSig  = rawSell and sellOK
+bool buySkip  = rawBuy and not buyOK
+bool sellSkip = rawSell and not sellOK
+
+// ───────── 描画 ─────────
+ma20 = ta.sma(close, 20)
+ma75 = ta.sma(close, 75)
+plot(showMA ? ma20 : na, "SMA20", color.new(color.orange, 0), 1)
+plot(showMA ? ma75 : na, "SMA75", color.new(color.blue, 0), 2)
+
+pLz1 = plot(showZone ? longS.zone(fibMin) : na, "買い 押し目ゾーン上限", color.new(color.teal, 40), style = plot.style_linebr)
+pLz2 = plot(showZone ? longS.zone(fibMax) : na, "買い 押し目ゾーン下限", color.new(color.teal, 40), style = plot.style_linebr)
+fill(pLz1, pLz2, color.new(color.teal, 85))
+pSz1 = plot(showZone ? shortS.zone(fibMin) : na, "売り 戻り目ゾーン下限", color.new(color.red, 40), style = plot.style_linebr)
+pSz2 = plot(showZone ? shortS.zone(fibMax) : na, "売り 戻り目ゾーン上限", color.new(color.red, 40), style = plot.style_linebr)
+fill(pSz1, pSz2, color.new(color.red, 85))
+
+plotshape(buySig, "買いサイン", shape.triangleup, location.belowbar, color.new(color.lime, 0), size = size.small)
+plotshape(sellSig, "売りサイン", shape.triangledown, location.abovebar, color.new(color.red, 0), size = size.small)
+plotshape(showSkipped and buySkip, "買い見送り", shape.xcross, location.belowbar, color.new(color.gray, 30), size = size.tiny)
+plotshape(showSkipped and sellSkip, "売り見送り", shape.xcross, location.abovebar, color.new(color.gray, 30), size = size.tiny)
+
+f_draw(bool isBuy, bool rev, float entry, float sl, float tp1, float tp2, float rr) =>
+    string kind = rev ? "転換型（1波→2波）" : "継続型（押し目/戻り目）"
+    string txt = (isBuy ? "BUY " : "SELL ") + kind + "\nEntry " + str.tostring(entry, format.mintick) + "\nSL  " + str.tostring(sl, format.mintick) + "\nTP1 " + str.tostring(tp1, format.mintick) + "（1波の先端）\nTP2 " + str.tostring(tp2, format.mintick) + "\nRR  " + str.tostring(rr, "#.##")
+    float y = isBuy ? low - atr : high + atr
+    label.new(bar_index, y, txt, style = isBuy ? label.style_label_up : label.style_label_down, color = isBuy ? color.new(color.green, 10) : color.new(color.maroon, 10), textcolor = color.white, size = size.small, textalign = text.align_left)
+    line.new(bar_index, sl, bar_index + 20, sl, color = color.red, style = line.style_dashed)
+    line.new(bar_index, tp1, bar_index + 20, tp1, color = color.aqua, style = line.style_dotted)
+    line.new(bar_index, tp2, bar_index + 20, tp2, color = color.lime, style = line.style_dashed)
+
+if buySig
+    f_draw(true, longS.reversal, bEntry, bSL, bTP1, bTP2, bRR)
+if sellSig
+    f_draw(false, shortS.reversal, sEntry, sSL, sTP1, sTP2, sRR)
+
+// 上位足の水平線（直近スイング高値・安値）
+var line lnHH = line.new(na, na, na, na, extend = extend.both, color = color.new(color.purple, 20), width = 2)
+var line lnHL = line.new(na, na, na, na, extend = extend.both, color = color.new(color.purple, 20), width = 2)
+var line lnMH = line.new(na, na, na, na, extend = extend.both, color = color.new(color.fuchsia, 40), style = line.style_dashed)
+var line lnML = line.new(na, na, na, na, extend = extend.both, color = color.new(color.fuchsia, 40), style = line.style_dashed)
+f_hline(line ln, float y) =>
+    if showLevels and not na(y)
+        line.set_xy1(ln, bar_index - 1, y)
+        line.set_xy2(ln, bar_index, y)
+    else
+        line.set_xy1(ln, na, na)
+        line.set_xy2(ln, na, na)
+if barstate.islast
+    f_hline(lnHH, hSwH)
+    f_hline(lnHL, hSwL)
+    f_hline(lnMH, mSwH)
+    f_hline(lnML, mSwL)
+
+// ───────── 環境認識パネル ─────────
+f_trendTxt(int v) => v == 1 ? "上昇" : v == -1 ? "下降" : "レンジ/調整"
+f_maTxt(int v) => v == 1 ? "上向き" : v == -1 ? "下向き" : "横ばい"
+f_col(int v) => v == 1 ? color.new(color.teal, 25) : v == -1 ? color.new(color.red, 25) : color.new(color.gray, 45)
+f_phaseTxt(Setup s) => s.phase == 1 ? "1波進行中" : s.phase == 2 ? "2波（ゾーン内）反転待ち" : s.phase == 3 ? "サイン済" : "―"
+f_tfTxt(string tf) => timeframe.in_seconds(tf) >= 86400 ? tf : str.tostring(timeframe.in_seconds(tf) / 60) + "分"
+
+string bias = hTrend == 1 and mTrend == 1 ? "買い目線（上位足一致）" : hTrend == -1 and mTrend == -1 ? "売り目線（上位足一致）" : hTrend == 1 and mTrend != 1 ? "大局上昇・中期調整 → 押し目待ち" : hTrend == -1 and mTrend != -1 ? "大局下降・中期調整 → 戻り待ち" : "様子見（方向感なし）"
+int biasDir = hTrend == 1 and mTrend == 1 ? 1 : hTrend == -1 and mTrend == -1 ? -1 : 0
+bool tfWarn = timeframe.in_seconds(tfMid) <= timeframe.in_seconds() or timeframe.in_seconds(tfHigh) <= timeframe.in_seconds()
+
+var table panel = table.new(position.top_right, 4, 7, bgcolor = color.new(color.black, 20), border_width = 1, border_color = color.new(color.gray, 60))
+if showTable and barstate.islast
+    table.cell(panel, 0, 0, "時間足", text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 0, "ダウ", text_color = color.white, text_size = size.small)
+    table.cell(panel, 2, 0, "MA" + str.tostring(envMaLen), text_color = color.white, text_size = size.small)
+    table.cell(panel, 3, 0, "判定", text_color = color.white, text_size = size.small)
+    table.cell(panel, 0, 1, "A " + f_tfTxt(tfHigh), text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 1, f_trendTxt(hDow), bgcolor = f_col(hDow), text_color = color.white, text_size = size.small)
+    table.cell(panel, 2, 1, f_maTxt(hMa), bgcolor = f_col(hMa), text_color = color.white, text_size = size.small)
+    table.cell(panel, 3, 1, f_trendTxt(hTrend), bgcolor = f_col(hTrend), text_color = color.white, text_size = size.small)
+    table.cell(panel, 0, 2, "B " + f_tfTxt(tfMid), text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 2, f_trendTxt(mDow), bgcolor = f_col(mDow), text_color = color.white, text_size = size.small)
+    table.cell(panel, 2, 2, f_maTxt(mMa), bgcolor = f_col(mMa), text_color = color.white, text_size = size.small)
+    table.cell(panel, 3, 2, f_trendTxt(mTrend), bgcolor = f_col(mTrend), text_color = color.white, text_size = size.small)
+    table.cell(panel, 0, 3, "執行足", text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 3, f_trendTxt(cDow), bgcolor = f_col(cDow), text_color = color.white, text_size = size.small)
+    table.cell(panel, 2, 3, f_maTxt(cMa), bgcolor = f_col(cMa), text_color = color.white, text_size = size.small)
+    table.cell(panel, 3, 3, f_trendTxt(cTrend), bgcolor = f_col(cTrend), text_color = color.white, text_size = size.small)
+    table.cell(panel, 0, 4, "総合目線", text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 4, bias, bgcolor = f_col(biasDir), text_color = color.white, text_size = size.small)
+    table.merge_cells(panel, 1, 4, 3, 4)
+    table.cell(panel, 0, 5, "買い", text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 5, f_phaseTxt(longS), text_color = color.white, text_size = size.small)
+    table.merge_cells(panel, 1, 5, 3, 5)
+    table.cell(panel, 0, 6, "売り", text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 6, tfWarn ? "⚠ 上位足は執行足より大きい時間足にしてください" : f_phaseTxt(shortS), text_color = tfWarn ? color.yellow : color.white, text_size = size.small)
+    table.merge_cells(panel, 1, 6, 3, 6)
+
+// ───────── アラート ─────────
+alertcondition(buySig, "HT 買いサイン", "ハイトレ式 買いサイン {{ticker}} {{interval}} @ {{close}}")
+alertcondition(sellSig, "HT 売りサイン", "ハイトレ式 売りサイン {{ticker}} {{interval}} @ {{close}}")
+if buySig
+    alert("BUY " + syminfo.ticker + " " + timeframe.period + " Entry " + str.tostring(bEntry, format.mintick) + " SL " + str.tostring(bSL, format.mintick) + " TP1 " + str.tostring(bTP1, format.mintick) + " TP2 " + str.tostring(bTP2, format.mintick), alert.freq_once_per_bar_close)
+if sellSig
+    alert("SELL " + syminfo.ticker + " " + timeframe.period + " Entry " + str.tostring(sEntry, format.mintick) + " SL " + str.tostring(sSL, format.mintick) + " TP1 " + str.tostring(sTP1, format.mintick) + " TP2 " + str.tostring(sTP2, format.mintick), alert.freq_once_per_bar_close)
