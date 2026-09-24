@@ -1,0 +1,259 @@
+//@version=6
+// ============================================================================
+//  AB手法 サインツール（非公式・推定仕様）
+//
+//  ハイトレFXさんの考え方（上位足で環境認識 → エリオット波動の3波を狙う →
+//  押し目でエントリー）をもとに、次のルールでサインを出します。
+//
+//    A : 1波の起点（買いなら安値 / 売りなら高値）
+//    B : 1波の終点（買いなら高値 / 売りなら安値）
+//    C : 2波の押し・戻り（A を超えない ＆ AB の一定割合だけ戻す）
+//    サイン : C 確定後、終値で B を抜けたら 3波入りとして BUY / SELL
+//    利確 : C ± AB × 倍率（N値 / AB=CD）   損切り : C または A
+//
+//  ※ 公式に公開されたルールではありません。パラメータで調整してください。
+// ============================================================================
+indicator("AB手法 サインツール（非公式）", shorttitle = "AB Signal", overlay = true,
+     max_labels_count = 500, max_lines_count = 500)
+
+// ── 入力 ────────────────────────────────────────────────────────────────
+grpP     = "スイング検出"
+pivLeft  = input.int(5, "ピボット 左バー数", minval = 1, group = grpP)
+pivRight = input.int(3, "ピボット 右バー数（確定の遅れ）", minval = 1, group = grpP)
+
+grpR    = "押し・戻し（C点）の条件"
+minRet  = input.float(0.382, "最小押し率（ABに対して）", minval = 0.0, maxval = 1.0, step = 0.01, group = grpR)
+maxRet  = input.float(0.786, "最大押し率（ABに対して）", minval = 0.0, maxval = 1.0, step = 0.01, group = grpR)
+maxWait = input.int(50, "C点確定からBブレイクまでの最大待機バー数", minval = 1, group = grpR)
+
+grpF       = "上位足フィルター（環境認識）"
+useHtf     = input.bool(true, "上位足のトレンド方向にだけサインを出す", group = grpF)
+htfTf      = input.timeframe("240", "上位足", group = grpF)
+htfLen     = input.int(20, "上位足 EMA 期間", minval = 1, group = grpF)
+showHtfEma = input.bool(true, "上位足 EMA を表示", group = grpF)
+
+grpT    = "利確・損切り"
+slMode  = input.string("C点", "損切り位置", options = ["C点", "A点"], group = grpT)
+tp1Mult = input.float(1.0, "TP1 = C ± AB ×", minval = 0.1, step = 0.1, group = grpT)
+tp2Mult = input.float(1.618, "TP2 = C ± AB ×", minval = 0.1, step = 0.1, group = grpT)
+lineLen = input.int(30, "TP/SL ラインの長さ（バー）", minval = 1, maxval = 400, group = grpT)
+
+grpD      = "表示"
+showABC   = input.bool(true, "A・B・C 点ラベル", group = grpD)
+showZz    = input.bool(false, "ジグザグ線", group = grpD)
+showTable = input.bool(true, "状態パネル", group = grpD)
+colBull   = input.color(#089981, "買い色", group = grpD)
+colBear   = input.color(#F23645, "売り色", group = grpD)
+
+// ── 上位足トレンド（確定足のみ参照してリペイントを防止）──────────────────
+[hClose, hEma, hEmaPrev] = request.security(syminfo.tickerid, htfTf,
+     [close[1], ta.ema(close, htfLen)[1], ta.ema(close, htfLen)[2]], lookahead = barmerge.lookahead_on)
+htfUp   = hClose > hEma and hEma > hEmaPrev
+htfDown = hClose < hEma and hEma < hEmaPrev
+bullOk  = not useHtf or htfUp
+bearOk  = not useHtf or htfDown
+
+plot(useHtf and showHtfEma ? hEma : na, "上位足 EMA", color = color.new(color.orange, 0), linewidth = 2, style = plot.style_stepline)
+
+// ── ジグザグ（スイング高値・安値）──────────────────────────────────────
+var array<float> zzP = array.new<float>()   // 価格
+var array<int>   zzB = array.new<int>()     // bar_index
+var array<int>   zzT = array.new<int>()     // 1 = 高値, -1 = 安値
+
+// 戻り値: 0 = 変化なし, 1 = 直前の同種ピボットを更新, 2 = 新規追加
+addPivot(float p, int b, int t) =>
+    int result = 0
+    int n = array.size(zzP)
+    if n > 0 and array.get(zzT, n - 1) == t
+        float last = array.get(zzP, n - 1)
+        if (t == 1 and p > last) or (t == -1 and p < last)
+            array.set(zzP, n - 1, p)
+            array.set(zzB, n - 1, b)
+            result := 1
+    else
+        array.push(zzP, p)
+        array.push(zzB, b)
+        array.push(zzT, t)
+        result := 2
+        if array.size(zzP) > 20
+            array.shift(zzP)
+            array.shift(zzB)
+            array.shift(zzT)
+    result
+
+ph = ta.pivothigh(high, pivLeft, pivRight)
+pl = ta.pivotlow(low, pivLeft, pivRight)
+// ピボット確定までの間に、すでに B を終値で抜けていないかの確認用
+maxCloseSincePivot = ta.highest(close, pivRight)
+minCloseSincePivot = ta.lowest(close, pivRight)
+
+confirmed = barstate.isconfirmed
+
+int evH = 0
+int evL = 0
+if confirmed and not na(ph)
+    evH := addPivot(ph, bar_index - pivRight, 1)
+if confirmed and not na(pl)
+    evL := addPivot(pl, bar_index - pivRight, -1)
+changed = evH > 0 or evL > 0
+
+var line zzLine = na
+if showZz and changed and array.size(zzP) >= 2
+    int n = array.size(zzP)
+    int ev = evL > 0 ? evL : evH
+    if ev == 2 or na(zzLine)
+        zzLine := line.new(array.get(zzB, n - 2), array.get(zzP, n - 2), array.get(zzB, n - 1), array.get(zzP, n - 1), color = color.new(color.gray, 30))
+    else
+        line.set_xy2(zzLine, array.get(zzB, n - 1), array.get(zzP, n - 1))
+
+// ── セットアップ状態 ───────────────────────────────────────────────────
+var bool  bullArmed  = false
+var float bullA      = na
+var float bullB      = na
+var float bullC      = na
+var int   bullArmBar = na
+var label bullLa     = na
+var label bullLb     = na
+var label bullLc     = na
+var line  bullLine   = na
+
+var bool  bearArmed  = false
+var float bearA      = na
+var float bearB      = na
+var float bearC      = na
+var int   bearArmBar = na
+var label bearLa     = na
+var label bearLb     = na
+var label bearLc     = na
+var line  bearLine   = na
+
+// 新しいピボットが確定したら A-B-C の形を判定
+if changed and array.size(zzP) >= 3
+    int   n     = array.size(zzP)
+    int   tC    = array.get(zzT, n - 1)
+    float pA    = array.get(zzP, n - 3)
+    float pB    = array.get(zzP, n - 2)
+    float pC    = array.get(zzP, n - 1)
+    int   xA    = array.get(zzB, n - 3)
+    int   xB    = array.get(zzB, n - 2)
+    int   xC    = array.get(zzB, n - 1)
+
+    // 買い: A(安値) → B(高値) → C(安値, A より上)
+    if tC == -1
+        float rng = pB - pA
+        bool ok = rng > 0 and pC > pA and (pB - pC) / rng >= minRet and (pB - pC) / rng <= maxRet and maxCloseSincePivot <= pB
+        if bullArmed
+            label.delete(bullLa)
+            label.delete(bullLb)
+            label.delete(bullLc)
+            line.delete(bullLine)
+        bullArmed := ok
+        if ok
+            bullA      := pA
+            bullB      := pB
+            bullC      := pC
+            bullArmBar := bar_index
+            bullLa     := showABC ? label.new(xA, pA, "A", style = label.style_label_up, color = color.new(colBull, 80), textcolor = colBull, size = size.small) : na
+            bullLb     := showABC ? label.new(xB, pB, "B", style = label.style_label_down, color = color.new(colBull, 80), textcolor = colBull, size = size.small) : na
+            bullLc     := showABC ? label.new(xC, pC, "C", style = label.style_label_up, color = color.new(colBull, 80), textcolor = colBull, size = size.small) : na
+            bullLine   := line.new(xB, pB, bar_index, pB, color = colBull, style = line.style_dashed)
+
+    // 売り: A(高値) → B(安値) → C(高値, A より下)
+    if tC == 1
+        float rng = pA - pB
+        bool ok = rng > 0 and pC < pA and (pC - pB) / rng >= minRet and (pC - pB) / rng <= maxRet and minCloseSincePivot >= pB
+        if bearArmed
+            label.delete(bearLa)
+            label.delete(bearLb)
+            label.delete(bearLc)
+            line.delete(bearLine)
+        bearArmed := ok
+        if ok
+            bearA      := pA
+            bearB      := pB
+            bearC      := pC
+            bearArmBar := bar_index
+            bearLa     := showABC ? label.new(xA, pA, "A", style = label.style_label_down, color = color.new(colBear, 80), textcolor = colBear, size = size.small) : na
+            bearLb     := showABC ? label.new(xB, pB, "B", style = label.style_label_up, color = color.new(colBear, 80), textcolor = colBear, size = size.small) : na
+            bearLc     := showABC ? label.new(xC, pC, "C", style = label.style_label_down, color = color.new(colBear, 80), textcolor = colBear, size = size.small) : na
+            bearLine   := line.new(xB, pB, bar_index, pB, color = colBear, style = line.style_dashed)
+
+// ── サイン判定（確定足のみ）──────────────────────────────────────────
+drawLevel(float y, string txt, color c, string st) =>
+    line.new(bar_index, y, bar_index + lineLen, y, color = c, style = st)
+    label.new(bar_index + lineLen, y, txt + " " + str.tostring(y, format.mintick), style = label.style_label_left,
+         color = color.new(color.black, 100), textcolor = c, size = size.small)
+
+bool buySig  = false
+bool sellSig = false
+
+if bullArmed and confirmed and bar_index > bullArmBar
+    line.set_x2(bullLine, bar_index)
+    if close > bullB
+        bullArmed := false
+        if bullOk
+            buySig := true
+            float sl  = slMode == "C点" ? bullC : bullA
+            float ab  = bullB - bullA
+            float tp1 = bullC + ab * tp1Mult
+            float tp2 = bullC + ab * tp2Mult
+            drawLevel(tp1, "TP1", colBull, line.style_dotted)
+            drawLevel(tp2, "TP2", colBull, line.style_dotted)
+            drawLevel(sl, "SL", color.gray, line.style_dotted)
+            alert("AB手法 買い " + syminfo.ticker + " | Entry " + str.tostring(close, format.mintick) + " | SL " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick), alert.freq_once_per_bar_close)
+        else
+            // 上位足と逆行のブレイクはサインにしない
+            label.delete(bullLa)
+            label.delete(bullLb)
+            label.delete(bullLc)
+            line.delete(bullLine)
+    else if low < bullC or bar_index - bullArmBar > maxWait
+        bullArmed := false
+        label.delete(bullLa)
+        label.delete(bullLb)
+        label.delete(bullLc)
+        line.delete(bullLine)
+
+if bearArmed and confirmed and bar_index > bearArmBar
+    line.set_x2(bearLine, bar_index)
+    if close < bearB
+        bearArmed := false
+        if bearOk
+            sellSig := true
+            float sl  = slMode == "C点" ? bearC : bearA
+            float ab  = bearA - bearB
+            float tp1 = bearC - ab * tp1Mult
+            float tp2 = bearC - ab * tp2Mult
+            drawLevel(tp1, "TP1", colBear, line.style_dotted)
+            drawLevel(tp2, "TP2", colBear, line.style_dotted)
+            drawLevel(sl, "SL", color.gray, line.style_dotted)
+            alert("AB手法 売り " + syminfo.ticker + " | Entry " + str.tostring(close, format.mintick) + " | SL " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick), alert.freq_once_per_bar_close)
+        else
+            label.delete(bearLa)
+            label.delete(bearLb)
+            label.delete(bearLc)
+            line.delete(bearLine)
+    else if high > bearC or bar_index - bearArmBar > maxWait
+        bearArmed := false
+        label.delete(bearLa)
+        label.delete(bearLb)
+        label.delete(bearLc)
+        line.delete(bearLine)
+
+plotshape(buySig, "買いサイン", shape.triangleup, location.belowbar, colBull, text = "BUY", textcolor = colBull, size = size.small)
+plotshape(sellSig, "売りサイン", shape.triangledown, location.abovebar, colBear, text = "SELL", textcolor = colBear, size = size.small)
+
+alertcondition(buySig, "AB 買いサイン", "AB手法 買いサイン: {{ticker}} {{interval}} 終値 {{close}}")
+alertcondition(sellSig, "AB 売りサイン", "AB手法 売りサイン: {{ticker}} {{interval}} 終値 {{close}}")
+
+// ── 状態パネル ─────────────────────────────────────────────────────────
+var table info = table.new(position.top_right, 2, 3, bgcolor = color.new(color.black, 25), border_width = 1)
+if showTable and barstate.islast
+    string trendTxt = not useHtf ? "フィルターOFF" : htfUp ? "上昇" : htfDown ? "下降" : "中立（様子見）"
+    color  trendCol = not useHtf ? color.gray : htfUp ? colBull : htfDown ? colBear : color.gray
+    table.cell(info, 0, 0, "上位足 " + htfTf, text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 0, trendTxt, text_color = trendCol, text_size = size.small)
+    table.cell(info, 0, 1, "買い待ち", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 1, bullArmed ? "B " + str.tostring(bullB, format.mintick) + " 上抜け待ち" : "―", text_color = colBull, text_size = size.small)
+    table.cell(info, 0, 2, "売り待ち", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 2, bearArmed ? "B " + str.tostring(bearB, format.mintick) + " 下抜け待ち" : "―", text_color = colBear, text_size = size.small)
