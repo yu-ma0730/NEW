@@ -130,6 +130,10 @@ textarea{resize:vertical;min-height:64px}
 .cal td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .cal td.d{white-space:nowrap}
 .tbl{overflow-x:auto}
+.legal{display:flex;flex-direction:column;gap:12px;font-size:14px}
+.legal ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.legal .ok{color:var(--good);font-weight:700}
+.legal mark{background:var(--bad-soft);color:var(--bad);font-weight:700;border-radius:4px;padding:0 4px}
 .warnbox{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px}
 
 /* posts */
@@ -361,11 +365,29 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <input type="text" id="pTags">
         <span class="hint" id="tagHint"></span>
       </div>
+      <div class="field">
+        <label for="pAd">この投稿の立場（広告表示）</label>
+        <select id="pAd">
+          <option value="none">自社アカウントで自社の商品を紹介する</option>
+          <option value="paid">企業から依頼・報酬を受けて投稿する</option>
+          <option value="gift">企業から商品を無償で提供されて投稿する</option>
+          <option value="staff">自社の商品を、社員が個人アカウントで紹介する</option>
+        </select>
+        <span class="hint" id="adHint"></span>
+      </div>
+      <div class="field" id="sponsorField">
+        <label for="pSponsor">依頼元・提供元の企業名</label>
+        <input type="text" id="pSponsor" placeholder="例：株式会社〇〇">
+      </div>
     </form>
     <div class="out">
       <div class="sec">
         <h2>下書き3案</h2>
         <div class="drafts" id="drafts"></div>
+      </div>
+      <div class="sec">
+        <h2>広告表示と表現のチェック</h2>
+        <div class="card legal" id="legal"></div>
       </div>
       <div class="sec">
         <h2>投稿前チェック</h2>
@@ -375,7 +397,8 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
           <label><input type="checkbox" id="c3">専門用語をターゲットが分かる言葉に直した</label>
           <label><input type="checkbox" id="c4">画像・動画の最初の1枚（1秒）で内容が伝わる</label>
           <label><input type="checkbox" id="c5">最後に「次にしてほしいこと」を1つだけ書いた</label>
-          <label><input type="checkbox" id="c6">誇張表現・他者の写真や音源の無断使用がない</label>
+          <label><input type="checkbox" id="c6">企業からの依頼・商品提供がある投稿は、冒頭の目立つ位置に【PR】などを入れた</label>
+          <label><input type="checkbox" id="c7">「No.1」「必ず」などの表現には根拠がある。他者の写真や音源を無断で使っていない</label>
         </div>
       </div>
       <div class="next"><button class="btn ghost" data-go="step2">戻る</button><button class="btn" data-go="step4">分析・改善へ進む</button></div>
@@ -482,13 +505,13 @@ const SAMPLE = {
   pPlatform:'', pTheme:'平日限定の「いちごパフェ」', pPain:'仕事帰りに甘いもので癒されたい',
   pBenefit:'旬のいちごを使ったパフェを、平日19時まで予約なしで楽しめます',
   pPoints:'朝摘みのいちごを1日20食分だけ仕入れ\n甘さ控えめの自家製ミルクアイス\n駅から徒歩3分、仕事帰りに寄れる',
-  pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ',
+  pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ', pAd:'none', pSponsor:'',
   mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96'
 };
 const STORE = 'sns-navi-v1';
 
 /* ---------- state io ---------- */
-const TEXT_IDS = ['industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
+const TEXT_IDS = ['industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
 function readState(){
   const s = {};
   TEXT_IDS.forEach(id => s[id] = $(id).value);
@@ -636,6 +659,30 @@ function xLength(t){
   }
   return n;
 }
+const AD = {
+  paid:  sp => `${sp}から依頼を受けて投稿しています。`,
+  gift:  sp => `${sp}から商品の提供を受けて投稿しています。`,
+  staff: sp => `私は${sp}の社員です。`
+};
+const AD_HINT = {
+  none:'会社やお店の公式アカウントの投稿は、広告であることが見て分かるので、「PR」の表示は原則いりません。',
+  paid:'下書きの冒頭に【PR】、最後に依頼元を入れます。企業が関わっていることを隠した投稿は、依頼した企業がステルスマーケティング規制（景品表示法）違反になります。',
+  gift:'無償で商品をもらって投稿する場合も、企業から「投稿してほしい」と頼まれていれば表示が必要です。冒頭に【PR】、最後に提供元を入れます。',
+  staff:'会社の指示で投稿する場合や、販売・広報に関わる立場の社員が投稿する場合は表示が必要です。迷ったら表示しておくのが安全です。'
+};
+const AD_TOOL = {
+  ig:'Instagramの「タイアップ投稿ラベル」（ブランドコンテンツ）も一緒に設定してください。',
+  x:'Xには専用のラベルがないので、本文冒頭の【PR】が特に大切です。',
+  tt:'TikTokの「コンテンツの開示設定」もオンにし、動画の最初でも「PR」と表示するか話してください。',
+  yt:'YouTubeの「有料プロモーションが含まれています」もオンにし、動画の冒頭でも伝えてください。',
+  line:'', th:'', li:''
+};
+const RISKY = [
+  {re:/No\.?\s?1|NO\.?\s?1|ナンバーワン|日本一|世界一|業界初|業界最安|最安値|最安/gi, why:'「No.1」「最安」などは、客観的な調査の根拠と出典を一緒に書かないと、実際より良く見せる表示（優良誤認・有利誤認）になるおそれがあります。'},
+  {re:/絶対|必ず|100\s?[%％]|１００[%％]|完全|確実に|誰でも|永久/g, why:'「必ず」「100%」のように結果を言い切る表現は、実際より著しく良く見せる表示と判断されるおそれがあります。'},
+  {re:/通常価格|定価|今だけ|本日限り|半額|[0-9０-９]+\s?[%％]\s?OFF|[0-9０-９]+\s?割引/gi, why:'割引や期間限定の表示は、比べる元の価格で実際に販売していたこと、期限が本当であることが必要です（二重価格に注意）。'},
+  {re:/治る|治す|治療|効く|シミが消え|若返|アンチエイジング|痩せる|やせる|デトックス/g, why:'効き目をうたう表現は、景品表示法に加えて薬機法や健康増進法の対象になることがあります（化粧品・健康食品・美容施術など）。'}
+];
 function renderStep3(s){
   const pk = s.pPlatform, pf = P[pk];
   const theme = s.pTheme.trim() || 'テーマ';
@@ -644,7 +691,13 @@ function renderStep3(s){
   const points = s.pPoints.split('\n').map(x => x.trim()).filter(Boolean);
   const kw = s.pTags.split(/[\s,、　]+/).map(x => x.replace(/^#/, '')).filter(Boolean);
   const [minT, maxT] = pf.tags;
-  const tags = kw.slice(0, maxT).map(x => '#' + x).join(' ');
+  const ad = s.pAd !== 'none';
+  const sponsor = s.pSponsor.trim() || '〇〇（企業名）';
+  $('sponsorField').hidden = !ad;
+  $('adHint').textContent = AD_HINT[s.pAd];
+  const tagList = kw.filter(x => x.toUpperCase() !== 'PR').slice(0, maxT).map(x => '#' + x);
+  if (ad && maxT > 0) tagList.unshift('#PR');
+  const tags = tagList.join(' ');
   $('tagHint').textContent = maxT === 0 ? pf.name + 'ではハッシュタグは使いません。'
     : pf.name + 'のハッシュタグは' + (minT === maxT ? maxT : minT + '〜' + maxT) + '個が目安です。数より、内容に合った言葉を選ぶことが大切です。';
 
@@ -664,6 +717,7 @@ function renderStep3(s){
     } else {
       body = i === 2 ? `${h.text}\n\n${bullets}\n\n${CTA[s.pCta]}` : `${h.text}\n\n${benefit}。\n\n${bullets}\n\n${CTA[s.pCta]}`;
     }
+    if (ad) body = '【PR】' + body + '\n\n※' + AD[s.pAd](sponsor);
     if (tags) body += '\n\n' + tags;
     const len = pf.xcount ? xLength(body) : [...body].length;
     return {h, body, len};
@@ -674,7 +728,24 @@ function renderStep3(s){
       <p class="small muted">${esc(d.h.why)}</p>
       <pre id="draft-${i}">${esc(d.body)}</pre>
       <div><button class="btn sm" data-copy="${i}">この案をコピー</button></div></div>`).join('');
+  renderLegal(s, pf, ad, sponsor);
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(drafts[+b.dataset.copy].body, '下書きをコピーしました', $('draft-' + b.dataset.copy)));
+}
+
+function renderLegal(s, pf, ad, sponsor){
+  let html = '';
+  if (ad){
+    html += `<p><span class="ok">✓ 広告表示を入れました</span>　3案すべての冒頭に【PR】、最後に「${esc(AD[s.pAd](sponsor))}」を入れています。${esc(AD_TOOL[s.pPlatform] || '')}</p>
+      <p class="small muted">【PR】を最後だけに書かないでください。消費者庁の運用基準では、長い文章の最後だけに書く、たくさんのハッシュタグの中に埋もれさせる、動画で一瞬だけ表示する、といった書き方は「分かりにくい表示」の例として挙げられています。</p>`;
+  } else {
+    html += `<p class="small muted">自社の公式アカウントでの投稿として作っています。企業から依頼や商品提供を受けて投稿する場合は、左の「この投稿の立場」を変えると【PR】表示が入ります。</p>`;
+  }
+  const text = [s.pTheme, s.pPain, s.pBenefit, s.pPoints].join('\n');
+  const hits = RISKY.map(r => ({why:r.why, words:[...new Set(text.match(r.re) || [])]})).filter(r => r.words.length);
+  html += hits.length
+    ? `<div class="warnbox"><b>確認したい表現があります</b><ul>${hits.map(h => `<li>${h.words.map(w => `<mark>${esc(w)}</mark>`).join(' ')}　${esc(h.why)}</li>`).join('')}</ul></div>`
+    : `<p class="small"><span class="ok">✓</span> 誇大表現になりやすい言葉は見つかりませんでした（すべての表現を判定できるわけではありません）。</p>`;
+  $('legal').innerHTML = html;
 }
 
 /* ---------- step 4 ---------- */
