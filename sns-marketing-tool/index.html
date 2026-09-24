@@ -56,7 +56,7 @@ p{margin:0}
 .lead{max-width:36em;color:var(--muted);font-size:14px}
 
 /* step rail */
-.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;list-style:none;padding:0}
+.rail{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px;list-style:none;padding:0}
 .rail button{width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;font:inherit;display:flex;gap:10px;align-items:center}
 .rail button:hover{border-color:var(--accent)}
 .rail button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -136,6 +136,30 @@ textarea{resize:vertical;min-height:64px}
 .legal mark{background:var(--bad-soft);color:var(--bad);font-weight:700;border-radius:4px;padding:0 4px}
 .warnbox{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px}
 
+/* research */
+.kwchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kwchips button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 12px;cursor:pointer}
+.kwchips button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+.srcs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.src{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.src p{font-size:13px;color:var(--muted)}
+.src:last-child:nth-child(odd){grid-column:1/-1}
+.src .links{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.src a{font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;padding:3px 10px}
+.src a:hover{background:var(--accent-soft)}
+.judge{width:100%;border-collapse:collapse;font-size:13px}
+.judge th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.judge td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.judge td.w{font-weight:700;min-width:7em}
+.judge select{width:auto;padding:4px 6px;font-size:13px}
+.vd{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 10px;white-space:nowrap}
+.vd.good{background:var(--good-soft);color:var(--good)}
+.vd.warn{background:var(--warn-soft);color:var(--warn)}
+.vd.bad{background:var(--bad-soft);color:var(--bad)}
+.ideas{display:flex;flex-direction:column;gap:10px}
+.idea{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.idea .h{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+
 /* posts */
 .drafts{display:grid;gap:12px}
 .draft{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
@@ -179,11 +203,15 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
 
 @media (max-width:860px){
   .panel{grid-template-columns:1fr}
+  .rail .t span{display:none}
 }
 @media (max-width:620px){
   .wrap{padding-inline:16px}
   h1{font-size:25px}
-  .rail{grid-template-columns:1fr 1fr}
+  .rail{gap:4px}
+  .rail button{flex-direction:column;padding:8px 2px;gap:4px;text-align:center}
+  .rail .t b{font-size:12px}
+  .srcs{grid-template-columns:1fr}
   .picks,.pillars{grid-template-columns:1fr}
   .rk{grid-template-columns:20px 118px minmax(0,1fr) 36px}
   .mt{grid-template-columns:minmax(0,1fr) 80px;row-gap:6px}
@@ -205,18 +233,68 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
       <span class="tag">SNS MARKETING NAVIGATOR</span>
       <h1>SNS運用ナビ</h1>
     </div>
-    <p class="lead">SNS運用を「戦略 → 投稿計画 → 投稿づくり → 分析・改善」の4ステップで回すためのツールです。入力はすべてこのブラウザ内だけで処理されます。最初はカフェの例が入っています。</p>
+    <p class="lead">SNS運用を「市場調査 → 戦略 → 投稿計画 → 投稿づくり → 分析・改善」の5ステップで回すためのツールです。入力はすべてこのブラウザ内だけで処理されます。最初はカフェの例が入っています。</p>
   </header>
 
   <ol class="rail" role="tablist" aria-label="ステップ">
-    <li><button role="tab" id="tab-step1" data-step="step1" aria-selected="true"><span class="n">1</span><span class="t"><b>戦略を決める</b><span>誰に・何のために・どこで</span></span></button></li>
-    <li><button role="tab" id="tab-step2" data-step="step2" aria-selected="false"><span class="n">2</span><span class="t"><b>投稿計画</b><span>4週間のカレンダー</span></span></button></li>
-    <li><button role="tab" id="tab-step3" data-step="step3" aria-selected="false"><span class="n">3</span><span class="t"><b>投稿づくり</b><span>型に沿って下書き</span></span></button></li>
-    <li><button role="tab" id="tab-step4" data-step="step4" aria-selected="false"><span class="n">4</span><span class="t"><b>分析・改善</b><span>数字から次の一手</span></span></button></li>
+    <li><button role="tab" id="tab-research" data-step="research" aria-selected="true"><span class="n">1</span><span class="t"><b>市場調査</b><span>今のトレンドをつかむ</span></span></button></li>
+    <li><button role="tab" id="tab-step1" data-step="step1" aria-selected="false"><span class="n">2</span><span class="t"><b>戦略</b><span>誰に・何を・どこで</span></span></button></li>
+    <li><button role="tab" id="tab-step2" data-step="step2" aria-selected="false"><span class="n">3</span><span class="t"><b>投稿計画</b><span>4週間のカレンダー</span></span></button></li>
+    <li><button role="tab" id="tab-step3" data-step="step3" aria-selected="false"><span class="n">4</span><span class="t"><b>投稿づくり</b><span>型に沿って下書き</span></span></button></li>
+    <li><button role="tab" id="tab-step4" data-step="step4" aria-selected="false"><span class="n">5</span><span class="t"><b>分析・改善</b><span>数字から次の一手</span></span></button></li>
   </ol>
 
+  <!-- RESEARCH -->
+  <section class="panel" id="research" role="tabpanel" aria-labelledby="tab-research">
+    <form class="form" onsubmit="return false">
+      <div class="hd"><h2>調べるテーマ</h2><p class="hint">キーワードを入れると、各SNSのトレンド・検索画面へのリンクができます。</p></div>
+      <div class="field">
+        <label for="rKw">キーワード（スペース区切り、5つまで）</label>
+        <input type="text" id="rKw">
+        <span class="hint">商品名・ジャンル・お客様が悩みを話すときの言葉など。</span>
+      </div>
+      <div class="field">
+        <label for="rTrends">見つけたトレンド（1行に1つ）</label>
+        <textarea id="rTrends" rows="6"></textarea>
+        <span class="hint">リンク先で気になった話題・ハッシュタグ・音源名を書き留めてください。右側で「乗るか・見送るか」を判定します。</span>
+      </div>
+      <p class="example">最初に入っているのはカフェの例です。トレンドの評価も例として付けています。</p>
+    </form>
+    <div class="out">
+      <div class="sec">
+        <div class="sec-h"><h2>トレンドを調べる</h2><span class="small muted">リンクは新しいタブで開きます</span></div>
+        <div class="kwchips" id="kwchips"></div>
+        <div class="srcs" id="sources"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>乗るか・見送るか</h2><span class="small muted">関連度を2倍で計算</span></div>
+        <div class="card"><div class="tbl" id="judge"></div></div>
+      </div>
+      <div class="sec" id="aiBox" hidden>
+        <h2>Claudeに切り口を相談</h2>
+        <div class="card legal">
+          <p class="small muted">「乗る」「様子見」のトレンドと、戦略ステップの業種・目的・ターゲットをもとに、投稿の切り口を提案します。Claudeはここからネットを見に行けないため、トレンドの中身は上で調べた内容を使います。</p>
+          <div><button type="button" class="btn" id="aiBtn">切り口を提案してもらう</button></div>
+          <div id="aiOut"></div>
+        </div>
+      </div>
+      <div class="sec">
+        <h2>週1回・15分の調査ルーティン</h2>
+        <div class="card"><ol class="todo">
+          <li><b>今の話題をつかむ</b><span class="small muted">Xのトレンドと Yahoo!リアルタイム検索で、今週よく話されている言葉を見る。</span></li>
+          <li><b>伸びているか確かめる</b><span class="small muted">Googleトレンドで検索数が上がっているか、毎年同じ時期に来る季節ネタかを確認する。</span></li>
+          <li><b>動画の流行を見る</b><span class="small muted">TikTok Creative Center で伸びているハッシュタグと音源を見る。ビジネスアカウントは商用利用できる音源しか使えないので注意。</span></li>
+          <li><b>競合を見る</b><span class="small muted">同業のアカウント3つで、直近1か月に反応が多かった投稿の形式とテーマをメモする。</span></li>
+          <li><b>判定して1つ投稿する</b><span class="small muted">左に書き出して評価し、「乗る」になったものを今週の投稿にする。</span></li>
+        </ol>
+        <p class="small muted" style="margin-top:12px">災害・事件・訃報など、困っている人がいる話題には便乗しないでください。炎上の原因になります。</p></div>
+      </div>
+      <div class="next"><button class="btn" data-go="step1">戦略へ進む</button></div>
+    </div>
+  </section>
+
   <!-- STEP 1 -->
-  <section class="panel" id="step1" role="tabpanel" aria-labelledby="tab-step1">
+  <section class="panel" id="step1" role="tabpanel" aria-labelledby="tab-step1" hidden>
     <form class="form" id="f1" onsubmit="return false">
       <div class="hd"><h2>あなたのビジネス</h2><p class="hint">選ぶたびに右側の結果が更新されます。</p></div>
       <div class="field">
@@ -295,7 +373,7 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
   <!-- STEP 2 -->
   <section class="panel" id="step2" role="tabpanel" aria-labelledby="tab-step2" hidden>
     <form class="form" onsubmit="return false">
-      <div class="hd"><h2>計画の条件</h2><p class="hint">ステップ1の結果をもとに、4週間分の投稿予定を作ります。</p></div>
+      <div class="hd"><h2>計画の条件</h2><p class="hint">ステップ2（戦略）の結果をもとに、4週間分の投稿予定を作ります。</p></div>
       <div class="field">
         <label for="calPlatform">メインで使うSNS</label>
         <select id="calPlatform"></select>
@@ -505,27 +583,151 @@ const SAMPLE = {
   pPlatform:'', pTheme:'平日限定の「いちごパフェ」', pPain:'仕事帰りに甘いもので癒されたい',
   pBenefit:'旬のいちごを使ったパフェを、平日19時まで予約なしで楽しめます',
   pPoints:'朝摘みのいちごを1日20食分だけ仕入れ\n甘さ控えめの自家製ミルクアイス\n駅から徒歩3分、仕事帰りに寄れる',
+  rKw:'カフェ パフェ モンブラン', rTrends:'秋限定スイーツ\nモンブラン\nハロウィン\n推し活カフェ\n台風',
+  rRates:{'秋限定スイーツ':{rel:3,mom:3,ease:3,risk:0},'モンブラン':{rel:3,mom:2,ease:3,risk:0},'ハロウィン':{rel:2,mom:3,ease:2,risk:0},'推し活カフェ':{rel:2,mom:2,ease:1,risk:0},'台風':{rel:1,mom:3,ease:1,risk:1}},
   pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ', pAd:'none', pSponsor:'',
   mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96'
 };
 const STORE = 'sns-navi-v1';
 
 /* ---------- state io ---------- */
-const TEXT_IDS = ['industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
+let RATES = {};
+const TEXT_IDS = ['rKw','rTrends','industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
 function readState(){
   const s = {};
   TEXT_IDS.forEach(id => s[id] = $(id).value);
   s.ages = [...document.querySelectorAll('#ages input:checked')].map(i => i.value);
   s.assets = [...document.querySelectorAll('#assets input:checked')].map(i => i.value);
+  s.rRates = RATES;
   return s;
 }
 function writeState(s){
   TEXT_IDS.forEach(id => { if (s[id] !== undefined && s[id] !== '') $(id).value = s[id]; });
   document.querySelectorAll('#ages input').forEach(i => i.checked = (s.ages||[]).includes(i.value));
   document.querySelectorAll('#assets input').forEach(i => i.checked = (s.assets||[]).includes(i.value));
+  RATES = JSON.parse(JSON.stringify(s.rRates || {}));
 }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(readState())); }catch(e){} }
 function load(){ try{ const v = localStorage.getItem(STORE); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+
+/* ---------- research ---------- */
+const enc = encodeURIComponent;
+const SOURCES = [
+  {name:'X（旧Twitter）', look:'「話題」で反応の多い投稿を、「最新」で今の生の声を見る。どんな言葉で話されているかをメモ。',
+   links:(k,all) => [['トレンド一覧','https://x.com/explore/tabs/trending'],['話題の投稿',`https://x.com/search?q=${enc(k)}&f=top`],['最新の投稿',`https://x.com/search?q=${enc(k)}&f=live`],['いいね100以上',`https://x.com/search?q=${enc(k + ' min_faves:100 lang:ja')}&f=top`]]},
+  {name:'Yahoo!リアルタイム検索', look:'X上での投稿数の推移がグラフで見られる。急に増えた日と、そのきっかけを探す。',
+   links:(k,all) => [['今の話題','https://search.yahoo.co.jp/realtime'],['投稿数の推移',`https://search.yahoo.co.jp/realtime/search?p=${enc(k)}`]]},
+  {name:'Googleトレンド', look:'検索数が伸びているか、毎年同じ時期に上がる季節ネタかを見る。「関連キーワード」も投稿ネタになる。',
+   links:(k,all) => [['急上昇ワード','https://trends.google.co.jp/trending?geo=JP'],['キーワード比較',`https://trends.google.co.jp/trends/explore?geo=JP&q=${all.map(enc).join(',')}`]]},
+  {name:'TikTok', look:'Creative Centerで地域を「日本」にして、伸びているハッシュタグと音源を確認する。',
+   links:(k,all) => [['Creative Center','https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/ja'],['キーワード検索',`https://www.tiktok.com/search?q=${enc(k)}`]]},
+  {name:'Instagram', look:'上位に出る投稿の形式（リールかカルーセルか）と、1枚目の作り方を見る。',
+   links:(k,all) => [['キーワード検索',`https://www.instagram.com/explore/search/keyword/?q=${enc(k)}`]]},
+  {name:'YouTube', look:'今週アップされた動画のうち、チャンネル登録者数のわりに再生数が多いものに注目する。',
+   links:(k,all) => [['今週の動画',`https://www.youtube.com/results?search_query=${enc(k)}&sp=EgIIAw%253D%253D`]]},
+  {name:'Threads', look:'コメントが多い投稿から、お客様が実際に使っている言葉を拾う。',
+   links:(k,all) => [['キーワード検索',`https://www.threads.com/search?q=${enc(k)}`]]}
+];
+let activeKw = 0;
+const LV = {3:'高',2:'中',1:'低'};
+function trendList(s){ return [...new Set(s.rTrends.split('\n').map(x => x.trim()).filter(Boolean))].slice(0, 20); }
+function verdict(r){
+  if (r.risk) return {cls:'bad', t:'見送る', why:'炎上・権利のリスク'};
+  if (r.rel === 1) return {cls:'bad', t:'見送る', why:'自社と関係が薄い'};
+  const sc = r.rel*2 + r.mom + r.ease;
+  if (sc >= 10) return {cls:'good', t:'乗る', why:'今週の投稿にする'};
+  if (sc >= 7) return {cls:'warn', t:'様子見', why:'切り口を考えてから'};
+  return {cls:'bad', t:'見送る', why:'効果が小さい'};
+}
+function renderResearch(s){
+  const kws = s.rKw.split(/[\s,、　]+/).filter(Boolean).slice(0, 5);
+  if (activeKw >= kws.length) activeKw = 0;
+  const k = kws[activeKw] || '';
+  $('kwchips').innerHTML = kws.length
+    ? '<span class="small muted">検索に使う言葉：</span>' + kws.map((w,i) => `<button type="button" data-kw="${i}" aria-pressed="${i === activeKw}">${esc(w)}</button>`).join('')
+    : '<span class="small muted">左にキーワードを入れると、検索リンクができます。</span>';
+  document.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { activeKw = +b.dataset.kw; renderResearch(readState()); });
+  $('sources').innerHTML = SOURCES.map(src => {
+    const links = src.links(k, kws).filter(([, u]) => k || !/[?&](q|p|search_query)=(&|$)/.test(u));
+    return `<div class="src"><h3>${esc(src.name)}</h3><p>${esc(src.look)}</p>
+      <div class="links">${links.map(([t,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`).join('')}</div></div>`;
+  }).join('');
+
+  const trends = trendList(s);
+  if (!trends.length){ $('judge').innerHTML = '<p class="small muted">左の「見つけたトレンド」に書き出すと、ここで評価できます。</p>'; return; }
+  const sel = (w, key, val) => `<select data-w="${esc(w)}" data-k="${key}" aria-label="${esc(w)}の${{rel:'関連度',mom:'勢い',ease:'作りやすさ'}[key]}">${[3,2,1].map(v => `<option value="${v}"${v === val ? ' selected' : ''}>${LV[v]}</option>`).join('')}</select>`;
+  $('judge').innerHTML = `<table class="judge"><thead><tr><th>トレンド</th><th>自社との関連</th><th>勢い</th><th>作りやすさ</th><th>炎上・権利リスク</th><th>判定</th><th></th></tr></thead><tbody>` +
+    trends.map(w => {
+      const r = RATES[w] || (RATES[w] = {rel:2, mom:2, ease:2, risk:0});
+      const v = verdict(r);
+      return `<tr><td class="w">${esc(w)}</td><td>${sel(w,'rel',r.rel)}</td><td>${sel(w,'mom',r.mom)}</td><td>${sel(w,'ease',r.ease)}</td>
+        <td><select data-w="${esc(w)}" data-k="risk" aria-label="${esc(w)}のリスク"><option value="0"${r.risk ? '' : ' selected'}>なし</option><option value="1"${r.risk ? ' selected' : ''}>あり</option></select></td>
+        <td><span class="vd ${v.cls}">${v.t}</span><br><span class="small muted">${v.why}</span></td>
+        <td>${v.cls === 'bad' ? '' : `<button type="button" class="btn sm ghost" data-use="${esc(w)}">投稿にする</button>`}</td></tr>`;
+    }).join('') + '</tbody></table>';
+  document.querySelectorAll('[data-use]').forEach(b => b.onclick = () => useTrend(b.dataset.use));
+}
+function useTrend(w){
+  $('pTheme').value = w;
+  render();
+  show('step3');
+  window.scrollTo({top:0, behavior:'smooth'});
+  toast('「' + w + '」を投稿のテーマに入れました');
+}
+$('judge').addEventListener('change', e => {
+  const t = e.target;
+  if (!t.dataset || !t.dataset.w) return;
+  (RATES[t.dataset.w] = RATES[t.dataset.w] || {rel:2, mom:2, ease:2, risk:0})[t.dataset.k] = +t.value;
+});
+
+/* Claudeへの相談（claude.ai で開いたときだけ表示） */
+let sampleFn = null;
+if (window.claude && typeof window.claude.use === 'function'){
+  window.claude.use('sample').then(fn => { sampleFn = fn; $('aiBox').hidden = !fn; }).catch(() => {});
+}
+$('aiBtn').onclick = async () => {
+  const s = readState();
+  const picks = trendList(s).filter(w => verdict(RATES[w] || {rel:2,mom:2,ease:2,risk:0}).cls !== 'bad');
+  const out = $('aiOut');
+  if (!picks.length){ out.innerHTML = '<p class="small muted">「乗る」か「様子見」のトレンドがありません。表で評価を付けてから押してください。</p>'; return; }
+  const main = score(s)[0].k;
+  const prompt = [
+    'あなたは日本の中小事業者を支援するSNSマーケティング担当者です。',
+    '次の事業者が、下のトレンドに乗って投稿するときの切り口を考えてください。',
+    `業種：${LABEL.industry[s.industry]}`,
+    `目的：${LABEL.goal[s.goal]}`,
+    `ターゲット：${s.persona || '未入力'}`,
+    `メインのSNS：${P[main].name}`,
+    'トレンド（この一覧にない話題を付け足さないこと）：',
+    ...picks.map(w => '- ' + w),
+    '',
+    'ルール：事実を断定しない。「No.1」「必ず」など根拠のいる表現を使わない。災害・事件・訃報に関わる便乗は「見送り推奨」とする。',
+    '次のJSONだけを返してください：{"ideas":[{"trend":"トレンド名","angle":"切り口を1文で","hook":"投稿の1行目の例","format":"おすすめの形式","caution":"注意点（なければ空文字）"}]}'
+  ].join('\n');
+  $('aiBtn').disabled = true;
+  out.innerHTML = '<p class="small muted">考えています…（数十秒かかることがあります）</p>';
+  try {
+    const data = await sampleFn.json(prompt, {modelTier:'default'});
+    const ideas = (data && Array.isArray(data.ideas)) ? data.ideas : [];
+    out.innerHTML = ideas.length ? '<div class="ideas">' + ideas.map((d,i) =>
+      `<div class="idea"><div class="h"><b>${esc(d.trend || '')}</b><span class="small muted">${esc(d.format || '')}</span></div>
+       <p>${esc(d.angle || '')}</p><p class="small">1行目の例：「${esc(d.hook || '')}」</p>
+       ${d.caution ? `<p class="small" style="color:var(--warn)">注意：${esc(d.caution)}</p>` : ''}
+       <div><button type="button" class="btn sm ghost" data-idea="${i}">投稿にする</button></div></div>`).join('') + '</div>'
+      : '<p class="small muted">提案を受け取れませんでした。もう一度押してください。</p>';
+    out.querySelectorAll('[data-idea]').forEach(b => b.onclick = () => {
+      const d = ideas[+b.dataset.idea];
+      $('pBenefit').value = d.angle || $('pBenefit').value;
+      useTrend(d.trend || '');
+    });
+  } catch(e){
+    const code = e && e.code;
+    if (['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(code)){ $('aiBox').hidden = true; return; }
+    out.innerHTML = `<p class="small" style="color:var(--bad)">${code === 'rate_limited' ? '混み合っています。少し時間をおいてからもう一度押してください。' : code === 'session_expired' ? 'ログインが切れています。claude.ai に再ログインしてください。' : '提案を受け取れませんでした。時間をおいてもう一度押してください。'}</p>`;
+  } finally {
+    $('aiBtn').disabled = false;
+  }
+};
 
 /* ---------- step 1 ---------- */
 function score(s){
@@ -844,6 +1046,7 @@ function render(){
   renderStep2(s);
   renderStep3(s);
   renderStep4(s);
+  renderResearch(s);
   save();
 }
 
@@ -864,7 +1067,7 @@ if (saved) initPref = {calPlatform: saved.calPlatform, pPlatform: saved.pPlatfor
 if (!$('start').value) $('start').value = isoDate(nextMonday());
 render();
 const h = (location.hash || '').slice(1);
-if (/^step[1-4]$/.test(h)) show(h);
+if (/^(research|step[1-4])$/.test(h)) show(h);
 })();
 </script>
 </body>
