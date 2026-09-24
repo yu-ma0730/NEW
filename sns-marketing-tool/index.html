@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SNS運用ナビ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#E9EDF4; --ink:#172035; --muted:#58627A; --line:#D5DCE7;
+  --accent:#CF3B6E; --accent-ink:#FFFFFF; --accent-soft:#FAE1EA;
+  --edu:#2D6BD6; --emp:#CF3B6E; --trust:#12837A; --act:#B97414;
+  --good:#1D8549; --warn:#A86F12; --bad:#BE3B34;
+  --good-soft:#DDF2E5; --warn-soft:#F8EBD3; --bad-soft:#F8DEDC;
+  --display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0F121A; --surface:#171B26; --surface-2:#212737; --ink:#E7EAF2; --muted:#9AA3B8; --line:#2D3446;
+    --accent:#FF6B9B; --accent-ink:#1A0D13; --accent-soft:#3A1E2A;
+    --edu:#6E9DFF; --emp:#FF6B9B; --trust:#3DC3B2; --act:#E6A747;
+    --good:#52C685; --warn:#E3AA4A; --bad:#F2746B;
+    --good-soft:#15301F; --warn-soft:#33270F; --bad-soft:#3A1917;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F121A; --surface:#171B26; --surface-2:#212737; --ink:#E7EAF2; --muted:#9AA3B8; --line:#2D3446;
+  --accent:#FF6B9B; --accent-ink:#1A0D13; --accent-soft:#3A1E2A;
+  --edu:#6E9DFF; --emp:#FF6B9B; --trust:#3DC3B2; --act:#E6A747;
+  --good:#52C685; --warn:#E3AA4A; --bad:#F2746B;
+  --good-soft:#15301F; --warn-soft:#33270F; --bad-soft:#3A1917;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.7}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.35}
+h1{font-size:30px;font-weight:900;letter-spacing:.01em}
+h2{font-size:21px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:22px}
+.brand{display:flex;flex-direction:column;gap:4px}
+.brand .tag{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700}
+.lead{max-width:36em;color:var(--muted);font-size:14px}
+
+/* step rail */
+.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;list-style:none;padding:0}
+.rail button{width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;font:inherit;display:flex;gap:10px;align-items:center}
+.rail button:hover{border-color:var(--accent)}
+.rail button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rail .n{font-family:var(--mono);font-weight:700;font-size:13px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--muted);flex:none}
+.rail .t{display:flex;flex-direction:column;line-height:1.3}
+.rail .t b{font-family:var(--display);font-size:15px}
+.rail .t span{font-size:12px;color:var(--muted)}
+.rail button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.rail button[aria-selected="true"] .n{background:var(--accent);color:var(--accent-ink)}
+
+/* panels */
+.panel{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
+.form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.form .hd{display:flex;flex-direction:column;gap:4px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lbl{font-size:13px;font-weight:700}
+.hint{font-size:12px;color:var(--muted)}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{resize:vertical;min-height:64px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;background:var(--bg)}
+.chips input{accent-color:var(--accent);margin:0}
+.chips label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{font:inherit;font-size:14px;font-weight:700;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{font-size:12px;padding:5px 10px}
+.example{font-size:12px;color:var(--muted);background:var(--surface-2);border-radius:6px;padding:6px 10px}
+
+.out{display:flex;flex-direction:column;gap:20px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+
+/* platform ranking */
+.rank{display:flex;flex-direction:column;gap:2px}
+.rk{display:grid;grid-template-columns:22px 150px minmax(0,1fr) 44px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.rk:last-child{border-bottom:0}
+.rk .pos{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rk .nm{font-weight:700;font-size:14px}
+.bar{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--muted);border-radius:5px}
+.rk.top .bar i{background:var(--accent)}
+.rk .sc{font-family:var(--mono);font-size:13px;text-align:right}
+.picks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pick{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.pick .role{font-size:11px;letter-spacing:.12em;font-weight:700;color:var(--accent)}
+.pick ul{margin:0;padding-left:1.2em;font-size:13px}
+.pick .meta{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+
+.kv{display:grid;grid-template-columns:110px 1fr;gap:8px 14px;font-size:14px}
+.kv dt{color:var(--muted);font-size:13px}
+.kv dd{margin:0}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 10px;line-height:1.7;white-space:nowrap}
+.p-edu{background:color-mix(in srgb,var(--edu) 16%,transparent);color:var(--edu)}
+.p-emp{background:color-mix(in srgb,var(--emp) 16%,transparent);color:var(--emp)}
+.p-trust{background:color-mix(in srgb,var(--trust) 16%,transparent);color:var(--trust)}
+.p-act{background:color-mix(in srgb,var(--act) 18%,transparent);color:var(--act)}
+.mix{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px}
+.mix i{display:block;height:100%}
+.pillars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pl{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.pl .h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pl ul{margin:0;padding-left:1.2em;font-size:13px}
+
+/* calendar */
+.week{display:flex;flex-direction:column}
+.week h3{font-size:14px;color:var(--muted);margin:6px 0}
+.cal{width:100%;border-collapse:collapse;font-size:13px}
+.cal th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+.cal td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.cal td.d{white-space:nowrap}
+.tbl{overflow-x:auto}
+.warnbox{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px}
+
+/* posts */
+.drafts{display:grid;gap:12px}
+.draft{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.draft .h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.draft pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--body);font-size:14px;background:var(--bg);border-radius:8px;padding:12px;border:1px solid var(--line)}
+.count{font-size:12px}
+.count.over{color:var(--bad);font-weight:700}
+.check{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.check label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.check input{accent-color:var(--accent);margin-top:5px}
+
+/* analytics */
+.summary{display:flex;gap:10px;flex-wrap:wrap}
+.summary .s{flex:1 1 120px;border-radius:10px;padding:10px 14px;display:flex;flex-direction:column}
+.summary .s b{font-family:var(--mono);font-size:24px}
+.s.good{background:var(--good-soft);color:var(--good)}
+.s.warn{background:var(--warn-soft);color:var(--warn)}
+.s.bad{background:var(--bad-soft);color:var(--bad)}
+.metrics{display:flex;flex-direction:column}
+.mt{display:grid;grid-template-columns:minmax(0,1.2fr) 90px minmax(0,1fr) 72px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.mt:last-child{border-bottom:0}
+.mt .nm b{display:block;font-size:14px}
+.mt .nm span{font-size:12px;color:var(--muted)}
+.mt .v{font-family:var(--mono);font-size:18px;font-weight:700;text-align:right}
+.gauge{position:relative;height:8px;display:flex;border-radius:4px;overflow:visible}
+.gauge i{display:block;height:100%}
+.gauge i:nth-child(1){background:var(--bad-soft);border-radius:4px 0 0 4px}
+.gauge i:nth-child(2){background:var(--warn-soft)}
+.gauge i:nth-child(3){background:var(--good-soft);border-radius:0 4px 4px 0}
+.gauge .mk{position:absolute;top:-4px;width:4px;height:16px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.st{font-size:12px;font-weight:700;border-radius:999px;padding:2px 0;text-align:center}
+.st.good{background:var(--good-soft);color:var(--good)}
+.st.warn{background:var(--warn-soft);color:var(--warn)}
+.st.bad{background:var(--bad-soft);color:var(--bad)}
+.todo{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
+.todo li b{display:block}
+
+.next{display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:13px;z-index:10}
+footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+
+@media (max-width:860px){
+  .panel{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .wrap{padding-inline:16px}
+  h1{font-size:25px}
+  .rail{grid-template-columns:1fr 1fr}
+  .picks,.pillars{grid-template-columns:1fr}
+  .rk{grid-template-columns:20px 118px minmax(0,1fr) 36px}
+  .mt{grid-template-columns:minmax(0,1fr) 80px;row-gap:6px}
+  .mt .gauge{grid-column:1}
+  .mt .st{grid-column:2}
+  .kv{grid-template-columns:1fr;gap:2px}
+  .kv dd{margin-bottom:8px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .bar i{transition:width .35s ease}
+  .gauge .mk{transition:left .35s ease}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="tag">SNS MARKETING NAVIGATOR</span>
+      <h1>SNS運用ナビ</h1>
+    </div>
+    <p class="lead">SNS運用を「戦略 → 投稿計画 → 投稿づくり → 分析・改善」の4ステップで回すためのツールです。入力はすべてこのブラウザ内だけで処理されます。最初はカフェの例が入っています。</p>
+  </header>
+
+  <ol class="rail" role="tablist" aria-label="ステップ">
+    <li><button role="tab" id="tab-step1" data-step="step1" aria-selected="true"><span class="n">1</span><span class="t"><b>戦略を決める</b><span>誰に・何のために・どこで</span></span></button></li>
+    <li><button role="tab" id="tab-step2" data-step="step2" aria-selected="false"><span class="n">2</span><span class="t"><b>投稿計画</b><span>4週間のカレンダー</span></span></button></li>
+    <li><button role="tab" id="tab-step3" data-step="step3" aria-selected="false"><span class="n">3</span><span class="t"><b>投稿づくり</b><span>型に沿って下書き</span></span></button></li>
+    <li><button role="tab" id="tab-step4" data-step="step4" aria-selected="false"><span class="n">4</span><span class="t"><b>分析・改善</b><span>数字から次の一手</span></span></button></li>
+  </ol>
+
+  <!-- STEP 1 -->
+  <section class="panel" id="step1" role="tabpanel" aria-labelledby="tab-step1">
+    <form class="form" id="f1" onsubmit="return false">
+      <div class="hd"><h2>あなたのビジネス</h2><p class="hint">選ぶたびに右側の結果が更新されます。</p></div>
+      <div class="field">
+        <label for="industry">業種</label>
+        <select id="industry">
+          <option value="food">飲食・カフェ・店舗</option>
+          <option value="beauty">美容・サロン</option>
+          <option value="ec">EC・物販</option>
+          <option value="b2b">BtoB・法人向けサービス</option>
+          <option value="creator">個人・クリエイター・講師</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="goal">いちばんの目的</label>
+        <select id="goal">
+          <option value="aware">知ってもらう（認知拡大）</option>
+          <option value="visit">来てもらう・問い合わせてもらう（集客）</option>
+          <option value="sales">買ってもらう（販売）</option>
+          <option value="fan">また来てもらう（ファン化・リピート）</option>
+          <option value="hire">働きたい人を集める（採用）</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="lbl">ターゲットの年代（複数可）</span>
+        <div class="chips" id="ages">
+          <label><input type="checkbox" id="age-10" value="10">10代</label>
+          <label><input type="checkbox" id="age-20" value="20">20代</label>
+          <label><input type="checkbox" id="age-30" value="30">30代</label>
+          <label><input type="checkbox" id="age-40" value="40">40代</label>
+          <label><input type="checkbox" id="age-50" value="50">50代以上</label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">用意できる素材（複数可）</span>
+        <div class="chips" id="assets">
+          <label><input type="checkbox" id="as-photo" value="photo">写真</label>
+          <label><input type="checkbox" id="as-video" value="video">短い動画</label>
+          <label><input type="checkbox" id="as-text" value="text">文章</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="hours">SNSに使える時間（週）</label>
+        <select id="hours">
+          <option value="1">1〜2時間</option>
+          <option value="4">3〜5時間</option>
+          <option value="8">6時間以上</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="persona">ターゲットを一言で</label>
+        <input type="text" id="persona" placeholder="例：駅近で働く、甘いもの好きの20〜30代女性">
+        <span class="hint">「誰に届けるか」を1人に絞るほど、投稿の言葉が決まりやすくなります。</span>
+      </div>
+      <button type="button" class="btn ghost" id="reset">例に戻す</button>
+    </form>
+
+    <div class="out">
+      <div class="sec">
+        <div class="sec-h"><h2>おすすめのSNS</h2><span class="small muted">相性スコア（100点満点の目安）</span></div>
+        <div class="picks" id="picks"></div>
+        <div class="card"><div class="rank" id="rank"></div></div>
+      </div>
+      <div class="sec">
+        <h2>戦略シート</h2>
+        <div class="card"><dl class="kv" id="sheet"></dl></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>投稿の4つの柱</h2><span class="small muted">目的に合わせた配分</span></div>
+        <div class="mix" id="mix" aria-hidden="true"></div>
+        <div class="pillars" id="pillars"></div>
+      </div>
+      <div class="next"><button class="btn" data-go="step2">投稿計画へ進む</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" id="step2" role="tabpanel" aria-labelledby="tab-step2" hidden>
+    <form class="form" onsubmit="return false">
+      <div class="hd"><h2>計画の条件</h2><p class="hint">ステップ1の結果をもとに、4週間分の投稿予定を作ります。</p></div>
+      <div class="field">
+        <label for="calPlatform">メインで使うSNS</label>
+        <select id="calPlatform"></select>
+      </div>
+      <div class="field">
+        <label for="freq">投稿の頻度</label>
+        <select id="freq">
+          <option value="1">週1回</option>
+          <option value="3">週3回（月・水・金）</option>
+          <option value="5">週5回（平日）</option>
+          <option value="7">毎日</option>
+        </select>
+        <span class="hint" id="freqHint"></span>
+      </div>
+      <div class="field">
+        <label for="start">開始日</label>
+        <input type="date" id="start">
+      </div>
+      <p class="example">投稿時間はよく見られやすい時間帯の一般的な目安です。実際は分析画面の「フォロワーがアクティブな時間」を見て調整してください。</p>
+    </form>
+    <div class="out">
+      <div class="sec">
+        <div class="sec-h"><h2>4週間の投稿カレンダー</h2><button class="btn sm ghost" id="copyCal">テキストでコピー</button></div>
+        <div id="calWarn"></div>
+        <div class="card" id="cal"></div>
+      </div>
+      <div class="next"><button class="btn ghost" data-go="step1">戻る</button><button class="btn" data-go="step3">投稿づくりへ進む</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" id="step3" role="tabpanel" aria-labelledby="tab-step3" hidden>
+    <form class="form" onsubmit="return false">
+      <div class="hd"><h2>投稿の材料</h2><p class="hint">3つの「書き出しの型」で下書きを作ります。そのまま使わず、自分の言葉に直して仕上げてください。</p></div>
+      <div class="field">
+        <label for="pPlatform">投稿するSNS</label>
+        <select id="pPlatform"></select>
+      </div>
+      <div class="field">
+        <label for="pTheme">テーマ</label>
+        <input type="text" id="pTheme">
+      </div>
+      <div class="field">
+        <label for="pPain">読む人の悩み・願望</label>
+        <input type="text" id="pPain">
+      </div>
+      <div class="field">
+        <label for="pBenefit">伝えたいこと（読む人にとっての得）</label>
+        <textarea id="pBenefit"></textarea>
+      </div>
+      <div class="field">
+        <label for="pPoints">具体的なポイント（1行に1つ）</label>
+        <textarea id="pPoints" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label for="pCta">読んだ後にしてほしいこと</label>
+        <select id="pCta">
+          <option value="save">保存してもらう</option>
+          <option value="comment">コメントしてもらう</option>
+          <option value="profile">プロフィールを見てもらう</option>
+          <option value="link">リンクを押してもらう</option>
+          <option value="visit">来店・予約してもらう</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="pTags">キーワード（スペース区切り）</label>
+        <input type="text" id="pTags">
+        <span class="hint" id="tagHint"></span>
+      </div>
+    </form>
+    <div class="out">
+      <div class="sec">
+        <h2>下書き3案</h2>
+        <div class="drafts" id="drafts"></div>
+      </div>
+      <div class="sec">
+        <h2>投稿前チェック</h2>
+        <div class="card check" id="checklist">
+          <label><input type="checkbox" id="c1">1行目だけで「自分に関係ある」と分かる</label>
+          <label><input type="checkbox" id="c2">伝えたいことは1投稿につき1つに絞った</label>
+          <label><input type="checkbox" id="c3">専門用語をターゲットが分かる言葉に直した</label>
+          <label><input type="checkbox" id="c4">画像・動画の最初の1枚（1秒）で内容が伝わる</label>
+          <label><input type="checkbox" id="c5">最後に「次にしてほしいこと」を1つだけ書いた</label>
+          <label><input type="checkbox" id="c6">誇張表現・他者の写真や音源の無断使用がない</label>
+        </div>
+      </div>
+      <div class="next"><button class="btn ghost" data-go="step2">戻る</button><button class="btn" data-go="step4">分析・改善へ進む</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="panel" id="step4" role="tabpanel" aria-labelledby="tab-step4" hidden>
+    <form class="form" onsubmit="return false">
+      <div class="hd"><h2>先月の数字</h2><p class="hint">各SNSの分析画面（インサイト）から、1か月分の合計を入れてください。</p></div>
+      <div class="row2">
+        <div class="field"><label for="mF0">フォロワー（月初）</label><input type="number" min="0" id="mF0"></div>
+        <div class="field"><label for="mF1">フォロワー（月末）</label><input type="number" min="0" id="mF1"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mImp">インプレッション</label><input type="number" min="0" id="mImp"></div>
+        <div class="field"><label for="mReach">リーチ</label><input type="number" min="0" id="mReach"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mLike">いいね</label><input type="number" min="0" id="mLike"></div>
+        <div class="field"><label for="mCom">コメント</label><input type="number" min="0" id="mCom"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mSave">保存</label><input type="number" min="0" id="mSave"></div>
+        <div class="field"><label for="mShare">シェア</label><input type="number" min="0" id="mShare"></div>
+      </div>
+      <div class="field"><label for="mClick">リンククリック</label><input type="number" min="0" id="mClick"></div>
+      <p class="example">インプレッション＝表示された回数、リーチ＝見た人の数（同じ人は1回）。X（旧Twitter）は「保存」を「ブックマーク」、シェアを「リポスト」で入れてください。</p>
+    </form>
+    <div class="out">
+      <div class="sec">
+        <h2>診断結果</h2>
+        <div class="summary" id="summary"></div>
+        <div class="card"><div class="metrics" id="metrics"></div></div>
+        <p class="small muted">判定の基準は、フォロワー数千人規模のアカウントでよく使われる一般的な目安です。SNSやジャンルで差が大きいので、他社と比べるより「先月の自分」と比べるのがおすすめです。</p>
+      </div>
+      <div class="sec">
+        <h2>次にやること</h2>
+        <div class="card"><ol class="todo" id="todo"></ol></div>
+      </div>
+      <div class="next"><button class="btn ghost" data-go="step3">戻る</button><button class="btn" data-go="step1">戦略を見直す</button></div>
+    </div>
+  </section>
+
+  <footer>SNS運用ナビ ・ スコアや基準値は一般的な傾向にもとづく目安です。最終判断はご自身のアカウントの数字で行ってください。</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- data ---------- */
+const KEYS = ['ig','x','tt','yt','line','th','li'];
+const P = {
+  ig:  {name:'Instagram', strength:'写真やリールで世界観を伝えやすい。保存やおすすめ欄から新しい人に届く。', cadence:'週3〜5回＋ストーリーズ', formats:{edu:'カルーセル（複数枚）',emp:'リール',trust:'カルーセル',act:'フィード＋ストーリーズ'}, times:['12:00','20:00','21:00'], limit:2200, tags:[3,5]},
+  x:   {name:'X（旧Twitter）', strength:'拡散力とリアルタイム性。ノウハウや本音の発信、会話で関係を作れる。', cadence:'1日1〜3回', formats:{edu:'テキスト＋画像',emp:'テキスト',trust:'スクショ・画像',act:'テキスト＋リンク'}, times:['7:30','12:15','21:00'], limit:280, xcount:true, tags:[1,2]},
+  tt:  {name:'TikTok', strength:'フォロワー0でもおすすめに載りやすい。縦型動画で一気に認知を取れる。', cadence:'週3〜7本', formats:{edu:'解説動画',emp:'日常・裏側動画',trust:'ビフォーアフター動画',act:'告知動画'}, times:['19:00','21:00','22:00'], limit:4000, tags:[3,5]},
+  yt:  {name:'YouTube', strength:'検索で長く見られる「資産型」。ショートで入口、長尺で信頼を作る。', cadence:'ショート週2〜3本＋長尺月2本', formats:{edu:'長尺（解説）',emp:'ショート',trust:'長尺（事例）',act:'ショート'}, times:['18:00','20:00'], limit:5000, tags:[2,3]},
+  line:{name:'LINE公式アカウント', strength:'既存のお客様に直接届く。開封されやすく、リピートや予約に強い。', cadence:'月2〜4回（送りすぎるとブロックが増える）', formats:{edu:'リッチメッセージ',emp:'テキスト＋画像',trust:'カードタイプ',act:'クーポン'}, times:['12:00','18:00'], limit:5000, tags:[0,0]},
+  th:  {name:'Threads', strength:'テキストで気軽に会話できる。Instagramとつながり、人柄が伝わりやすい。', cadence:'1日1〜2回', formats:{edu:'テキスト',emp:'テキスト',trust:'テキスト＋画像',act:'テキスト＋リンク'}, times:['12:00','21:00'], limit:500, tags:[1,1]},
+  li:  {name:'LinkedIn', strength:'ビジネス層・決裁者に届く。専門性の発信と採用に強い。', cadence:'週2〜3回', formats:{edu:'テキスト＋図解',emp:'テキスト',trust:'事例記事',act:'テキスト＋リンク'}, times:['8:00','12:00'], limit:3000, tags:[3,3]}
+};
+//                ig x tt yt line th li
+const AGE = {10:[3,3,3,3,1,1,0],20:[3,3,3,2,2,2,1],30:[3,2,1,2,3,2,2],40:[2,2,1,2,3,1,2],50:[1,1,0,3,3,0,1]};
+const GOAL = {aware:[2,3,3,2,0,2,1],visit:[3,1,2,1,3,1,0],sales:[3,2,2,2,3,1,1],fan:[2,2,1,3,3,2,1],hire:[2,2,2,1,0,1,3]};
+const IND = {food:[3,1,2,1,3,1,0],beauty:[3,1,2,1,3,1,0],ec:[3,2,3,2,2,1,0],b2b:[0,2,0,2,0,1,3],creator:[2,3,2,3,1,3,1]};
+const ASSET = {photo:[2,0,0,0,1,0,0],video:[1,0,3,3,0,0,0],text:[0,2,0,0,0,2,2]};
+const LABEL = {
+  industry:{food:'飲食・店舗',beauty:'美容・サロン',ec:'EC・物販',b2b:'BtoB',creator:'個人・クリエイター'},
+  goal:{aware:'認知拡大',visit:'集客',sales:'販売',fan:'ファン化',hire:'採用'},
+  asset:{photo:'写真',video:'動画',text:'文章'}
+};
+const KPI = {
+  aware:{kgi:'指名検索数・フォロワー数',kpi:'インプレッション／リーチ／フォロワー増加数／シェア数'},
+  visit:{kgi:'来店数・予約数・問い合わせ数',kpi:'プロフィールアクセス／予約リンクのタップ数／保存数／LINE友だち追加数'},
+  sales:{kgi:'SNS経由の売上・購入件数',kpi:'リンククリック率／購入率／保存数'},
+  fan:{kgi:'リピート率・客単価',kpi:'エンゲージメント率／コメント数／保存率／お客様による口コミ投稿数'},
+  hire:{kgi:'応募数・面接数',kpi:'プロフィールアクセス／採用ページへの遷移数／保存数'}
+};
+const PILLAR = {
+  edu:{name:'教育',sub:'役に立つ情報',cls:'p-edu'},
+  emp:{name:'共感',sub:'人柄・ストーリー',cls:'p-emp'},
+  trust:{name:'信頼',sub:'実績・お客様の声',cls:'p-trust'},
+  act:{name:'行動',sub:'お知らせ・販売',cls:'p-act'}
+};
+const PKEYS = ['edu','emp','trust','act'];
+const MIX = {aware:[40,30,20,10],visit:[30,20,25,25],sales:[25,20,30,25],fan:[25,45,20,10],hire:[25,40,25,10]};
+const BANK = {
+  food:{edu:['おうちで再現できる一品レシピ','コーヒー豆の選び方 3つのポイント','旬の食材のおいしい食べ方'],emp:['開店前の仕込み風景','店主が語る、この店を始めた理由','常連さんとのちょっといい話'],trust:['お客様の口コミ紹介','人気メニューランキングTOP3','食材の産地・生産者さん紹介'],act:['今月の限定メニュー','平日ランチの予約案内','LINE友だち限定クーポン']},
+  beauty:{edu:['自宅でできるヘアケアの基本','肌タイプ別スキンケアの選び方','似合う髪型の見つけ方'],emp:['スタッフの1日','施術で大切にしていること','お客様が「変わった」瞬間'],trust:['ビフォーアフター','お客様の声','スタッフの資格・受賞歴'],act:['今週の空き枠のお知らせ','新メニュー・キャンペーン','初回限定オファー']},
+  ec:{edu:['商品の上手な使い方','失敗しない選び方ガイド','お手入れ・長持ちのコツ'],emp:['商品ができるまでの裏側','作り手のこだわり','開発で失敗した話'],trust:['レビュー紹介','販売数・リピート率の実績','メディア掲載・受賞'],act:['新商品の発売告知','期間限定セール','セット購入の提案']},
+  b2b:{edu:['業界の最新トレンド解説','よくある課題と解決策','導入前チェックリスト'],emp:['社員インタビュー','創業の背景','プロジェクトの舞台裏'],trust:['導入事例','数字で見る実績','お客様インタビュー'],act:['無料相談・資料請求の案内','セミナー告知','新サービスのリリース']},
+  creator:{edu:['得意分野のノウハウ','おすすめツール・本の紹介','初心者がつまずくポイント'],emp:['挑戦中のことの途中経過','失敗談と学んだこと','活動を始めたきっかけ'],trust:['実績・制作物の紹介','いただいた感想','成果のビフォーアフター'],act:['商品・サービスの案内','募集開始のお知らせ','限定コンテンツの告知']}
+};
+const HIRE_ACT = ['募集要項のお知らせ','会社説明会・見学会の案内','よくある質問への回答'];
+
+const SAMPLE = {
+  industry:'food', goal:'visit', ages:['20','30'], assets:['photo','video'], hours:'4',
+  persona:'駅近で働く、甘いもの好きの20〜30代女性',
+  freq:'3', calPlatform:'', start:'',
+  pPlatform:'', pTheme:'平日限定の「いちごパフェ」', pPain:'仕事帰りに甘いもので癒されたい',
+  pBenefit:'旬のいちごを使ったパフェを、平日19時まで予約なしで楽しめます',
+  pPoints:'朝摘みのいちごを1日20食分だけ仕入れ\n甘さ控えめの自家製ミルクアイス\n駅から徒歩3分、仕事帰りに寄れる',
+  pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ',
+  mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96'
+};
+const STORE = 'sns-navi-v1';
+
+/* ---------- state io ---------- */
+const TEXT_IDS = ['industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
+function readState(){
+  const s = {};
+  TEXT_IDS.forEach(id => s[id] = $(id).value);
+  s.ages = [...document.querySelectorAll('#ages input:checked')].map(i => i.value);
+  s.assets = [...document.querySelectorAll('#assets input:checked')].map(i => i.value);
+  return s;
+}
+function writeState(s){
+  TEXT_IDS.forEach(id => { if (s[id] !== undefined && s[id] !== '') $(id).value = s[id]; });
+  document.querySelectorAll('#ages input').forEach(i => i.checked = (s.ages||[]).includes(i.value));
+  document.querySelectorAll('#assets input').forEach(i => i.checked = (s.assets||[]).includes(i.value));
+}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(readState())); }catch(e){} }
+function load(){ try{ const v = localStorage.getItem(STORE); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+
+/* ---------- step 1 ---------- */
+function score(s){
+  const ages = s.ages.length ? s.ages : ['20','30','40'];
+  const hours = +s.hours;
+  return KEYS.map((k,i) => {
+    const g = GOAL[s.goal][i], ind = IND[s.industry][i];
+    const age = ages.reduce((a,x) => a + AGE[x][i], 0) / ages.length;
+    let asset = 0; s.assets.forEach(a => asset += ASSET[a][i]);
+    asset = Math.min(asset, 4);
+    let time = 0;
+    if (hours < 3 && k === 'yt') time = -4;
+    if (hours < 3 && k === 'tt') time = -2;
+    if (hours >= 6 && (k === 'yt' || k === 'tt')) time = 1;
+    const raw = g*3 + ind*2 + age*2 + asset + time;
+    const pct = Math.max(0, Math.min(100, Math.round(raw / 25 * 100)));
+    const why = [];
+    if (g >= 3) why.push('「' + LABEL.goal[s.goal] + '」の目的に強い');
+    if (ind >= 3) why.push(LABEL.industry[s.industry] + 'と相性が良い');
+    if (age >= 2.5) why.push('ターゲット年代の利用者が多い');
+    const used = s.assets.filter(a => ASSET[a][i] >= 2).map(a => LABEL.asset[a]);
+    if (used.length) why.push('手持ちの素材（' + used.join('・') + '）を活かせる');
+    if (time < 0) why.push('いまの作業時間だと負担が大きめ');
+    if (!why.length) why.push('補助的に使うなら候補');
+    return {k, pct, why};
+  }).sort((a,b) => b.pct - a.pct);
+}
+
+function renderStep1(s, ranked){
+  const [a,b] = ranked;
+  $('picks').innerHTML = [[a,'メイン'],[b,'サブ']].map(([r,role]) =>
+    `<div class="pick"><span class="role">${role}</span><h3>${esc(P[r.k].name)} <span class="num muted small">${r.pct}</span></h3>
+     <p class="small">${esc(P[r.k].strength)}</p>
+     <ul>${r.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+     <p class="meta">目安の頻度：${esc(P[r.k].cadence)}</p></div>`).join('');
+  $('rank').innerHTML = ranked.map((r,i) =>
+    `<div class="rk${i<2?' top':''}"><span class="pos">${i+1}</span><span class="nm">${esc(P[r.k].name)}</span>
+     <div class="bar"><i style="width:${r.pct}%"></i></div><span class="sc">${r.pct}</span></div>`).join('');
+
+  const kpi = KPI[s.goal];
+  const persona = s.persona.trim() || '（左の欄に入力してください）';
+  $('sheet').innerHTML =
+    `<dt>誰に</dt><dd>${esc(persona)}</dd>
+     <dt>目的</dt><dd>${esc(LABEL.goal[s.goal])}</dd>
+     <dt>ゴール（KGI）</dt><dd>${esc(kpi.kgi)}</dd>
+     <dt>毎月見る数字（KPI）</dt><dd>${esc(kpi.kpi)}</dd>
+     <dt>使うSNS</dt><dd>メイン：${esc(P[a.k].name)}／サブ：${esc(P[b.k].name)}</dd>
+     <dt>最初の3か月</dt><dd>メインのSNSに絞って、決めた頻度を守ることを最優先に。サブは余裕が出てから、メインの投稿を作り直して流用します。</dd>`;
+
+  const mix = MIX[s.goal];
+  $('mix').innerHTML = PKEYS.map((p,i) => `<i style="width:${mix[i]}%;background:var(--${p})"></i>`).join('');
+  $('pillars').innerHTML = PKEYS.map((p,i) => {
+    const ideas = topicsFor(s, p);
+    return `<div class="pl"><div class="h"><span class="pill ${PILLAR[p].cls}">${PILLAR[p].name}｜${PILLAR[p].sub}</span><b class="num">${mix[i]}%</b></div>
+      <ul>${ideas.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
+  }).join('');
+}
+function topicsFor(s, p){
+  if (s.goal === 'hire' && p === 'act') return HIRE_ACT;
+  return BANK[s.industry][p];
+}
+
+/* ---------- step 2 ---------- */
+const DOW = ['日','月','火','水','木','金','土'];
+const DAYSETS = {1:[3],3:[1,3,5],5:[1,2,3,4,5],7:[0,1,2,3,4,5,6]};
+function nextMonday(){
+  const d = new Date(); d.setHours(0,0,0,0);
+  const add = ((8 - d.getDay()) % 7) || 7;
+  d.setDate(d.getDate() + add);
+  return d;
+}
+function isoDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function buildPlan(s){
+  const pk = s.calPlatform, pf = P[pk];
+  const start = s.start ? new Date(s.start + 'T00:00:00') : nextMonday();
+  const days = DAYSETS[s.freq];
+  const mix = MIX[s.goal];
+  const count = [0,0,0,0], used = [0,0,0,0];
+  const rows = [];
+  for (let off = 0; off < 28; off++){
+    const d = new Date(start); d.setDate(start.getDate() + off);
+    if (!days.includes(d.getDay())) continue;
+    // 配分に対して最も不足している柱を選ぶ
+    const n = rows.length + 1;
+    let best = 0, gap = -Infinity;
+    mix.forEach((m,i) => { const g = m/100*n - count[i]; if (g > gap){ gap = g; best = i; } });
+    count[best]++;
+    const p = PKEYS[best];
+    const ideas = topicsFor(s, p);
+    const topic = ideas[used[best]++ % ideas.length];
+    rows.push({d, week: Math.floor(off/7)+1, time: pf.times[rows.length % pf.times.length], p, format: pf.formats[p], topic});
+  }
+  return rows;
+}
+function renderStep2(s){
+  const rows = buildPlan(s);
+  const pf = P[s.calPlatform];
+  const f = +s.freq;
+  $('freqHint').textContent = pf.name + 'の目安：' + pf.cadence;
+  let warn = '';
+  if (s.calPlatform === 'line' && f > 1) warn = 'LINE公式アカウントは配信のたびに通知が届くため、週3回以上はブロックが増えやすくなります。週1回以下がおすすめです。';
+  else if (+s.hours < 3 && f >= 5) warn = '週1〜2時間で週' + f + '回はかなり大変です。続かないと逆効果なので、まず週3回から始めて、慣れたら増やしましょう。';
+  $('calWarn').innerHTML = warn ? `<p class="warnbox">${esc(warn)}</p>` : '';
+  let html = '';
+  for (let w = 1; w <= 4; w++){
+    const wr = rows.filter(r => r.week === w);
+    if (!wr.length) continue;
+    html += `<div class="week"><h3>${w}週目</h3><div class="tbl"><table class="cal"><thead><tr><th>日付</th><th>時間</th><th>柱</th><th>形式</th><th>ネタ</th></tr></thead><tbody>` +
+      wr.map(r => `<tr><td class="d num">${r.d.getMonth()+1}/${r.d.getDate()}（${DOW[r.d.getDay()]}）</td><td class="num">${r.time}</td><td><span class="pill ${PILLAR[r.p].cls}">${PILLAR[r.p].name}</span></td><td>${esc(r.format)}</td><td>${esc(r.topic)}</td></tr>`).join('') +
+      `</tbody></table></div></div>`;
+  }
+  $('cal').innerHTML = html;
+  $('copyCal').onclick = () => copy(
+    ['日付\t時間\t柱\t形式\tネタ'].concat(rows.map(r => `${isoDate(r.d)}(${DOW[r.d.getDay()]})\t${r.time}\t${PILLAR[r.p].name}\t${r.format}\t${r.topic}`)).join('\n'),
+    'カレンダーをコピーしました（表計算ソフトに貼り付けできます）');
+}
+
+/* ---------- step 3 ---------- */
+const CTA = {
+  save:'あとで見返せるように「保存」しておいてくださいね。',
+  comment:'あなたはどう思いますか？ コメントで教えてください。',
+  profile:'ほかの投稿はプロフィールから見られます。',
+  link:'詳しくはプロフィールのリンクからどうぞ。',
+  visit:'ご来店・ご予約をお待ちしています。'
+};
+function xLength(t){
+  let n = 0;
+  for (const ch of t){
+    const c = ch.codePointAt(0);
+    n += (c <= 0x10FF || (c >= 0x2000 && c <= 0x200D) || (c >= 0x2010 && c <= 0x201F) || (c >= 0x2032 && c <= 0x2037)) ? 1 : 2;
+  }
+  return n;
+}
+function renderStep3(s){
+  const pk = s.pPlatform, pf = P[pk];
+  const theme = s.pTheme.trim() || 'テーマ';
+  const pain = s.pPain.trim() || '悩み・願望';
+  const benefit = s.pBenefit.trim().replace(/[。.]$/, '') || '伝えたいこと';
+  const points = s.pPoints.split('\n').map(x => x.trim()).filter(Boolean);
+  const kw = s.pTags.split(/[\s,、　]+/).map(x => x.replace(/^#/, '')).filter(Boolean);
+  const [minT, maxT] = pf.tags;
+  const tags = kw.slice(0, maxT).map(x => '#' + x).join(' ');
+  $('tagHint').textContent = maxT === 0 ? pf.name + 'ではハッシュタグは使いません。'
+    : pf.name + 'のハッシュタグは' + (minT === maxT ? maxT : minT + '〜' + maxT) + '個が目安です。数より、内容に合った言葉を選ぶことが大切です。';
+
+  const short = pf.limit <= 500;
+  const bullets = points.length ? points.map(p => '・' + p).join('\n') : '・ポイント1\n・ポイント2';
+  const n = points.length || 3;
+  const hooks = [
+    {name:'問いかけ型', why:'読む人の気持ちを代弁して「自分のことだ」と思わせる', text:`「${pain}」\nそんな日、ありませんか？`},
+    {name:'数字型', why:'読む前に中身の量が分かり、最後まで読まれやすい', text:`${theme}、知ってほしいポイントは${n}つです。`},
+    {name:'結論先出し型', why:'最初に得を伝えるので、流し見でも内容が伝わる', text:`【${theme}】\n${benefit}。`}
+  ];
+  const drafts = hooks.map((h,i) => {
+    let body;
+    if (short){
+      const first = points[0] ? '\n' + points[0] + '。' : '';
+      body = i === 2 ? `${h.text}${first}\n\n${CTA[s.pCta]}` : `${h.text}\n\n${benefit}。${first}\n\n${CTA[s.pCta]}`;
+    } else {
+      body = i === 2 ? `${h.text}\n\n${bullets}\n\n${CTA[s.pCta]}` : `${h.text}\n\n${benefit}。\n\n${bullets}\n\n${CTA[s.pCta]}`;
+    }
+    if (tags) body += '\n\n' + tags;
+    const len = pf.xcount ? xLength(body) : [...body].length;
+    return {h, body, len};
+  });
+  $('drafts').innerHTML = drafts.map((d,i) =>
+    `<div class="draft"><div class="h"><h3>案${i+1}：${esc(d.h.name)}</h3>
+      <span class="count num${d.len > pf.limit ? ' over' : ''}">${d.len} / ${pf.limit}${pf.xcount ? '（全角は2で計算）' : '文字'}${d.len > pf.limit ? '　文字数オーバー' : ''}</span></div>
+      <p class="small muted">${esc(d.h.why)}</p>
+      <pre id="draft-${i}">${esc(d.body)}</pre>
+      <div><button class="btn sm" data-copy="${i}">この案をコピー</button></div></div>`).join('');
+  document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(drafts[+b.dataset.copy].body, '下書きをコピーしました', $('draft-' + b.dataset.copy)));
+}
+
+/* ---------- step 4 ---------- */
+const METRICS = [
+  {id:'er', name:'エンゲージメント率', def:'（いいね＋コメント＋保存＋シェア）÷ リーチ', lo:1, hi:3, unit:'%',
+   bad:{t:'反応してもらえる投稿を増やす', d:'1行目・1枚目で「誰のための投稿か」を明確にし、最後に質問を入れてコメントを促しましょう。'},
+   warn:{t:'反応の良かった投稿の型を増やす', d:'上位3投稿のテーマと形式を書き出し、同じ型で別のネタを作ってみましょう。'}},
+  {id:'save', name:'保存率', def:'保存 ÷ リーチ', lo:0.5, hi:1.5, unit:'%',
+   bad:{t:'「あとで見返したい」情報を入れる', d:'チェックリスト・手順・まとめなど、一度では覚えきれない情報をカルーセルで作ると保存されやすくなります。'},
+   warn:{t:'教育の柱の投稿を磨く', d:'役に立つ情報の投稿に「保存しておくと便利」と一言添えるだけでも保存は増えます。'}},
+  {id:'share', name:'シェア率', def:'シェア ÷ リーチ', lo:0.2, hi:0.8, unit:'%',
+   bad:{t:'誰かに教えたくなる投稿をつくる', d:'「あるある」や意外な豆知識は、友だちに送られやすく新規の人にも届きます。'},
+   warn:{t:'共感の柱を強める', d:'裏側やストーリーの投稿で、人柄が伝わる言葉を増やしてみましょう。'}},
+  {id:'ctr', name:'リンククリック率', def:'リンククリック ÷ インプレッション', lo:0.5, hi:1.5, unit:'%',
+   bad:{t:'クリックする理由をはっきり書く', d:'「詳しくはこちら」ではなく「空き状況はリンクから」のように、押した先で何が分かるかを書きましょう。'},
+   warn:{t:'行動の柱の投稿を見直す', d:'お知らせ投稿は、期限や数量など「今すぐ動く理由」を入れると反応が上がります。'}},
+  {id:'grow', name:'フォロワー増加率', def:'（月末 − 月初）÷ 月初', lo:1, hi:5, unit:'%',
+   bad:{t:'プロフィールを整える', d:'投稿を見た人がフォローするか決めるのはプロフィールです。「誰に何を発信しているか」を1行目に書きましょう。'},
+   warn:{t:'フォローする理由をつくる', d:'シリーズ投稿（例：毎週金曜は○○）にすると「続きを見たい」とフォローされやすくなります。'}},
+  {id:'reachf', name:'リーチ ÷ フォロワー', def:'フォロワー以外にも届いているか', lo:30, hi:100, unit:'%',
+   bad:{t:'フォロワー以外に届く形式を増やす', d:'リールやショート動画はフォロワー外にも表示されやすい形式です。週1本から始めてみましょう。'},
+   warn:{t:'おすすめに載る投稿を分析する', d:'リーチが多かった投稿の最初の1秒・1枚目を比べ、共通点を次の投稿に活かしましょう。'}}
+];
+function renderStep4(s){
+  const n = k => Math.max(0, +s[k] || 0);
+  const reach = n('mReach'), imp = n('mImp'), f0 = n('mF0'), f1 = n('mF1');
+  const eng = n('mLike') + n('mCom') + n('mSave') + n('mShare');
+  const pct = (a,b) => b > 0 ? a / b * 100 : null;
+  const val = {
+    er: pct(eng, reach), save: pct(n('mSave'), reach), share: pct(n('mShare'), reach),
+    ctr: pct(n('mClick'), imp), grow: f0 > 0 ? (f1 - f0) / f0 * 100 : null, reachf: pct(reach, f1)
+  };
+  const tally = {good:0, warn:0, bad:0};
+  const results = METRICS.map(m => {
+    const v = val[m.id];
+    const st = v === null ? null : v < m.lo ? 'bad' : v < m.hi ? 'warn' : 'good';
+    if (st) tally[st]++;
+    return {m, v, st};
+  });
+  $('summary').innerHTML =
+    `<div class="s good"><span class="small">良好</span><b>${tally.good}</b></div>
+     <div class="s warn"><span class="small">標準</span><b>${tally.warn}</b></div>
+     <div class="s bad"><span class="small">要改善</span><b>${tally.bad}</b></div>`;
+  const LBL = {good:'良好', warn:'標準', bad:'要改善'};
+  $('metrics').innerHTML = results.map(({m,v,st}) => {
+    const max = m.hi * 2;
+    const w1 = m.lo / max * 100, w2 = (m.hi - m.lo) / max * 100, w3 = 100 - w1 - w2;
+    const pos = v === null ? null : Math.min(Math.max(v, 0), max) / max * 100;
+    const fmt = v === null ? '—' : (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(v < 10 ? 2 : 1)) + m.unit;
+    return `<div class="mt"><div class="nm"><b>${m.name}</b><span>${m.def}</span></div>
+      <div class="v">${fmt}</div>
+      <div class="gauge" title="要改善 〜${m.lo}${m.unit} ／ 標準 〜${m.hi}${m.unit} ／ 良好 ${m.hi}${m.unit}〜"><i style="width:${w1}%"></i><i style="width:${w2}%"></i><i style="width:${w3}%"></i>${pos === null ? '' : `<span class="mk" style="left:${pos}%"></span>`}</div>
+      <div class="st ${st || ''}">${st ? LBL[st] : '入力待ち'}</div></div>`;
+  }).join('');
+  const order = {bad:0, warn:1};
+  const todo = results.filter(r => r.st === 'bad' || r.st === 'warn')
+    .sort((a,b) => order[a.st] - order[b.st] || (a.v / a.m.hi) - (b.v / b.m.hi))
+    .slice(0, 3).map(r => r.m[r.st]);
+  if (!todo.length) todo.push({t:'今のやり方を続ける', d:'すべて良好です。うまくいった投稿の型を記録して、再現できる状態にしておきましょう。次は目的のKGI（来店・売上など）とのつながりを確認します。'});
+  $('todo').innerHTML = todo.map(t => `<li><b>${esc(t.t)}</b><span class="small muted">${esc(t.d)}</span></li>`).join('');
+}
+
+/* ---------- ui ---------- */
+function copy(text, msg, fallbackEl){
+  const done = () => toast(msg);
+  const fail = () => {
+    if (fallbackEl){ const r = document.createRange(); r.selectNodeContents(fallbackEl); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+    toast('コピーできませんでした。選択された文字をコピーしてください');
+  };
+  try { navigator.clipboard.writeText(text).then(done, fail); } catch(e){ fail(); }
+}
+let tt;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
+
+let initPref = {};
+function fillPlatformSelects(ranked, s){
+  const opts = ranked.map(r => `<option value="${r.k}">${esc(P[r.k].name)}</option>`).join('');
+  ['calPlatform','pPlatform'].forEach(id => {
+    const el = $(id), cur = s[id] || initPref[id];
+    el.innerHTML = opts;
+    el.value = cur && P[cur] ? cur : ranked[0].k;
+  });
+}
+
+let lastTop = null;
+function render(){
+  let s = readState();
+  const ranked = score(s);
+  // メインSNSが変わったら、計画・投稿の選択もそれに合わせる
+  if (lastTop && lastTop !== ranked[0].k){ s.calPlatform = ranked[0].k; s.pPlatform = ranked[0].k; }
+  lastTop = ranked[0].k;
+  fillPlatformSelects(ranked, s);
+  initPref = {};
+  s = readState();
+  renderStep1(s, ranked);
+  renderStep2(s);
+  renderStep3(s);
+  renderStep4(s);
+  save();
+}
+
+function show(step){
+  document.querySelectorAll('[role=tabpanel]').forEach(p => p.hidden = p.id !== step);
+  document.querySelectorAll('.rail button').forEach(b => b.setAttribute('aria-selected', b.dataset.step === step));
+  try { history.replaceState(null, '', '#' + step); } catch(e){}
+}
+document.querySelectorAll('.rail button').forEach(b => b.onclick = () => show(b.dataset.step));
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { show(b.dataset.go); window.scrollTo({top:0, behavior:'smooth'}); });
+document.addEventListener('input', render);
+document.addEventListener('change', render);
+$('reset').onclick = () => { writeState(SAMPLE); $('start').value = isoDate(nextMonday()); lastTop = null; render(); toast('例の内容に戻しました'); };
+
+const saved = load();
+writeState(saved || SAMPLE);
+if (saved) initPref = {calPlatform: saved.calPlatform, pPlatform: saved.pPlatform};
+if (!$('start').value) $('start').value = isoDate(nextMonday());
+render();
+const h = (location.hash || '').slice(1);
+if (/^step[1-4]$/.test(h)) show(h);
+})();
+</script>
+</body>
+</html>
