@@ -136,6 +136,28 @@ textarea{resize:vertical;min-height:64px}
 .legal mark{background:var(--bad-soft);color:var(--bad);font-weight:700;border-radius:4px;padding:0 4px}
 .warnbox{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px}
 
+/* mode */
+.modebar{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);align-self:flex-start;max-width:100%}
+.seg label{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:700}
+.seg label+label{border-left:1px solid var(--line)}
+.seg input{accent-color:var(--accent);margin:0}
+.seg label:has(input:checked){background:var(--accent-soft);color:var(--ink)}
+.flow{font-size:13px;color:var(--muted);max-width:60em}
+.flow b{color:var(--ink)}
+.cand input,.cand select{width:auto;padding:4px 6px;font-size:13px}
+.cand input[type=text]{width:10em}
+.cand input[type=number]{width:5em}
+.picked{border:1px solid var(--good);background:var(--good-soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.focus{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.dl{display:block;font-size:11px;font-weight:500}
+.dl.up{color:var(--good)}
+.dl.down{color:var(--bad)}
+.rec{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.rec .field{flex:0 0 auto}
+.rec .grow{flex:1 1 200px}
+.lever{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;background:var(--surface-2)}
+
 /* research */
 .kwchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .kwchips button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 12px;cursor:pointer}
@@ -183,7 +205,7 @@ textarea{resize:vertical;min-height:64px}
 .mt:last-child{border-bottom:0}
 .mt .nm b{display:block;font-size:14px}
 .mt .nm span{font-size:12px;color:var(--muted)}
-.mt .v{font-family:var(--mono);font-size:18px;font-weight:700;text-align:right}
+.mt .v{font-family:var(--mono);font-size:18px;font-weight:700;text-align:right;line-height:1.3}
 .gauge{position:relative;height:8px;display:flex;border-radius:4px;overflow:visible}
 .gauge i{display:block;height:100%}
 .gauge i:nth-child(1){background:var(--bad-soft);border-radius:4px 0 0 4px}
@@ -196,6 +218,7 @@ textarea{resize:vertical;min-height:64px}
 .st.bad{background:var(--bad-soft);color:var(--bad)}
 .todo{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
 .todo li b{display:block}
+.todo li .btn{margin-top:6px}
 
 .next{display:flex;justify-content:flex-end;gap:8px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:13px;z-index:10}
@@ -233,54 +256,69 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
       <span class="tag">SNS MARKETING NAVIGATOR</span>
       <h1>SNS運用ナビ</h1>
     </div>
-    <p class="lead">SNS運用を「市場調査 → 戦略 → 投稿計画 → 投稿づくり → 分析・改善」の5ステップで回すためのツールです。入力はすべてこのブラウザ内だけで処理されます。最初はカフェの例が入っています。</p>
+    <p class="lead">SNS運用を「市場調査 → 戦略 → 投稿計画 → 投稿づくり → 振り返り」の5ステップで、くり返し回すためのツールです。入力はすべてこのブラウザ内だけで処理されます。最初は例が入っています。</p>
   </header>
 
+  <div class="modebar">
+    <div class="seg" role="radiogroup" aria-label="使い方">
+      <label><input type="radio" name="mode" id="mode-own" value="own">自社の商品・お店を広める</label>
+      <label><input type="radio" name="mode" id="mode-af" value="af">アフィリエイトで紹介する</label>
+    </div>
+    <p class="flow" id="flowNote"></p>
+  </div>
+
   <ol class="rail" role="tablist" aria-label="ステップ">
-    <li><button role="tab" id="tab-research" data-step="research" aria-selected="true"><span class="n">1</span><span class="t"><b>市場調査</b><span>今のトレンドをつかむ</span></span></button></li>
-    <li><button role="tab" id="tab-step1" data-step="step1" aria-selected="false"><span class="n">2</span><span class="t"><b>戦略</b><span>誰に・何を・どこで</span></span></button></li>
+    <li><button role="tab" id="tab-research" data-step="research" aria-selected="true"><span class="n">1</span><span class="t"><b>市場調査</b><span data-af="悩みを見つける">今のトレンドをつかむ</span></span></button></li>
+    <li><button role="tab" id="tab-step1" data-step="step1" aria-selected="false"><span class="n">2</span><span class="t"><b>戦略</b><span data-af="商品選び・届け方">誰に・何を・どこで</span></span></button></li>
     <li><button role="tab" id="tab-step2" data-step="step2" aria-selected="false"><span class="n">3</span><span class="t"><b>投稿計画</b><span>4週間のカレンダー</span></span></button></li>
     <li><button role="tab" id="tab-step3" data-step="step3" aria-selected="false"><span class="n">4</span><span class="t"><b>投稿づくり</b><span>型に沿って下書き</span></span></button></li>
-    <li><button role="tab" id="tab-step4" data-step="step4" aria-selected="false"><span class="n">5</span><span class="t"><b>分析・改善</b><span>数字から次の一手</span></span></button></li>
+    <li><button role="tab" id="tab-step4" data-step="step4" aria-selected="false"><span class="n">5</span><span class="t"><b>振り返り</b><span>結果を見て直す</span></span></button></li>
   </ol>
 
   <!-- RESEARCH -->
   <section class="panel" id="research" role="tabpanel" aria-labelledby="tab-research">
     <form class="form" onsubmit="return false">
-      <div class="hd"><h2>調べるテーマ</h2><p class="hint">キーワードを入れると、各SNSのトレンド・検索画面へのリンクができます。</p></div>
+      <div class="hd"><h2 data-af="悩みを探す">調べるテーマ</h2><p class="hint" data-af="悩みが集まる言葉を入れると、質問サイト・SNS・検索の画面へのリンクができます。">キーワードを入れると、各SNSのトレンド・検索画面へのリンクができます。</p></div>
       <div class="field">
         <label for="rKw">キーワード（スペース区切り、5つまで）</label>
         <input type="text" id="rKw">
-        <span class="hint">商品名・ジャンル・お客様が悩みを話すときの言葉など。</span>
+        <span class="hint" data-af="「転職 不安」「肌荒れ 30代」のように、悩んでいる人が検索しそうな言葉。">商品名・ジャンル・お客様が悩みを話すときの言葉など。</span>
       </div>
       <div class="field">
-        <label for="rTrends">見つけたトレンド（1行に1つ）</label>
+        <label for="rTrends" data-af="見つけた悩み（1行に1つ）">見つけたトレンド（1行に1つ）</label>
         <textarea id="rTrends" rows="6"></textarea>
-        <span class="hint">リンク先で気になった話題・ハッシュタグ・音源名を書き留めてください。右側で「乗るか・見送るか」を判定します。</span>
+        <span class="hint" data-af="悩んでいる人が使っている言葉を、そのまま書き留めてください。右側で「どの悩みを狙うか」を判定します。">リンク先で気になった話題・ハッシュタグ・音源名を書き留めてください。右側で「乗るか・見送るか」を判定します。</span>
       </div>
-      <p class="example">最初に入っているのはカフェの例です。トレンドの評価も例として付けています。</p>
+      <p class="example" data-af="最初に入っているのは転職ジャンルの例です。悩みの評価も例として付けています。">最初に入っているのはカフェの例です。トレンドの評価も例として付けています。</p>
     </form>
     <div class="out">
       <div class="sec">
-        <div class="sec-h"><h2>トレンドを調べる</h2><span class="small muted">リンクは新しいタブで開きます</span></div>
+        <div class="sec-h"><h2 data-af="悩みを探す場所">トレンドを調べる</h2><span class="small muted">リンクは新しいタブで開きます</span></div>
         <div class="kwchips" id="kwchips"></div>
         <div class="srcs" id="sources"></div>
       </div>
       <div class="sec">
-        <div class="sec-h"><h2>乗るか・見送るか</h2><span class="small muted">関連度を2倍で計算</span></div>
+        <div class="sec-h"><h2 data-af="どの悩みを狙うか">乗るか・見送るか</h2><span class="small muted">関連度を2倍で計算</span></div>
         <div class="card"><div class="tbl" id="judge"></div></div>
       </div>
       <div class="sec" id="aiBox" hidden>
         <h2>Claudeに切り口を相談</h2>
         <div class="card legal">
-          <p class="small muted">「乗る」「様子見」のトレンドと、戦略ステップの業種・目的・ターゲットをもとに、投稿の切り口を提案します。Claudeはここからネットを見に行けないため、トレンドの中身は上で調べた内容を使います。</p>
+          <p class="small muted" data-af="「狙う」「様子見」の悩みと、戦略ステップのジャンル・ターゲットをもとに、投稿の切り口とASPで探すとよい商品の種類を提案します。Claudeはここからネットを見に行けないため、悩みの中身は上で調べた内容を使います。">「乗る」「様子見」のトレンドと、戦略ステップの業種・目的・ターゲットをもとに、投稿の切り口を提案します。Claudeはここからネットを見に行けないため、トレンドの中身は上で調べた内容を使います。</p>
           <div><button type="button" class="btn" id="aiBtn">切り口を提案してもらう</button></div>
           <div id="aiOut"></div>
         </div>
       </div>
       <div class="sec">
         <h2>週1回・15分の調査ルーティン</h2>
-        <div class="card"><ol class="todo">
+        <div class="card"><ol class="todo" data-mode="af">
+          <li><b>悩みの生の声を集める</b><span class="small muted">Yahoo!知恵袋やSNSの検索で「〇〇 不安」「〇〇 どうすれば」を調べ、使われている言葉をそのままメモする。</span></li>
+          <li><b>悩んでいる人の多さを確かめる</b><span class="small muted">Googleトレンドで検索数の推移を見る。回答や反応が多い質問も、悩んでいる人が多いサイン。</span></li>
+          <li><b>レビューで「足りない点」を知る</b><span class="small muted">通販サイトで星2〜3のレビューを読む。紹介するときに正直に伝えるべき点が分かる。</span></li>
+          <li><b>合う商品をASPで探す</b><span class="small muted">A8.netなどで悩みの言葉から案件を探し、報酬・承認率・提携条件（SNSに載せてよいか）を確認する。</span></li>
+          <li><b>1つに決めて投稿する</b><span class="small muted">「狙う」になった悩みを1つ選び、戦略ステップで商品を1つに絞って投稿する。</span></li>
+        </ol>
+        <ol class="todo" data-mode="own">
           <li><b>今の話題をつかむ</b><span class="small muted">Xのトレンドと Yahoo!リアルタイム検索で、今週よく話されている言葉を見る。</span></li>
           <li><b>伸びているか確かめる</b><span class="small muted">Googleトレンドで検索数が上がっているか、毎年同じ時期に来る季節ネタかを確認する。</span></li>
           <li><b>動画の流行を見る</b><span class="small muted">TikTok Creative Center で伸びているハッシュタグと音源を見る。ビジネスアカウントは商用利用できる音源しか使えないので注意。</span></li>
@@ -289,33 +327,26 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         </ol>
         <p class="small muted" style="margin-top:12px">災害・事件・訃報など、困っている人がいる話題には便乗しないでください。炎上の原因になります。</p></div>
       </div>
-      <div class="next"><button class="btn" data-go="step1">戦略へ進む</button></div>
+      <div class="next"><button class="btn" data-go="step1" data-af="商品選びへ進む">戦略へ進む</button></div>
     </div>
   </section>
 
   <!-- STEP 1 -->
   <section class="panel" id="step1" role="tabpanel" aria-labelledby="tab-step1" hidden>
     <form class="form" id="f1" onsubmit="return false">
-      <div class="hd"><h2>あなたのビジネス</h2><p class="hint">選ぶたびに右側の結果が更新されます。</p></div>
+      <div class="hd"><h2 data-af="あなたの発信">あなたのビジネス</h2><p class="hint">選ぶたびに右側の結果が更新されます。</p></div>
       <div class="field">
-        <label for="industry">業種</label>
-        <select id="industry">
-          <option value="food">飲食・カフェ・店舗</option>
-          <option value="beauty">美容・サロン</option>
-          <option value="ec">EC・物販</option>
-          <option value="b2b">BtoB・法人向けサービス</option>
-          <option value="creator">個人・クリエイター・講師</option>
-        </select>
+        <label for="industry" data-af="発信ジャンル">業種</label>
+        <select id="industry"></select>
+      </div>
+      <div class="field" data-mode="af">
+        <label for="afPain">狙う悩み</label>
+        <input type="text" id="afPain" placeholder="例：30代未経験で転職できるか不安">
+        <span class="hint">市場調査で「狙う」になった悩みを1つ。商品はこの悩みに合わせて後から選びます。</span>
       </div>
       <div class="field">
         <label for="goal">いちばんの目的</label>
-        <select id="goal">
-          <option value="aware">知ってもらう（認知拡大）</option>
-          <option value="visit">来てもらう・問い合わせてもらう（集客）</option>
-          <option value="sales">買ってもらう（販売）</option>
-          <option value="fan">また来てもらう（ファン化・リピート）</option>
-          <option value="hire">働きたい人を集める（採用）</option>
-        </select>
+        <select id="goal"></select>
       </div>
       <div class="field">
         <span class="lbl">ターゲットの年代（複数可）</span>
@@ -352,6 +383,55 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
     </form>
 
     <div class="out">
+      <div class="sec" data-mode="af" id="candSec">
+        <div class="sec-h"><h2>商品を選ぶ</h2><span class="small muted">悩みに合う案件をASPから3つまで比べる</span></div>
+        <div class="card legal">
+          <div class="tbl"><table class="judge cand">
+            <thead><tr><th>商品・案件名</th><th>悩みとの一致</th><th>報酬（円）</th><th>承認率（%）</th><th>EPC（円・任意）</th><th>自分で使った</th><th>SNS掲載</th></tr></thead>
+            <tbody>
+            <tr>
+              <td><input type="text" id="c0name" aria-label="候補1の商品名" placeholder="候補1"></td>
+              <td><select id="c0fit" aria-label="候補1の悩みとの一致"><option value="3">高</option><option value="2">中</option><option value="1">低</option></select></td>
+              <td><input type="number" min="0" id="c0rew" aria-label="候補1の報酬"></td>
+              <td><input type="number" min="0" max="100" id="c0appr" aria-label="候補1の承認率"></td>
+              <td><input type="number" min="0" id="c0epc" aria-label="候補1のEPC"></td>
+              <td><select id="c0used" aria-label="候補1を自分で使ったか"><option value="yes">はい</option><option value="no">いいえ</option></select></td>
+              <td><select id="c0sns" aria-label="候補1のSNS掲載可否"><option value="ok">OK</option><option value="check">要確認</option><option value="ng">NG</option></select></td>
+            </tr>
+            <tr>
+              <td><input type="text" id="c1name" aria-label="候補2の商品名" placeholder="候補2"></td>
+              <td><select id="c1fit" aria-label="候補2の悩みとの一致"><option value="3">高</option><option value="2">中</option><option value="1">低</option></select></td>
+              <td><input type="number" min="0" id="c1rew" aria-label="候補2の報酬"></td>
+              <td><input type="number" min="0" max="100" id="c1appr" aria-label="候補2の承認率"></td>
+              <td><input type="number" min="0" id="c1epc" aria-label="候補2のEPC"></td>
+              <td><select id="c1used" aria-label="候補2を自分で使ったか"><option value="yes">はい</option><option value="no">いいえ</option></select></td>
+              <td><select id="c1sns" aria-label="候補2のSNS掲載可否"><option value="ok">OK</option><option value="check">要確認</option><option value="ng">NG</option></select></td>
+            </tr>
+            <tr>
+              <td><input type="text" id="c2name" aria-label="候補3の商品名" placeholder="候補3"></td>
+              <td><select id="c2fit" aria-label="候補3の悩みとの一致"><option value="3">高</option><option value="2">中</option><option value="1">低</option></select></td>
+              <td><input type="number" min="0" id="c2rew" aria-label="候補3の報酬"></td>
+              <td><input type="number" min="0" max="100" id="c2appr" aria-label="候補3の承認率"></td>
+              <td><input type="number" min="0" id="c2epc" aria-label="候補3のEPC"></td>
+              <td><select id="c2used" aria-label="候補3を自分で使ったか"><option value="yes">はい</option><option value="no">いいえ</option></select></td>
+              <td><select id="c2sns" aria-label="候補3のSNS掲載可否"><option value="ok">OK</option><option value="check">要確認</option><option value="ng">NG</option></select></td>
+            </tr>
+            </tbody>
+          </table></div>
+          <div id="pickOut"></div>
+        </div>
+        <div class="card legal">
+          <b>ASPで提携する前のチェック</b>
+          <ul>
+            <li>プログラムの提携条件で、使うSNSに載せてよいか（媒体ごとに可否が違うことがある）</li>
+            <li>SNSアカウントを「媒体（サイト）」としてASPに登録したか</li>
+            <li>広告主が決めている表現のルール・NGワードを確認したか</li>
+            <li>自分で申し込んで報酬を得る「自己アフィリエイト」は、許可された案件以外でしない</li>
+            <li>投稿には【PR】などの広告表示を入れる（アフィリエイトもステマ規制の対象）</li>
+          </ul>
+          <p class="small muted">商品の中身・価格・販売ページは変えられません。動かせるのは「誰に」「どう伝えるか」「どの商品を選ぶか」の3つです。</p>
+        </div>
+      </div>
       <div class="sec">
         <div class="sec-h"><h2>おすすめのSNS</h2><span class="small muted">相性スコア（100点満点の目安）</span></div>
         <div class="picks" id="picks"></div>
@@ -447,6 +527,7 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <label for="pAd">この投稿の立場（広告表示）</label>
         <select id="pAd">
           <option value="none">自社アカウントで自社の商品を紹介する</option>
+          <option value="af">アフィリエイトで商品を紹介する</option>
           <option value="paid">企業から依頼・報酬を受けて投稿する</option>
           <option value="gift">企業から商品を無償で提供されて投稿する</option>
           <option value="staff">自社の商品を、社員が個人アカウントで紹介する</option>
@@ -454,7 +535,7 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <span class="hint" id="adHint"></span>
       </div>
       <div class="field" id="sponsorField">
-        <label for="pSponsor">依頼元・提供元の企業名</label>
+        <label for="pSponsor" id="sponsorLbl">依頼元・提供元の企業名</label>
         <input type="text" id="pSponsor" placeholder="例：株式会社〇〇">
       </div>
     </form>
@@ -479,7 +560,7 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
           <label><input type="checkbox" id="c7">「No.1」「必ず」などの表現には根拠がある。他者の写真や音源を無断で使っていない</label>
         </div>
       </div>
-      <div class="next"><button class="btn ghost" data-go="step2">戻る</button><button class="btn" data-go="step4">分析・改善へ進む</button></div>
+      <div class="next"><button class="btn ghost" data-go="step2">戻る</button><button class="btn" data-go="step4">振り返りへ進む</button></div>
     </div>
   </section>
 
@@ -503,7 +584,14 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <div class="field"><label for="mSave">保存</label><input type="number" min="0" id="mSave"></div>
         <div class="field"><label for="mShare">シェア</label><input type="number" min="0" id="mShare"></div>
       </div>
-      <div class="field"><label for="mClick">リンククリック</label><input type="number" min="0" id="mClick"></div>
+      <div class="row2">
+        <div class="field"><label for="mClick">リンククリック</label><input type="number" min="0" id="mClick"></div>
+        <div class="field"><label for="mCv" data-af="成果（発生）件数">成果の件数（予約・購入）</label><input type="number" min="0" id="mCv"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mRev" data-af="報酬額（円）">売上（円・任意）</label><input type="number" min="0" id="mRev"></div>
+        <div class="field" data-mode="af"><label for="mAppr">承認件数</label><input type="number" min="0" id="mAppr"></div>
+      </div>
       <p class="example">インプレッション＝表示された回数、リーチ＝見た人の数（同じ人は1回）。X（旧Twitter）は「保存」を「ブックマーク」、シェアを「リポスト」で入れてください。</p>
     </form>
     <div class="out">
@@ -515,9 +603,23 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
       </div>
       <div class="sec">
         <h2>次にやること</h2>
+        <div id="focusNow"></div>
+        <div id="lever"></div>
         <div class="card"><ol class="todo" id="todo"></ol></div>
+        <p class="small muted">1か月に変えるのは1つだけにすると、何が効いたのかが分かります。「今月のテーマにする」を押すと、戦略シートにも表示されます。</p>
       </div>
-      <div class="next"><button class="btn ghost" data-go="step3">戻る</button><button class="btn" data-go="step1">戦略を見直す</button></div>
+      <div class="sec">
+        <div class="sec-h"><h2>月ごとの記録</h2><span class="small muted">先月の自分と比べる</span></div>
+        <div class="card legal">
+          <div class="rec">
+            <div class="field"><label for="recMonth">記録する月</label><input type="month" id="recMonth"></div>
+            <div class="field grow"><label for="recNote">この月に変えたこと</label><input type="text" id="recNote"></div>
+            <button type="button" class="btn" id="recBtn">この月の結果を記録</button>
+          </div>
+          <div class="tbl" id="hist"></div>
+        </div>
+      </div>
+      <div class="next"><button class="btn ghost" data-go="step3">戻る</button><button class="btn" data-go="research">次の1周へ（市場調査に戻る）</button></div>
     </div>
   </section>
 
@@ -545,10 +647,26 @@ const P = {
 //                ig x tt yt line th li
 const AGE = {10:[3,3,3,3,1,1,0],20:[3,3,3,2,2,2,1],30:[3,2,1,2,3,2,2],40:[2,2,1,2,3,1,2],50:[1,1,0,3,3,0,1]};
 const GOAL = {aware:[2,3,3,2,0,2,1],visit:[3,1,2,1,3,1,0],sales:[3,2,2,2,3,1,1],fan:[2,2,1,3,3,2,1],hire:[2,2,2,1,0,1,3]};
-const IND = {food:[3,1,2,1,3,1,0],beauty:[3,1,2,1,3,1,0],ec:[3,2,3,2,2,1,0],b2b:[0,2,0,2,0,1,3],creator:[2,3,2,3,1,3,1]};
+const IND = {food:[3,1,2,1,3,1,0],beauty:[3,1,2,1,3,1,0],ec:[3,2,3,2,2,1,0],b2b:[0,2,0,2,0,1,3],creator:[2,3,2,3,1,3,1],
+  af_beauty:[3,2,3,2,1,2,0],af_health:[3,2,3,3,1,1,0],af_career:[1,3,1,3,1,2,3],af_money:[0,3,1,3,1,2,1],af_life:[2,3,2,3,0,1,0],af_study:[1,3,1,3,1,2,2]};
+const OPTS = {
+  own:{industry:[['food','飲食・カフェ・店舗'],['beauty','美容・サロン'],['ec','EC・物販'],['b2b','BtoB・法人向けサービス'],['creator','個人・クリエイター・講師']],
+       goal:[['aware','知ってもらう（認知拡大）'],['visit','来てもらう・問い合わせてもらう（集客）'],['sales','買ってもらう（販売）'],['fan','また来てもらう（ファン化・リピート）'],['hire','働きたい人を集める（採用）']]},
+  af:{industry:[['af_career','転職・副業'],['af_beauty','美容・コスメ'],['af_health','健康・ダイエット'],['af_money','お金・投資'],['af_life','暮らし・ガジェット'],['af_study','学習・資格']],
+      goal:[['sales','紹介した商品で成果を出す'],['aware','まずフォロワーを増やす'],['fan','信頼して読み続けてもらう']]}
+};
+const LINKPOS = {ig:'投稿文のリンクは押せないため、プロフィールのリンクかストーリーズのリンクスタンプに置く', x:'本文にそのまま貼れる', tt:'プロフィールのリンクに置く（表示には条件あり）', yt:'概要欄か固定コメントに置く', line:'メッセージに直接貼れる', th:'本文に貼れる', li:'本文に貼れる'};
+const GENRE_NOTE = {
+  af_career:'「必ず転職できる」「年収が上がる」など、結果を言い切る表現は避ける。',
+  af_beauty:'化粧品は薬機法で言える効果の範囲が決まっている。「シミが消える」「治る」などは使わない。',
+  af_health:'健康食品は病気の予防・治療をうたえない（薬機法・健康増進法）。「痩せる」の断定も避ける。',
+  af_money:'「必ず儲かる」「元本保証」は禁止。特定の銘柄を「買うべき」と勧めるような、投資の助言にあたる言い方も避ける。',
+  af_life:'スペックや価格は公式情報と日付を確認してから書く。',
+  af_study:'合格率などの数字は、公式に公開されている出典を添える。'
+};
 const ASSET = {photo:[2,0,0,0,1,0,0],video:[1,0,3,3,0,0,0],text:[0,2,0,0,0,2,2]};
 const LABEL = {
-  industry:{food:'飲食・店舗',beauty:'美容・サロン',ec:'EC・物販',b2b:'BtoB',creator:'個人・クリエイター'},
+  industry:{food:'飲食・店舗',beauty:'美容・サロン',ec:'EC・物販',b2b:'BtoB',creator:'個人・クリエイター',af_career:'転職・副業',af_beauty:'美容・コスメ',af_health:'健康・ダイエット',af_money:'お金・投資',af_life:'暮らし・ガジェット',af_study:'学習・資格'},
   goal:{aware:'認知拡大',visit:'集客',sales:'販売',fan:'ファン化',hire:'採用'},
   asset:{photo:'写真',video:'動画',text:'文章'}
 };
@@ -559,6 +677,11 @@ const KPI = {
   fan:{kgi:'リピート率・客単価',kpi:'エンゲージメント率／コメント数／保存率／お客様による口コミ投稿数'},
   hire:{kgi:'応募数・面接数',kpi:'プロフィールアクセス／採用ページへの遷移数／保存数'}
 };
+const KPI_AF = {
+  sales:{kgi:'確定報酬額',kpi:'リンククリック数／成果（発生）件数／承認率／1クリックあたりの報酬'},
+  aware:{kgi:'フォロワー数（将来の見込み客）',kpi:'インプレッション／リーチ／フォロワー増加数／保存数'},
+  fan:{kgi:'くり返し読んでくれる人の数',kpi:'保存率／コメント数／プロフィールアクセス'}
+};
 const PILLAR = {
   edu:{name:'教育',sub:'役に立つ情報',cls:'p-edu'},
   emp:{name:'共感',sub:'人柄・ストーリー',cls:'p-emp'},
@@ -567,16 +690,33 @@ const PILLAR = {
 };
 const PKEYS = ['edu','emp','trust','act'];
 const MIX = {aware:[40,30,20,10],visit:[30,20,25,25],sales:[25,20,30,25],fan:[25,45,20,10],hire:[25,40,25,10]};
+const MIX_AF = {aware:[45,30,20,5],sales:[35,20,30,15],fan:[30,40,20,10]};
+const mixFor = s => (s.mode === 'af' ? MIX_AF : MIX)[s.goal];
+const PILLAR_SUB = {own:{trust:'実績・お客様の声',act:'お知らせ・販売'}, af:{trust:'比較・正直なレビュー',act:'商品の紹介'}};
 const BANK = {
   food:{edu:['おうちで再現できる一品レシピ','コーヒー豆の選び方 3つのポイント','旬の食材のおいしい食べ方'],emp:['開店前の仕込み風景','店主が語る、この店を始めた理由','常連さんとのちょっといい話'],trust:['お客様の口コミ紹介','人気メニューランキングTOP3','食材の産地・生産者さん紹介'],act:['今月の限定メニュー','平日ランチの予約案内','LINE友だち限定クーポン']},
   beauty:{edu:['自宅でできるヘアケアの基本','肌タイプ別スキンケアの選び方','似合う髪型の見つけ方'],emp:['スタッフの1日','施術で大切にしていること','お客様が「変わった」瞬間'],trust:['ビフォーアフター','お客様の声','スタッフの資格・受賞歴'],act:['今週の空き枠のお知らせ','新メニュー・キャンペーン','初回限定オファー']},
   ec:{edu:['商品の上手な使い方','失敗しない選び方ガイド','お手入れ・長持ちのコツ'],emp:['商品ができるまでの裏側','作り手のこだわり','開発で失敗した話'],trust:['レビュー紹介','販売数・リピート率の実績','メディア掲載・受賞'],act:['新商品の発売告知','期間限定セール','セット購入の提案']},
   b2b:{edu:['業界の最新トレンド解説','よくある課題と解決策','導入前チェックリスト'],emp:['社員インタビュー','創業の背景','プロジェクトの舞台裏'],trust:['導入事例','数字で見る実績','お客様インタビュー'],act:['無料相談・資料請求の案内','セミナー告知','新サービスのリリース']},
-  creator:{edu:['得意分野のノウハウ','おすすめツール・本の紹介','初心者がつまずくポイント'],emp:['挑戦中のことの途中経過','失敗談と学んだこと','活動を始めたきっかけ'],trust:['実績・制作物の紹介','いただいた感想','成果のビフォーアフター'],act:['商品・サービスの案内','募集開始のお知らせ','限定コンテンツの告知']}
+  creator:{edu:['得意分野のノウハウ','おすすめツール・本の紹介','初心者がつまずくポイント'],emp:['挑戦中のことの途中経過','失敗談と学んだこと','活動を始めたきっかけ'],trust:['実績・制作物の紹介','いただいた感想','成果のビフォーアフター'],act:['商品・サービスの案内','募集開始のお知らせ','限定コンテンツの告知']},
+  af_career:{edu:['転職活動の進め方','職務経歴書を「数字」で書くコツ','副業を始める前の注意点'],emp:['自分の転職体験','働き方を変えたきっかけ','うまくいかなかった面接の話'],trust:['転職サービスの比較表','実際に使ってみた感想（良い点・気になる点）','向いている人・向いていない人'],act:['狙う悩みに合うサービスの紹介','無料相談・登録の流れ','キャンペーンのお知らせ']},
+  af_beauty:{edu:['肌悩み別の選び方','成分表示の見方','やりがちなNGケア'],emp:['自分の肌悩みの経緯','失敗したコスメの話','続けてみた記録（個人の感想として）'],trust:['使ったレビュー（良い点・気になる点）','価格と容量の比較','口コミの傾向まとめ'],act:['悩みに合う商品の紹介','初回価格・キャンペーンのお知らせ','合わない人の条件']},
+  af_health:{edu:['続けやすい習慣づくり','食事のよくある勘違い','睡眠を整える基本'],emp:['自分が続かなかった理由','1か月試した記録','挫折した話'],trust:['サービス・商品の比較','使ってみた正直な感想','料金プランの整理'],act:['お試し・キャンペーンの案内','目的別のおすすめ','向いていない人の条件']},
+  af_money:{edu:['お金の基本用語','家計の見直し方','制度の仕組みをやさしく'],emp:['自分の家計改善の記録','お金で失敗した話','始めたきっかけ'],trust:['口座・サービスの比較','手数料の比較表','使ってみた感想'],act:['キャンペーンのお知らせ','目的別の選び方','リスクと注意点の整理']},
+  af_life:{edu:['用途別の選び方','買う前のチェックポイント','長持ちさせる使い方'],emp:['買って生活が変わった話','買って後悔したもの','愛用品の紹介'],trust:['実際に使ったレビュー','スペック・価格の比較','1か月使った正直な感想'],act:['セール情報','目的別のおすすめ','向いていない人の条件']},
+  af_study:{edu:['勉強の進め方','資格の難しさと選び方','独学でつまずく所'],emp:['自分の合格・挫折体験','勉強を始めたきっかけ','続けるための工夫'],trust:['講座・教材の比較','受講した感想','公開データの整理'],act:['無料体験・キャンペーンの案内','目的別のおすすめ','向いていない人の条件']}
 };
 const HIRE_ACT = ['募集要項のお知らせ','会社説明会・見学会の案内','よくある質問への回答'];
 
+const SAMPLE_HIST = [
+  {mode:'own', month:'2026-07', v:{er:1.9,save:0.31,share:0.09,ctr:0.38,grow:4.1,reachf:980,cvr:11.2}, rev:14000, note:'カルーセル投稿を週2本に増やした'},
+  {mode:'af', month:'2026-07', v:{er:2.2,save:0.36,share:0.21,ctr:0.55,grow:5.3,reachf:2560,cvr:0.6}, rev:6000, note:'転職サイトBから転職エージェントAに商品を変えた'}
+];
 const SAMPLE = {
+  mode:'own', recMonth:'', recNote:'リールを週1本追加した', mCv:'14', mRev:'19600', mAppr:'',
+  afPain:'', c0name:'', c0fit:'3', c0rew:'', c0appr:'', c0epc:'', c0used:'yes', c0sns:'ok',
+  c1name:'', c1fit:'2', c1rew:'', c1appr:'', c1epc:'', c1used:'no', c1sns:'ok',
+  c2name:'', c2fit:'2', c2rew:'', c2appr:'', c2epc:'', c2used:'no', c2sns:'check',
   industry:'food', goal:'visit', ages:['20','30'], assets:['photo','video'], hours:'4',
   persona:'駅近で働く、甘いもの好きの20〜30代女性',
   freq:'3', calPlatform:'', start:'',
@@ -588,21 +728,45 @@ const SAMPLE = {
   pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ', pAd:'none', pSponsor:'',
   mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96'
 };
+const SAMPLE_AF = Object.assign({}, SAMPLE, {
+  mode:'af', industry:'af_career', goal:'sales', ages:['20','30'], assets:['text'], hours:'4',
+  persona:'今の職場に不満がある、30代前半の会社員', afPain:'30代未経験で転職できるか不安',
+  c0name:'転職エージェントA（例）', c0fit:'3', c0rew:'8000', c0appr:'40', c0epc:'', c0used:'yes', c0sns:'ok',
+  c1name:'転職サイトB（例）', c1fit:'2', c1rew:'1500', c1appr:'80', c1epc:'', c1used:'no', c1sns:'ok',
+  c2name:'オンライン講座C（例）', c2fit:'2', c2rew:'5000', c2appr:'60', c2epc:'', c2used:'no', c2sns:'check',
+  rKw:'転職 30代 未経験', rTrends:'30代未経験で転職できるか不安\n職務経歴書の書き方が分からない\n転職エージェントの違いが分からない\n会社を辞めたいけど貯金がない\n退職代行を使うか迷う',
+  rRates:{'30代未経験で転職できるか不安':{rel:3,mom:3,ease:3,risk:0},'職務経歴書の書き方が分からない':{rel:3,mom:2,ease:2,risk:0},'転職エージェントの違いが分からない':{rel:3,mom:2,ease:3,risk:0},'会社を辞めたいけど貯金がない':{rel:2,mom:2,ease:1,risk:0},'退職代行を使うか迷う':{rel:1,mom:2,ease:2,risk:0}},
+  pTheme:'30代未経験の転職', pPain:'30代・未経験から転職できるか不安',
+  pBenefit:'30代未経験でも、準備の順番を決めれば転職活動は進めやすくなります',
+  pPoints:'最初に求人の傾向を見て、求められる経験を知る\n職務経歴書は「数字」で書く\n転職エージェントは2〜3社を比べる',
+  pCta:'link', pTags:'転職 30代転職 未経験転職', pAd:'af', pSponsor:'転職エージェントA（例）',
+  mF0:'850', mF1:'910', mImp:'42000', mReach:'26000', mLike:'640', mCom:'35', mSave:'120', mShare:'80', mClick:'310', mCv:'4', mAppr:'2', mRev:'16000',
+  recNote:'エージェントAの比較投稿を週2本に増やした'
+});
+const SAMPLES = {own:SAMPLE, af:SAMPLE_AF};
 const STORE = 'sns-navi-v1';
 
 /* ---------- state io ---------- */
-let RATES = {};
-const TEXT_IDS = ['rKw','rTrends','industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
+let RATES = {}, HIST = [], FOCUS = {own:null, af:null}, MODE = 'own';
+const TEXT_IDS = ['afPain','c0name','c0fit','c0rew','c0appr','c0epc','c0used','c0sns','c1name','c1fit','c1rew','c1appr','c1epc','c1used','c1sns','c2name','c2fit','c2rew','c2appr','c2epc','c2used','c2sns','mCv','mRev','mAppr','recMonth','recNote','rKw','rTrends','industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
 function readState(){
   const s = {};
   TEXT_IDS.forEach(id => s[id] = $(id).value);
   s.ages = [...document.querySelectorAll('#ages input:checked')].map(i => i.value);
   s.assets = [...document.querySelectorAll('#assets input:checked')].map(i => i.value);
   s.rRates = RATES;
+  s.hist = HIST;
+  s.focus = FOCUS;
+  s.mode = MODE;
   return s;
 }
 function writeState(s){
-  TEXT_IDS.forEach(id => { if (s[id] !== undefined && s[id] !== '') $(id).value = s[id]; });
+  setMode(s.mode || 'own');
+  TEXT_IDS.forEach(id => { if (s[id] !== undefined) $(id).value = s[id]; });
+  ['industry','goal'].forEach(id => { if (!$(id).value) $(id).selectedIndex = 0; });
+  if (!$('recMonth').value) $('recMonth').value = lastMonth();
+  HIST = JSON.parse(JSON.stringify(s.hist || SAMPLE_HIST));
+  FOCUS = Object.assign({own:null, af:null}, s.focus || {});
   document.querySelectorAll('#ages input').forEach(i => i.checked = (s.ages||[]).includes(i.value));
   document.querySelectorAll('#assets input').forEach(i => i.checked = (s.assets||[]).includes(i.value));
   RATES = JSON.parse(JSON.stringify(s.rRates || {}));
@@ -610,9 +774,53 @@ function writeState(s){
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(readState())); }catch(e){} }
 function load(){ try{ const v = localStorage.getItem(STORE); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
 
+/* ---------- mode ---------- */
+function lastMonth(){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function fillOptions(id, list){
+  const el = $(id), cur = el.value;
+  el.innerHTML = list.map(([v,l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+  if (list.some(([v]) => v === cur)) el.value = cur;
+}
+function setMode(m){
+  MODE = m === 'af' ? 'af' : 'own';
+  $('mode-' + MODE).checked = true;
+  fillOptions('industry', OPTS[MODE].industry);
+  fillOptions('goal', OPTS[MODE].goal);
+  document.querySelectorAll('[data-mode]').forEach(el => el.hidden = el.dataset.mode !== MODE);
+  document.querySelectorAll('[data-af]').forEach(el => {
+    if (el.dataset.own === undefined) el.dataset.own = el.textContent;
+    el.textContent = MODE === 'af' ? el.dataset.af : el.dataset.own;
+  });
+  Object.assign(PILLAR.trust, {sub:PILLAR_SUB[MODE].trust});
+  Object.assign(PILLAR.act, {sub:PILLAR_SUB[MODE].act});
+  $('flowNote').innerHTML = MODE === 'af'
+    ? '<b>アフィリエイトの流れ：</b>悩みを持つ人を先に見つける → ASPから合う商品を選ぶ → 投稿 → 振り返り → 「誰に」「どう伝えるか」「どの商品か」のどれか1つを入れ替える。商品の中身・価格・販売ページは変えられないので、このツールもその3つだけを扱います。はじめは商品1つで1周し、使わない機能は飛ばしてかまいません。'
+    : '<b>自社商品の流れ：</b>商品がある → 買いそうな人と場所を決める → 投稿 → 振り返り → 戦略を直す。はじめは1つの商品（またはお店）で1周し、使わない機能は飛ばしてかまいません。';
+}
+// 例のままの項目だけを、切り替え先の例に入れ替える（自分で入力した内容は残す）
+function switchMode(next){
+  const cur = readState(), from = SAMPLES[cur.mode], to = SAMPLES[next];
+  const ns = Object.assign({}, cur, {mode:next});
+  Object.keys(to).forEach(k => {
+    if (k === 'mode') return;
+    if (JSON.stringify(cur[k]) === JSON.stringify(from[k]) || cur[k] === undefined) ns[k] = to[k];
+  });
+  if (JSON.stringify(cur.rRates) === JSON.stringify(from.rRates)) ns.rRates = to.rRates;
+  writeState(ns);
+  lastTop = null;
+  render();
+}
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', e => { e.stopPropagation(); switchMode(r.value); }));
+
 /* ---------- research ---------- */
 const enc = encodeURIComponent;
 const SOURCES = [
+  {name:'Yahoo!知恵袋', mode:'af', look:'悩みの質問と、その言葉づかいをそのまま拾える。回答や「共感した」が多い質問は、悩んでいる人が多いサイン。',
+   links:(k,all) => [['質問を検索',`https://chiebukuro.yahoo.co.jp/search?p=${enc(k)}`]]},
+  {name:'通販サイトのレビュー', mode:'af', look:'星2〜3のレビューに「期待と違った点」が書かれている。紹介するときに正直に伝えるべき点になる。',
+   links:(k,all) => [['Amazonで検索',`https://www.amazon.co.jp/s?k=${enc(k)}`],['楽天市場で検索',`https://search.rakuten.co.jp/search/mall/${enc(k)}/`]]},
+  {name:'A8.net', mode:'af', look:'悩みの言葉でプログラムを探し、報酬・承認率・EPC・提携条件を確認する（ログインが必要）。',
+   links:(k,all) => [['A8.netを開く','https://www.a8.net/']]},
   {name:'X（旧Twitter）', look:'「話題」で反応の多い投稿を、「最新」で今の生の声を見る。どんな言葉で話されているかをメモ。',
    links:(k,all) => [['トレンド一覧','https://x.com/explore/tabs/trending'],['話題の投稿',`https://x.com/search?q=${enc(k)}&f=top`],['最新の投稿',`https://x.com/search?q=${enc(k)}&f=live`],['いいね100以上',`https://x.com/search?q=${enc(k + ' min_faves:100 lang:ja')}&f=top`]]},
   {name:'Yahoo!リアルタイム検索', look:'X上での投稿数の推移がグラフで見られる。急に増えた日と、そのきっかけを探す。',
@@ -633,10 +841,11 @@ const LV = {3:'高',2:'中',1:'低'};
 function trendList(s){ return [...new Set(s.rTrends.split('\n').map(x => x.trim()).filter(Boolean))].slice(0, 20); }
 function verdict(r){
   if (r.risk) return {cls:'bad', t:'見送る', why:'炎上・権利のリスク'};
-  if (r.rel === 1) return {cls:'bad', t:'見送る', why:'自社と関係が薄い'};
+  const af = MODE === 'af';
+  if (r.rel === 1) return {cls:'bad', t:'見送る', why: af ? '発信テーマと関係が薄い' : '自社と関係が薄い'};
   const sc = r.rel*2 + r.mom + r.ease;
-  if (sc >= 10) return {cls:'good', t:'乗る', why:'今週の投稿にする'};
-  if (sc >= 7) return {cls:'warn', t:'様子見', why:'切り口を考えてから'};
+  if (sc >= 10) return {cls:'good', t: af ? '狙う' : '乗る', why: af ? '合う商品を選ぶ' : '今週の投稿にする'};
+  if (sc >= 7) return {cls:'warn', t:'様子見', why: af ? '悩みの深さを確かめる' : '切り口を考えてから'};
   return {cls:'bad', t:'見送る', why:'効果が小さい'};
 }
 function renderResearch(s){
@@ -647,27 +856,39 @@ function renderResearch(s){
     ? '<span class="small muted">検索に使う言葉：</span>' + kws.map((w,i) => `<button type="button" data-kw="${i}" aria-pressed="${i === activeKw}">${esc(w)}</button>`).join('')
     : '<span class="small muted">左にキーワードを入れると、検索リンクができます。</span>';
   document.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { activeKw = +b.dataset.kw; renderResearch(readState()); });
-  $('sources').innerHTML = SOURCES.map(src => {
+  $('sources').innerHTML = SOURCES.filter(src => !src.mode || src.mode === s.mode).map(src => {
     const links = src.links(k, kws).filter(([, u]) => k || !/[?&](q|p|search_query)=(&|$)/.test(u));
     return `<div class="src"><h3>${esc(src.name)}</h3><p>${esc(src.look)}</p>
       <div class="links">${links.map(([t,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`).join('')}</div></div>`;
   }).join('');
 
   const trends = trendList(s);
-  if (!trends.length){ $('judge').innerHTML = '<p class="small muted">左の「見つけたトレンド」に書き出すと、ここで評価できます。</p>'; return; }
-  const sel = (w, key, val) => `<select data-w="${esc(w)}" data-k="${key}" aria-label="${esc(w)}の${{rel:'関連度',mom:'勢い',ease:'作りやすさ'}[key]}">${[3,2,1].map(v => `<option value="${v}"${v === val ? ' selected' : ''}>${LV[v]}</option>`).join('')}</select>`;
-  $('judge').innerHTML = `<table class="judge"><thead><tr><th>トレンド</th><th>自社との関連</th><th>勢い</th><th>作りやすさ</th><th>炎上・権利リスク</th><th>判定</th><th></th></tr></thead><tbody>` +
+  const af = s.mode === 'af';
+  const H = af ? {w:'悩み', rel:'発信テーマとの関連', mom:'悩んでいる人の多さ', ease:'合う商品がありそう', use:'この悩みで商品を選ぶ'}
+               : {w:'トレンド', rel:'自社との関連', mom:'勢い', ease:'作りやすさ', use:'投稿にする'};
+  if (!trends.length){ $('judge').innerHTML = `<p class="small muted">左の「見つけた${H.w}」に書き出すと、ここで評価できます。</p>`; return; }
+  const sel = (w, key, val) => `<select data-w="${esc(w)}" data-k="${key}" aria-label="${esc(w)}の${H[key]}">${[3,2,1].map(v => `<option value="${v}"${v === val ? ' selected' : ''}>${LV[v]}</option>`).join('')}</select>`;
+  $('judge').innerHTML = `<table class="judge"><thead><tr><th>${H.w}</th><th>${H.rel}</th><th>${H.mom}</th><th>${H.ease}</th><th>炎上・権利リスク</th><th>判定</th><th></th></tr></thead><tbody>` +
     trends.map(w => {
       const r = RATES[w] || (RATES[w] = {rel:2, mom:2, ease:2, risk:0});
       const v = verdict(r);
       return `<tr><td class="w">${esc(w)}</td><td>${sel(w,'rel',r.rel)}</td><td>${sel(w,'mom',r.mom)}</td><td>${sel(w,'ease',r.ease)}</td>
         <td><select data-w="${esc(w)}" data-k="risk" aria-label="${esc(w)}のリスク"><option value="0"${r.risk ? '' : ' selected'}>なし</option><option value="1"${r.risk ? ' selected' : ''}>あり</option></select></td>
         <td><span class="vd ${v.cls}">${v.t}</span><br><span class="small muted">${v.why}</span></td>
-        <td>${v.cls === 'bad' ? '' : `<button type="button" class="btn sm ghost" data-use="${esc(w)}">投稿にする</button>`}</td></tr>`;
+        <td>${v.cls === 'bad' ? '' : `<button type="button" class="btn sm ghost" data-use="${esc(w)}">${H.use}</button>`}</td></tr>`;
     }).join('') + '</tbody></table>';
   document.querySelectorAll('[data-use]').forEach(b => b.onclick = () => useTrend(b.dataset.use));
 }
 function useTrend(w){
+  if (MODE === 'af'){
+    $('afPain').value = w;
+    $('pPain').value = w;
+    render();
+    show('step1');
+    $('candSec').scrollIntoView({behavior:'smooth', block:'start'});
+    toast('「' + w + '」を狙う悩みに入れました。合う商品を選びましょう');
+    return;
+  }
   $('pTheme').value = w;
   render();
   show('step3');
@@ -689,9 +910,21 @@ $('aiBtn').onclick = async () => {
   const s = readState();
   const picks = trendList(s).filter(w => verdict(RATES[w] || {rel:2,mom:2,ease:2,risk:0}).cls !== 'bad');
   const out = $('aiOut');
-  if (!picks.length){ out.innerHTML = '<p class="small muted">「乗る」か「様子見」のトレンドがありません。表で評価を付けてから押してください。</p>'; return; }
+  const af = s.mode === 'af';
+  if (!picks.length){ out.innerHTML = `<p class="small muted">「${af ? '狙う' : '乗る'}」か「様子見」の${af ? '悩み' : 'トレンド'}がありません。表で評価を付けてから押してください。</p>`; return; }
   const main = score(s)[0].k;
-  const prompt = [
+  const prompt = (af ? [
+    'あなたはアフィリエイトでSNS運用をする個人を支援するマーケティング担当者です。',
+    '次の発信者が、下の悩みを持つ人に向けて投稿するときの切り口と、ASPで探すとよい商品の種類を考えてください。商品の中身や価格は変えられない前提です。',
+    `発信ジャンル：${LABEL.industry[s.industry]}`,
+    `ターゲット：${s.persona || '未入力'}`,
+    `メインのSNS：${P[main].name}`,
+    '悩み（この一覧にない話題を付け足さないこと）：',
+    ...picks.map(w => '- ' + w),
+    '',
+    'ルール：事実や効果を断定しない。「No.1」「必ず」など根拠のいる表現を使わない。特定の企業名・商品名を挙げない。',
+    '次のJSONだけを返してください：{"ideas":[{"trend":"悩み","angle":"切り口を1文で","hook":"投稿の1行目の例","format":"おすすめの形式","product":"ASPで探すとよい商品の種類","caution":"注意点（なければ空文字）"}]}'
+  ] : [
     'あなたは日本の中小事業者を支援するSNSマーケティング担当者です。',
     '次の事業者が、下のトレンドに乗って投稿するときの切り口を考えてください。',
     `業種：${LABEL.industry[s.industry]}`,
@@ -703,7 +936,7 @@ $('aiBtn').onclick = async () => {
     '',
     'ルール：事実を断定しない。「No.1」「必ず」など根拠のいる表現を使わない。災害・事件・訃報に関わる便乗は「見送り推奨」とする。',
     '次のJSONだけを返してください：{"ideas":[{"trend":"トレンド名","angle":"切り口を1文で","hook":"投稿の1行目の例","format":"おすすめの形式","caution":"注意点（なければ空文字）"}]}'
-  ].join('\n');
+  ]).join('\n');
   $('aiBtn').disabled = true;
   out.innerHTML = '<p class="small muted">考えています…（数十秒かかることがあります）</p>';
   try {
@@ -712,8 +945,9 @@ $('aiBtn').onclick = async () => {
     out.innerHTML = ideas.length ? '<div class="ideas">' + ideas.map((d,i) =>
       `<div class="idea"><div class="h"><b>${esc(d.trend || '')}</b><span class="small muted">${esc(d.format || '')}</span></div>
        <p>${esc(d.angle || '')}</p><p class="small">1行目の例：「${esc(d.hook || '')}」</p>
+       ${d.product ? `<p class="small">探す商品：${esc(d.product)}</p>` : ''}
        ${d.caution ? `<p class="small" style="color:var(--warn)">注意：${esc(d.caution)}</p>` : ''}
-       <div><button type="button" class="btn sm ghost" data-idea="${i}">投稿にする</button></div></div>`).join('') + '</div>'
+       <div><button type="button" class="btn sm ghost" data-idea="${i}">${af ? 'この悩みで商品を選ぶ' : '投稿にする'}</button></div></div>`).join('') + '</div>'
       : '<p class="small muted">提案を受け取れませんでした。もう一度押してください。</p>';
     out.querySelectorAll('[data-idea]').forEach(b => b.onclick = () => {
       const d = ideas[+b.dataset.idea];
@@ -762,28 +996,65 @@ function renderStep1(s, ranked){
     `<div class="pick"><span class="role">${role}</span><h3>${esc(P[r.k].name)} <span class="num muted small">${r.pct}</span></h3>
      <p class="small">${esc(P[r.k].strength)}</p>
      <ul>${r.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
-     <p class="meta">目安の頻度：${esc(P[r.k].cadence)}</p></div>`).join('');
+     <p class="meta">目安の頻度：${esc(P[r.k].cadence)}${s.mode === 'af' ? '<br>リンクの置き場所：' + esc(LINKPOS[r.k]) : ''}</p></div>`).join('');
   $('rank').innerHTML = ranked.map((r,i) =>
     `<div class="rk${i<2?' top':''}"><span class="pos">${i+1}</span><span class="nm">${esc(P[r.k].name)}</span>
      <div class="bar"><i style="width:${r.pct}%"></i></div><span class="sc">${r.pct}</span></div>`).join('');
 
-  const kpi = KPI[s.goal];
+  const af = s.mode === 'af';
+  const kpi = (af ? KPI_AF : KPI)[s.goal];
   const persona = s.persona.trim() || '（左の欄に入力してください）';
+  const focus = FOCUS[s.mode];
+  const top = af ? renderPicks(s) : null;
   $('sheet').innerHTML =
-    `<dt>誰に</dt><dd>${esc(persona)}</dd>
-     <dt>目的</dt><dd>${esc(LABEL.goal[s.goal])}</dd>
+    (focus ? `<dt>今月の改善テーマ</dt><dd><b>${esc(focus.t)}</b>（${esc(focus.month)}の振り返りから）</dd>` : '') +
+    `<dt>誰に</dt><dd>${esc(persona)}</dd>` +
+    (af ? `<dt>狙う悩み</dt><dd>${esc(s.afPain.trim() || '（市場調査で1つ選んでください）')}</dd>
+           <dt>紹介する商品</dt><dd>${top ? esc(top.name) : '（上の表で候補を入れてください）'}</dd>` : '') +
+    `<dt>目的</dt><dd>${esc(LABEL.goal[s.goal])}</dd>
      <dt>ゴール（KGI）</dt><dd>${esc(kpi.kgi)}</dd>
      <dt>毎月見る数字（KPI）</dt><dd>${esc(kpi.kpi)}</dd>
-     <dt>使うSNS</dt><dd>メイン：${esc(P[a.k].name)}／サブ：${esc(P[b.k].name)}</dd>
-     <dt>最初の3か月</dt><dd>メインのSNSに絞って、決めた頻度を守ることを最優先に。サブは余裕が出てから、メインの投稿を作り直して流用します。</dd>`;
+     <dt>使うSNS</dt><dd>メイン：${esc(P[a.k].name)}／サブ：${esc(P[b.k].name)}</dd>` +
+    (af ? `<dt>動かせるもの</dt><dd>「誰に」「どう伝えるか」「どの商品を選ぶか」の3つ。商品の中身・価格・販売ページは変えられない。</dd>
+           <dt>最初の3か月</dt><dd>商品1つ・SNS1つで1周する。振り返りで、クリックが少なければ「誰に・どう伝えるか」を、クリックはあるのに成果が出なければ「どの商品か」を入れ替える。1か月に変えるのは1つだけ。</dd>
+           <dt>ジャンルの注意</dt><dd>${esc(GENRE_NOTE[s.industry] || '')}</dd>`
+        : `<dt>最初の3か月</dt><dd>メインのSNSに絞って、決めた頻度を守ることを最優先に。サブは余裕が出てから、メインの投稿を作り直して流用します。振り返りで変えるのは、1か月に1つだけ。</dd>`);
 
-  const mix = MIX[s.goal];
+  const mix = mixFor(s);
   $('mix').innerHTML = PKEYS.map((p,i) => `<i style="width:${mix[i]}%;background:var(--${p})"></i>`).join('');
   $('pillars').innerHTML = PKEYS.map((p,i) => {
     const ideas = topicsFor(s, p);
     return `<div class="pl"><div class="h"><span class="pill ${PILLAR[p].cls}">${PILLAR[p].name}｜${PILLAR[p].sub}</span><b class="num">${mix[i]}%</b></div>
       <ul>${ideas.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
   }).join('');
+}
+function candidates(s){
+  return [0,1,2].map(i => ({
+    name: s['c'+i+'name'].trim(), fit: +s['c'+i+'fit'], rew: +s['c'+i+'rew'] || 0, appr: +s['c'+i+'appr'] || 0,
+    epc: s['c'+i+'epc'] === '' ? null : +s['c'+i+'epc'], used: s['c'+i+'used'] === 'yes', sns: s['c'+i+'sns']
+  })).filter(c => c.name).map(c => {
+    // 100クリックあたりの見込み：EPCがあればそれを使い、なければ成約率1%と仮定
+    c.per100 = c.epc !== null ? Math.round(c.epc * 100) : Math.round(c.rew * c.appr / 100);
+    c.assumed = c.epc === null;
+    c.v = c.sns === 'ng' ? {cls:'bad', t:'使えない', why:'SNSに載せられない'}
+        : c.fit === 1 ? {cls:'bad', t:'見送る', why:'悩みと合っていない'}
+        : c.sns === 'check' ? {cls:'warn', t:'条件を確認', why:'SNS掲載の可否を先に確認'}
+        : {cls:'good', t:'候補', why: c.used ? '自分で使った体験を書ける' : '使ってから紹介すると伝わりやすい'};
+    return c;
+  });
+}
+function renderPicks(s){
+  const cs = candidates(s);
+  const ok = cs.filter(c => c.v.cls === 'good')
+    .sort((x,y) => y.fit - x.fit || (y.used - x.used) || y.per100 - x.per100);
+  const top = ok[0] || null;
+  $('pickOut').innerHTML = !cs.length ? '<p class="small muted">ASPで見つけた案件を上の表に入れると、ここで比べられます。</p>' :
+    `<div class="tbl"><table class="judge"><thead><tr><th>商品</th><th>100クリックあたりの見込み</th><th>判定</th></tr></thead><tbody>` +
+    cs.map(c => `<tr><td class="w">${esc(c.name)}</td><td class="num">${c.per100.toLocaleString()}円${c.assumed ? '<span class="small muted">（成約率1%と仮定）</span>' : ''}</td>
+      <td><span class="vd ${c.v.cls}">${c.v.t}</span> <span class="small muted">${c.v.why}</span></td></tr>`).join('') + '</tbody></table></div>' +
+    (top ? `<p class="picked">まずは <b>${esc(top.name)}</b> で1周してみましょう。悩みとの一致を最優先に、自分で使ったか、見込みの順で選んでいます。報酬の高さだけで選ぶと、読む人の悩みとずれて成果が出にくくなります。</p>`
+         : '<p class="warnbox">そのまま紹介できる候補がまだありません。提携条件を確認するか、悩みに合う別の案件を探しましょう。</p>');
+  return top;
 }
 function topicsFor(s, p){
   if (s.goal === 'hire' && p === 'act') return HIRE_ACT;
@@ -804,7 +1075,7 @@ function buildPlan(s){
   const pk = s.calPlatform, pf = P[pk];
   const start = s.start ? new Date(s.start + 'T00:00:00') : nextMonday();
   const days = DAYSETS[s.freq];
-  const mix = MIX[s.goal];
+  const mix = mixFor(s);
   const count = [0,0,0,0], used = [0,0,0,0];
   const rows = [];
   for (let off = 0; off < 28; off++){
@@ -862,11 +1133,13 @@ function xLength(t){
   return n;
 }
 const AD = {
+  af:    sp => `この投稿にはアフィリエイト広告（${sp}）が含まれています。`,
   paid:  sp => `${sp}から依頼を受けて投稿しています。`,
   gift:  sp => `${sp}から商品の提供を受けて投稿しています。`,
   staff: sp => `私は${sp}の社員です。`
 };
 const AD_HINT = {
+  af:'アフィリエイトの投稿も、広告主の広告としてステマ規制（景品表示法）の対象です。冒頭に【PR】、最後にアフィリエイト広告であることを入れます。ASPや広告主が表記を指定している場合は、そちらに従ってください。',
   none:'会社やお店の公式アカウントの投稿は、広告であることが見て分かるので、「PR」の表示は原則いりません。',
   paid:'下書きの冒頭に【PR】、最後に依頼元を入れます。企業が関わっていることを隠した投稿は、依頼した企業がステルスマーケティング規制（景品表示法）違反になります。',
   gift:'無償で商品をもらって投稿する場合も、企業から「投稿してほしい」と頼まれていれば表示が必要です。冒頭に【PR】、最後に提供元を入れます。',
@@ -883,6 +1156,7 @@ const RISKY = [
   {re:/No\.?\s?1|NO\.?\s?1|ナンバーワン|日本一|世界一|業界初|業界最安|最安値|最安/gi, why:'「No.1」「最安」などは、客観的な調査の根拠と出典を一緒に書かないと、実際より良く見せる表示（優良誤認・有利誤認）になるおそれがあります。'},
   {re:/絶対|必ず|100\s?[%％]|１００[%％]|完全|確実に|誰でも|永久/g, why:'「必ず」「100%」のように結果を言い切る表現は、実際より著しく良く見せる表示と判断されるおそれがあります。'},
   {re:/通常価格|定価|今だけ|本日限り|半額|[0-9０-９]+\s?[%％]\s?OFF|[0-9０-９]+\s?割引/gi, why:'割引や期間限定の表示は、比べる元の価格で実際に販売していたこと、期限が本当であることが必要です（二重価格に注意）。'},
+  {re:/元本保証|必ず儲かる|絶対儲かる|確実に稼げる|誰でも稼げる|不労所得/g, why:'お金・副業の分野で利益を約束する表現は、景品表示法だけでなく金融商品取引法などの問題になるおそれがあります。'},
   {re:/治る|治す|治療|効く|シミが消え|若返|アンチエイジング|痩せる|やせる|デトックス/g, why:'効き目をうたう表現は、景品表示法に加えて薬機法や健康増進法の対象になることがあります（化粧品・健康食品・美容施術など）。'}
 ];
 function renderStep3(s){
@@ -894,8 +1168,9 @@ function renderStep3(s){
   const kw = s.pTags.split(/[\s,、　]+/).map(x => x.replace(/^#/, '')).filter(Boolean);
   const [minT, maxT] = pf.tags;
   const ad = s.pAd !== 'none';
-  const sponsor = s.pSponsor.trim() || '〇〇（企業名）';
+  const sponsor = s.pSponsor.trim() || (s.pAd === 'af' ? '〇〇（商品名・広告主）' : '〇〇（企業名）');
   $('sponsorField').hidden = !ad;
+  $('sponsorLbl').textContent = s.pAd === 'af' ? '紹介する商品・広告主' : '依頼元・提供元の企業名';
   $('adHint').textContent = AD_HINT[s.pAd];
   const tagList = kw.filter(x => x.toUpperCase() !== 'PR').slice(0, maxT).map(x => '#' + x);
   if (ad && maxT > 0) tagList.unshift('#PR');
@@ -937,7 +1212,7 @@ function renderStep3(s){
 function renderLegal(s, pf, ad, sponsor){
   let html = '';
   if (ad){
-    html += `<p><span class="ok">✓ 広告表示を入れました</span>　3案すべての冒頭に【PR】、最後に「${esc(AD[s.pAd](sponsor))}」を入れています。${esc(AD_TOOL[s.pPlatform] || '')}</p>
+    html += `<p><span class="ok">✓ 広告表示を入れました</span>　3案すべての冒頭に【PR】、最後に「${esc(AD[s.pAd](sponsor))}」を入れています。${esc(AD_TOOL[s.pPlatform] || '')}${s.pAd === 'af' ? 'リンクの置き場所：' + esc(LINKPOS[s.pPlatform]) + '。' : ''}</p>
       <p class="small muted">【PR】を最後だけに書かないでください。消費者庁の運用基準では、長い文章の最後だけに書く、たくさんのハッシュタグの中に埋もれさせる、動画で一瞬だけ表示する、といった書き方は「分かりにくい表示」の例として挙げられています。</p>`;
   } else {
     html += `<p class="small muted">自社の公式アカウントでの投稿として作っています。企業から依頼や商品提供を受けて投稿する場合は、左の「この投稿の立場」を変えると【PR】表示が入ります。</p>`;
@@ -969,45 +1244,117 @@ const METRICS = [
    warn:{t:'フォローする理由をつくる', d:'シリーズ投稿（例：毎週金曜は○○）にすると「続きを見たい」とフォローされやすくなります。'}},
   {id:'reachf', name:'リーチ ÷ フォロワー', def:'フォロワー以外にも届いているか', lo:30, hi:100, unit:'%',
    bad:{t:'フォロワー以外に届く形式を増やす', d:'リールやショート動画はフォロワー外にも表示されやすい形式です。週1本から始めてみましょう。'},
-   warn:{t:'おすすめに載る投稿を分析する', d:'リーチが多かった投稿の最初の1秒・1枚目を比べ、共通点を次の投稿に活かしましょう。'}}
+   warn:{t:'おすすめに載る投稿を分析する', d:'リーチが多かった投稿の最初の1秒・1枚目を比べ、共通点を次の投稿に活かしましょう。'}},
+  {id:'cvr', name:'成果率', def:'成果の件数 ÷ リンククリック', lo:1, hi:3, lo_af:0.5, hi_af:2, unit:'%',
+   bad:{t:'申し込みまでの手間を減らす', d:'リンク先で迷わないよう、予約・購入ページへ直接つなぎ、投稿とリンク先の内容をそろえましょう。'},
+   warn:{t:'投稿とリンク先のつながりを強める', d:'投稿で約束したこと（価格・特典など）が、リンク先の最初の画面で見えるようにしましょう。'},
+   bad_af:{t:'「どの商品か」を入れ替える', d:'クリックはあるのに成果が出ないのは、読む人の悩みと商品が合っていないサインです。戦略ステップで2番目の候補に替えてみましょう。'},
+   warn_af:{t:'紹介の仕方を具体的にする', d:'「こんな人に向いている／向いていない」をはっきり書くと、合う人だけがクリックして成果率が上がります。'}}
 ];
-function renderStep4(s){
+METRICS.find(m => m.id === 'ctr').bad_af = {t:'「誰に・どう伝えるか」を変える', d:'商品名より先に「この悩みがどう変わるか」を書き、リンクの置き場所（プロフィールなど）もはっきり伝えましょう。'};
+const MKEYS = ['er','save','share','ctr','grow','reachf','cvr'];
+function computeVals(s){
   const n = k => Math.max(0, +s[k] || 0);
   const reach = n('mReach'), imp = n('mImp'), f0 = n('mF0'), f1 = n('mF1');
   const eng = n('mLike') + n('mCom') + n('mSave') + n('mShare');
   const pct = (a,b) => b > 0 ? a / b * 100 : null;
-  const val = {
+  return {
     er: pct(eng, reach), save: pct(n('mSave'), reach), share: pct(n('mShare'), reach),
-    ctr: pct(n('mClick'), imp), grow: f0 > 0 ? (f1 - f0) / f0 * 100 : null, reachf: pct(reach, f1)
+    ctr: pct(n('mClick'), imp), grow: f0 > 0 ? (f1 - f0) / f0 * 100 : null, reachf: pct(reach, f1),
+    cvr: s.mCv === '' ? null : pct(n('mCv'), n('mClick'))
   };
+}
+const fmtV = (v, unit) => v === null || v === undefined ? '—' : (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(Math.abs(v) < 10 ? 2 : 1)) + unit;
+function prevRecord(s){
+  return HIST.filter(r => r.mode === s.mode && r.month < s.recMonth).sort((a,b) => b.month.localeCompare(a.month))[0] || null;
+}
+function renderStep4(s){
+  const af = s.mode === 'af';
+  const val = computeVals(s);
+  const prev = prevRecord(s);
   const tally = {good:0, warn:0, bad:0};
   const results = METRICS.map(m => {
+    const lo = (af && m.lo_af !== undefined) ? m.lo_af : m.lo, hi = (af && m.hi_af !== undefined) ? m.hi_af : m.hi;
     const v = val[m.id];
-    const st = v === null ? null : v < m.lo ? 'bad' : v < m.hi ? 'warn' : 'good';
+    const st = v === null ? null : v < lo ? 'bad' : v < hi ? 'warn' : 'good';
     if (st) tally[st]++;
-    return {m, v, st};
+    return {m: Object.assign({}, m, {lo, hi}), v, st, pv: prev ? prev.v[m.id] : null};
   });
   $('summary').innerHTML =
     `<div class="s good"><span class="small">良好</span><b>${tally.good}</b></div>
      <div class="s warn"><span class="small">標準</span><b>${tally.warn}</b></div>
      <div class="s bad"><span class="small">要改善</span><b>${tally.bad}</b></div>`;
   const LBL = {good:'良好', warn:'標準', bad:'要改善'};
-  $('metrics').innerHTML = results.map(({m,v,st}) => {
+  $('metrics').innerHTML = results.map(({m,v,st,pv}) => {
     const max = m.hi * 2;
     const w1 = m.lo / max * 100, w2 = (m.hi - m.lo) / max * 100, w3 = 100 - w1 - w2;
     const pos = v === null ? null : Math.min(Math.max(v, 0), max) / max * 100;
-    const fmt = v === null ? '—' : (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(v < 10 ? 2 : 1)) + m.unit;
+    const fmt = fmtV(v, m.unit);
+    let dl = '';
+    if (v !== null && pv !== null && pv !== undefined){
+      const d = v - pv;
+      dl = `<span class="dl ${d >= 0 ? 'up' : 'down'}">前回比 ${d >= 0 ? '+' : ''}${Math.abs(d) >= 100 ? Math.round(d) : d.toFixed(2)}pt</span>`;
+    }
     return `<div class="mt"><div class="nm"><b>${m.name}</b><span>${m.def}</span></div>
-      <div class="v">${fmt}</div>
+      <div class="v">${fmt}${dl}</div>
       <div class="gauge" title="要改善 〜${m.lo}${m.unit} ／ 標準 〜${m.hi}${m.unit} ／ 良好 ${m.hi}${m.unit}〜"><i style="width:${w1}%"></i><i style="width:${w2}%"></i><i style="width:${w3}%"></i>${pos === null ? '' : `<span class="mk" style="left:${pos}%"></span>`}</div>
       <div class="st ${st || ''}">${st ? LBL[st] : '入力待ち'}</div></div>`;
   }).join('');
   const order = {bad:0, warn:1};
   const todo = results.filter(r => r.st === 'bad' || r.st === 'warn')
     .sort((a,b) => order[a.st] - order[b.st] || (a.v / a.m.hi) - (b.v / b.m.hi))
-    .slice(0, 3).map(r => r.m[r.st]);
-  if (!todo.length) todo.push({t:'今のやり方を続ける', d:'すべて良好です。うまくいった投稿の型を記録して、再現できる状態にしておきましょう。次は目的のKGI（来店・売上など）とのつながりを確認します。'});
-  $('todo').innerHTML = todo.map(t => `<li><b>${esc(t.t)}</b><span class="small muted">${esc(t.d)}</span></li>`).join('');
+    .slice(0, 3).map(r => (af && r.m[r.st + '_af']) || r.m[r.st]);
+  if (!todo.length) todo.push({t:'今のやり方を続ける', d:'すべて良好です。うまくいった投稿の型を記録して、再現できる状態にしておきましょう。次は投稿の本数を少し増やしてみます。'});
+  $('todo').innerHTML = todo.map((t,i) => `<li><b>${esc(t.t)}</b><span class="small muted">${esc(t.d)}</span><br><button type="button" class="btn sm ghost" data-focus="${i}">今月のテーマにする</button></li>`).join('');
+  document.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => {
+    FOCUS[MODE] = Object.assign({month: s.recMonth || lastMonth()}, todo[+b.dataset.focus]);
+    render();
+    toast('今月のテーマにしました。戦略シートにも表示されます');
+  });
+  const f = FOCUS[s.mode];
+  $('focusNow').innerHTML = f ? `<div class="focus"><span>いま取り組んでいるテーマ：<b>${esc(f.t)}</b></span><button type="button" class="btn sm ghost" id="focusDone">完了にする</button></div>` : '';
+  if (f) $('focusDone').onclick = () => { FOCUS[MODE] = null; render(); toast('テーマを完了にしました'); };
+
+  // アフィリエイト：どのレバーを動かすか
+  if (af){
+    const ctrSt = results.find(r => r.m.id === 'ctr').st, cvrSt = results.find(r => r.m.id === 'cvr').st;
+    const epc = +s.mClick > 0 && s.mRev !== '' ? Math.round(+s.mRev / +s.mClick) : null;
+    const appr = +s.mCv > 0 && s.mAppr !== '' ? Math.round(+s.mAppr / +s.mCv * 100) : null;
+    let lever = '数字を入れると、動かすべきところが分かります。';
+    if (ctrSt && cvrSt){
+      if (ctrSt === 'bad' && cvrSt === 'bad') lever = 'クリックも成果も少なめです。まず「誰に」を見直します（狙う悩みを変える）。商品と伝え方は、その後に1つずつ。';
+      else if (ctrSt === 'bad') lever = 'クリックが少なめです。動かすのは「誰に・どう伝えるか」。商品はそのままで大丈夫です。';
+      else if (cvrSt === 'bad') lever = 'クリックはあるのに成果が少なめです。動かすのは「どの商品か」。悩みに合う別の候補に入れ替えてみましょう。';
+      else if (ctrSt === 'warn' || cvrSt === 'warn') lever = '大きな問題はありません。次に伸ばすなら' + (ctrSt === 'warn' ? '「どう伝えるか」（クリック率）' : '「どの商品か」の見直し（成果率）') + 'です。変えるのは1か月に1つだけにしましょう。';
+      else lever = 'クリックも成果も良好です。商品と伝え方はそのままで、投稿の本数を増やしましょう。';
+    }
+    $('lever').innerHTML = `<div class="lever"><b>動かすところ：</b>${esc(lever)}` +
+      (epc !== null || appr !== null ? `<br><span class="small muted">${epc !== null ? '1クリックあたりの報酬：' + epc.toLocaleString() + '円　' : ''}${appr !== null ? '承認率：' + appr + '%' : ''}</span>` : '') + '</div>';
+  } else $('lever').innerHTML = '';
+
+  renderHist(s, val);
+}
+function renderHist(s, val){
+  const rows = HIST.filter(r => r.mode === s.mode).sort((a,b) => b.month.localeCompare(a.month));
+  $('hist').innerHTML = rows.length ? `<table class="judge"><thead><tr><th>月</th><th>エンゲージメント率</th><th>保存率</th><th>クリック率</th><th>成果率</th><th>${s.mode === 'af' ? '報酬' : '売上'}</th><th>変えたこと</th><th></th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="num">${esc(r.month)}</td><td class="num">${fmtV(r.v.er,'%')}</td><td class="num">${fmtV(r.v.save,'%')}</td><td class="num">${fmtV(r.v.ctr,'%')}</td><td class="num">${fmtV(r.v.cvr,'%')}</td>
+      <td class="num">${r.rev === null || r.rev === undefined ? '—' : Number(r.rev).toLocaleString() + '円'}</td><td>${esc(r.note || '')}</td>
+      <td><button type="button" class="btn sm ghost" data-del="${esc(r.month)}">削除</button></td></tr>`).join('') + '</tbody></table>'
+    : '<p class="small muted">まだ記録がありません。上の数字を入れたら「この月の結果を記録」を押してください。</p>';
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'もう一度押すと削除'; return; }
+    HIST = HIST.filter(r => !(r.mode === MODE && r.month === b.dataset.del));
+    render();
+    toast('記録を削除しました');
+  });
+  $('recBtn').onclick = () => {
+    const month = $('recMonth').value;
+    if (!month){ toast('記録する月を選んでください'); return; }
+    const rec = {mode: MODE, month, v: computeVals(readState()), rev: $('mRev').value === '' ? null : +$('mRev').value, note: $('recNote').value.trim()};
+    HIST = HIST.filter(r => !(r.mode === MODE && r.month === month)).concat([rec]);
+    render();
+    toast(month + ' の結果を記録しました');
+  };
 }
 
 /* ---------- ui ---------- */
@@ -1059,10 +1406,10 @@ document.querySelectorAll('.rail button').forEach(b => b.onclick = () => show(b.
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { show(b.dataset.go); window.scrollTo({top:0, behavior:'smooth'}); });
 document.addEventListener('input', render);
 document.addEventListener('change', render);
-$('reset').onclick = () => { writeState(SAMPLE); $('start').value = isoDate(nextMonday()); lastTop = null; render(); toast('例の内容に戻しました'); };
+$('reset').onclick = () => { writeState(Object.assign({}, SAMPLES[MODE], {hist: HIST, focus: FOCUS})); $('start').value = isoDate(nextMonday()); lastTop = null; render(); toast('例の内容に戻しました'); };
 
 const saved = load();
-writeState(saved || SAMPLE);
+writeState(saved ? Object.assign({}, SAMPLE, saved) : SAMPLE);
 if (saved) initPref = {calPlatform: saved.calPlatform, pPlatform: saved.pPlatform};
 if (!$('start').value) $('start').value = isoDate(nextMonday());
 render();
