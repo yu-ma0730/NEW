@@ -32,6 +32,7 @@ pivRight = input.int(2, "ピボット 右バー数（確定の遅れ）", minval
 grpE       = "エントリー"
 useTL      = input.bool(true, "斜めラインのブレイク", group = grpE)
 useDB      = input.bool(true, "ダブルボトム/トップのネックライン ブレイク", group = grpE)
+minGap     = input.int(3, "B から斜めラインの接点までの最小バー数", minval = 1, group = grpE)
 dbTolAtr   = input.float(0.5, "ダブルボトム/トップの高さの許容差（ATR×）", minval = 0.0, step = 0.1, group = grpE)
 needCandle = input.bool(true, "陽線（売りは陰線）の確定でのみエントリー", group = grpE)
 maxWait    = input.int(150, "200EMAタッチ後の最大待機バー数", minval = 1, maxval = 800, group = grpE)
@@ -146,6 +147,21 @@ lineClean(int x1, float y1, int x2, float y2, int dir) =>
                 ok := false
                 break
     ok
+
+// B から引いて、B より後の高値(dir=1) / 安値(dir=-1)に上(下)から接する斜めライン
+// 戻り値 [傾き, 接点バー]。B 以降の高値(安値)はすべてラインの内側に収まる
+tangentFrom(int xB, float yB, int dir) =>
+    float slope = na
+    int   tx    = na
+    int   len   = math.min(bar_index - xB - 1, 900)
+    if len >= 1
+        for i = 1 to len
+            float v = dir == 1 ? high[i] : low[i]
+            float s = (v - yB) / float(bar_index - i - xB)
+            if na(slope) or (dir == 1 and s > slope) or (dir == -1 and s < slope)
+                slope := s
+                tx    := bar_index - i
+    [slope, tx]
 
 // xFrom〜xTo の最高値(dir=1) / 最安値(dir=-1)
 extremeBetween(int xFrom, int xTo, int dir) =>
@@ -275,6 +291,14 @@ if confirmed
                     tlHit := close > tv and lineClean(x1, y1, x2, y2, 1)
                     tx1   := x1
                     ty1   := y1
+            // 途中に山がない、なめらかな押し目用：B から高値に接するライン
+            if not tlHit
+                [m, mx] = tangentFrom(bBx, bB, 1)
+                if not na(m) and m < 0 and mx - bBx >= minGap
+                    tv    := bB + m * (bar_index - bBx)
+                    tlHit := close > tv
+                    tx1   := bBx
+                    ty1   := bB
         bool  dbHit = false
         int   nx1   = na
         float neck  = na
@@ -352,6 +376,14 @@ if confirmed
                     tlHit := close < tv and lineClean(x1, y1, x2, y2, -1)
                     tx1   := x1
                     ty1   := y1
+            // 途中に谷がない、なめらかな戻り用：B から安値に接するライン
+            if not tlHit
+                [m, mx] = tangentFrom(sBx, sB, -1)
+                if not na(m) and m > 0 and mx - sBx >= minGap
+                    tv    := sB + m * (bar_index - sBx)
+                    tlHit := close < tv
+                    tx1   := sBx
+                    ty1   := sB
         bool  dbHit = false
         int   nx1   = na
         float neck  = na
