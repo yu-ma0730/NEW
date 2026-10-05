@@ -1,0 +1,868 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スレッズ市場調査ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap">
+<style>
+/* Layout: sticky header + step rail (left on desktop, scrolling strip on phone) + one working sheet per step */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --sunken: #e9eeec;
+  --ink: #15191b;
+  --muted: #5b666b;
+  --line: #d9dfdd;
+  --accent: #0f6b66;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcedeb;
+  --good: #2e7a3a;
+  --good-soft: #e0f0e2;
+  --warn: #a55f00;
+  --warn-soft: #f8ead3;
+  --bad: #b3261e;
+  --bad-soft: #f8e1df;
+  --font-display: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111516; --surface: #192022; --sunken: #141a1b; --ink: #e6ecea; --muted: #97a3a6;
+    --line: #2b3537; --accent: #4db3aa; --accent-ink: #0c1515; --accent-soft: #1b3331;
+    --good: #6cc27a; --good-soft: #1c3121; --warn: #e0a24a; --warn-soft: #382a14;
+    --bad: #ef7d74; --bad-soft: #3a1d1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111516; --surface: #192022; --sunken: #141a1b; --ink: #e6ecea; --muted: #97a3a6;
+  --line: #2b3537; --accent: #4db3aa; --accent-ink: #0c1515; --accent-soft: #1b3331;
+  --good: #6cc27a; --good-soft: #1c3121; --warn: #e0a24a; --warn-soft: #382a14;
+  --bad: #ef7d74; --bad-soft: #3a1d1b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.65; margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.35; }
+a { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-block: 10px; padding-inline: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.brand h1 { font-size: 18px; font-weight: 900; letter-spacing: .02em; }
+.brand small { color: var(--muted); font-size: 12px; }
+.top .spacer { flex: 1; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--sunken); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.chip b { color: var(--ink); font-weight: 700; }
+.chip.on { background: var(--accent-soft); color: var(--accent); }
+.save { font-size: 12px; color: var(--muted); }
+
+.shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; max-width: 1240px; margin: 0 auto; padding-block: 20px 64px; padding-inline: 16px; }
+.rail { position: sticky; top: 72px; align-self: start; display: flex; flex-direction: column; gap: 4px; }
+.rail button {
+  display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; align-items: center; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: var(--r); padding: 8px 10px; cursor: pointer;
+}
+.rail button:hover { background: var(--surface); border-color: var(--line); }
+.rail button[aria-current="step"] { background: var(--surface); border-color: var(--accent); }
+.rail .no { grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: 12px; background: var(--sunken); color: var(--muted); }
+.rail button[aria-current="step"] .no { background: var(--accent); color: var(--accent-ink); }
+.rail .no.done { background: var(--good-soft); color: var(--good); }
+.rail .nm { font-weight: 700; font-size: 13px; }
+.rail .bar { height: 3px; background: var(--sunken); border-radius: 2px; overflow: hidden; }
+.rail .bar i { display: block; height: 100%; background: var(--accent); }
+
+.sheet { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.head { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.head h2 { font-size: 24px; font-weight: 900; }
+.head p { margin: 0; color: var(--muted); max-width: 68ch; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel h3 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.panel h3 .tag { font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--muted); background: var(--sunken); padding: 1px 8px; border-radius: 4px; }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.field > span { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+input[type="text"], input[type="number"], input[type="url"], input[type="date"], select, textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; min-width: 0;
+}
+input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+textarea { resize: vertical; min-height: 64px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .7; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.checks label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 13px; background: var(--bg); }
+.checks input { accent-color: var(--accent); margin: 0; }
+.checks label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 500; font-size: 13px; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); color: var(--accent-ink); }
+.btn.danger { color: var(--bad); }
+.btn.danger:hover { border-color: var(--bad); }
+.btn.sm { padding: 3px 10px; font-size: 12px; }
+.btn.icon { padding: 3px 8px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row > input[type="text"] { flex: 1 1 220px; width: auto; }
+
+.rate { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.rate button { width: 34px; height: 30px; border: 0; border-right: 1px solid var(--line); background: var(--bg); cursor: pointer; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.rate button:last-child { border-right: 0; }
+.rate button.on { background: var(--accent); color: var(--accent-ink); }
+.rate-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; background: var(--sunken); }
+.rate-wrap b { font-size: 13px; }
+.rubric { font-size: 12px; color: var(--muted); margin: 0; padding-left: 1.2em; }
+.rubric li { margin: 1px 0; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 14px; cursor: pointer; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+.tabs button[aria-selected="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+th { font-size: 11.5px; font-weight: 500; color: var(--muted); background: var(--sunken); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.edit td { padding: 4px 6px; }
+table.edit input, table.edit select { padding: 5px 7px; font-size: 13px; }
+table.edit td.w-s input { width: 90px; }
+table.edit td.w-m input, table.edit td.w-m select { min-width: 130px; }
+table.edit td.w-l input { min-width: 200px; }
+
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.none { background: var(--sunken); color: var(--muted); font-weight: 500; }
+.ex { font-size: 10.5px; font-weight: 700; color: var(--warn); background: var(--warn-soft); padding: 0 6px; border-radius: 4px; letter-spacing: .04em; }
+.scorebar { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: var(--sunken); vertical-align: middle; margin-right: 6px; overflow: hidden; }
+.scorebar i { display: block; height: 100%; background: var(--accent); }
+tr.picked td { background: var(--accent-soft); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--sunken); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.stat span { font-size: 11.5px; color: var(--muted); }
+.stat b { font-family: var(--font-mono); font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 500; }
+.stat small { color: var(--muted); font-size: 11.5px; }
+
+.counter { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
+.counter.over { color: var(--bad); font-weight: 700; }
+.kw-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.kw-links a { font-size: 12.5px; text-decoration: none; border: 1px dashed var(--accent); border-radius: 999px; padding: 2px 10px; }
+.kw-links a:hover { background: var(--accent-soft); }
+.statement { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.6; padding: 14px 16px; background: var(--accent-soft); border-radius: 6px; margin: 0; }
+pre.md { white-space: pre-wrap; word-break: break-word; background: var(--sunken); border-radius: 6px; padding: 14px; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; max-height: 520px; overflow: auto; margin: 0; }
+.chart svg { width: 100%; height: auto; display: block; }
+.empty { color: var(--muted); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 6px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 6px; font-size: 13px; z-index: 20; }
+.nextbar { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-block: 12px 48px; }
+  .rail { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .rail button { grid-template-columns: 22px auto; padding: 6px 10px; border-color: var(--line); background: var(--surface); flex: 0 0 auto; }
+  .rail .no { width: 22px; height: 22px; font-size: 11px; }
+  .rail .bar { display: none; }
+  .head h2 { font-size: 20px; }
+  .panel { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="top">
+  <div class="brand"><h1>スレッズ市場調査ノート</h1><small>Threads のジャンル選定から検証まで 6 ステップ</small></div>
+  <div class="spacer"></div>
+  <span class="chip" id="target-chip"></span>
+  <span class="save" id="save-state" aria-live="polite"></span>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="調査ステップ"></nav>
+  <main class="sheet" id="view"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const KEY = "threads-research-v1";
+  const SEARCH = (k) => "https://www.threads.com/search?q=" + encodeURIComponent(k) + "&serp_type=default";
+
+  const STEPS = [
+    { id: 1, name: "ジャンル調査", sub: "ボリューム・収益化・発信内容" },
+    { id: 2, name: "競合分析", sub: "伸びているアカウントを分解" },
+    { id: 3, name: "ターゲット", sub: "誰に届けるか" },
+    { id: 4, name: "ポジション", sub: "競合との違いを言葉にする" },
+    { id: 5, name: "投稿設計", sub: "型・頻度・ネタ・導線" },
+    { id: 6, name: "KPI・検証", sub: "数字で続けるか判断する" },
+    { id: 7, name: "まとめ", sub: "レポートとバックアップ" }
+  ];
+  const MONETIZE = ["アフィリエイト", "note有料記事", "Brain・Tips", "コンサル・講座", "物販・自社商品", "企業案件・PR", "スキル販売(ココナラ等)", "店舗・サービス集客"];
+  const FUNNEL = ["プロフのリンク", "公式LINE", "note", "ブログ", "Instagram", "YouTube", "X", "DM"];
+  const POST_TYPES = ["ノウハウ・リスト", "体験談・ストーリー", "共感・あるある", "問いかけ・議論", "ビフォーアフター", "意見・主張", "日常・つぶやき", "ニュース・速報"];
+  const TREND = ["上昇", "横ばい", "下降", "不明"];
+  const DENSITY = ["多い", "普通", "少ない"];
+  const IDEA_STATUS = ["ネタ", "下書き", "投稿済"];
+  const FREQ = ["1日1投稿", "1日2〜3投稿", "1日4投稿以上", "週3〜5投稿"];
+
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const blankGenre = (name) => ({
+    id: uid(), name: name || "新しいジャンル", sample: false, keywords: "",
+    vol: { avgLikes: null, topFollowers: null, bigAccounts: null, density: "", trend: "", memo: "", score: null },
+    mon: { methods: [], price: null, funnel: [], proof: "", offer: "", memo: "", score: null },
+    con: { posts: [], themes: "", memo: "", score: null }
+  });
+
+  function sampleState() {
+    const g1 = blankGenre("副業×AI活用"); g1.sample = true;
+    g1.keywords = "AI 副業, ChatGPT 活用, 生成AI 仕事効率化";
+    Object.assign(g1.vol, { avgLikes: 320, topFollowers: 18000, bigAccounts: 12, density: "多い", trend: "上昇", memo: "上位は毎日2〜3投稿。新規参入も多い。", score: 4 });
+    Object.assign(g1.mon, { methods: ["note有料記事", "コンサル・講座", "アフィリエイト"], price: 9800, funnel: ["プロフのリンク", "公式LINE", "note"], proof: "有料noteのレビュー数が多い。LINE登録→個別相談の流れが定番。", offer: "業務効率化のプロンプト集 / 導入相談", score: 5 });
+    Object.assign(g1.con, { themes: "プロンプト例、時短事例、ツール比較", memo: "スクショ付きのリスト投稿が強い。", score: 4, posts: [
+      { url: "", type: "ノウハウ・リスト", likes: 820, hook: "ChatGPTで毎日1時間浮いた使い方5選" },
+      { url: "", type: "体験談・ストーリー", likes: 540, hook: "事務職の私がAIで副業月5万になるまで" },
+      { url: "", type: "意見・主張", likes: 210, hook: "AIで仕事がなくなる人の共通点" }
+    ] });
+    const g2 = blankGenre("30代のスキンケア"); g2.sample = true;
+    g2.keywords = "スキンケア 30代, 毛穴 ケア, プチプラ コスメ";
+    Object.assign(g2.vol, { avgLikes: 150, topFollowers: 25000, bigAccounts: 20, density: "多い", trend: "横ばい", memo: "アカウント数は多いが飽和気味。", score: 3 });
+    Object.assign(g2.mon, { methods: ["アフィリエイト", "企業案件・PR"], price: 2000, funnel: ["プロフのリンク", "Instagram"], proof: "楽天ROOM・PR投稿が中心。単価は低め。", offer: "", score: 3 });
+    Object.assign(g2.con, { themes: "成分解説、使用感レビュー", memo: "顔出しなしでも伸びている。", score: 3, posts: [
+      { url: "", type: "ビフォーアフター", likes: 400, hook: "毛穴が1か月で目立たなくなった順番" },
+      { url: "", type: "共感・あるある", likes: 180, hook: "30代になって急に合わなくなった化粧水" }
+    ] });
+    const g3 = blankGenre("子育て×時短家事"); g3.sample = true;
+    g3.keywords = "時短家事, ワーママ, 作り置き";
+    Object.assign(g3.vol, { avgLikes: 450, topFollowers: 12000, bigAccounts: 8, density: "普通", trend: "上昇", memo: "共感系がよく伸びる。", score: 4 });
+    Object.assign(g3.mon, { methods: ["アフィリエイト", "物販・自社商品"], price: 1500, funnel: ["プロフのリンク"], proof: "収益化している人はまだ少数。", offer: "", score: 2 });
+    Object.assign(g3.con, { themes: "朝のルーティン、時短グッズ", memo: "", score: 4, posts: [
+      { url: "", type: "共感・あるある", likes: 900, hook: "保育園のお迎え後の30分が一番しんどい" }
+    ] });
+    return {
+      v: 1, step: 1, openGenre: g1.id, selectedGenre: g1.id, sample: true,
+      weights: { vol: 30, mon: 40, con: 30 },
+      genres: [g1, g2, g3],
+      competitors: [
+        { name: "例）AI効率化の会社員", url: "", followers: 18000, ppw: 14, likes: 420, theme: "プロンプト集", monetize: "note・LINE", strength: "具体的なスクショ", gap: "初心者向けの説明が少ない" },
+        { name: "例）AI副業ママ", url: "", followers: 9000, ppw: 10, likes: 300, theme: "在宅副業の体験談", monetize: "講座", strength: "親近感", gap: "業務での使い方は弱い" },
+        { name: "例）生成AIニュース", url: "", followers: 30000, ppw: 21, likes: 260, theme: "最新ツール紹介", monetize: "アフィリ", strength: "速報性", gap: "実践の深さがない" }
+      ],
+      persona: { age: "20代後半〜30代の会社員", attr: "事務・営業職。副業に興味はあるが時間がない", pains: "残業が多い / AIを使ってみたいが何から始めればいいか分からない", ideal: "AIで仕事を早く終わらせ、空いた時間で副業を始めたい", habits: "通勤中と寝る前にSNSを見る", wants: "今日から真似できる具体例", trigger: "「自分でもできそう」と感じた時" },
+      position: { diff: "初心者が会社の業務でそのまま使える例に絞る", strengths: "事務職10年。社内でAI導入を担当した経験", pillars: "業務効率化のプロンプト / 失敗談 / 副業への応用", bio: "事務職10年｜社内のAI導入担当｜残業を月20時間減らしたChatGPTの使い方を毎日発信｜プロンプト集はプロフのリンクから", target: "AIを使い始めたい会社員", theme: "業務効率化", angle: "事務職の実体験と、そのまま使える例" },
+      plan: { freq: "1日2〜3投稿", times: "7:00 / 12:15 / 21:30", cta: "固定投稿 → プロフのリンク → 公式LINE（プロンプト集を配布）", draft: "ChatGPTで毎朝のメール整理が10分で終わるようになった。\n\nやっていることは3つだけ。\n① ...", mix: "ノウハウ5：体験談3：共感2", ideas: [
+        { title: "議事録を3分でまとめるプロンプト", type: "ノウハウ・リスト", status: "下書き" },
+        { title: "AI導入で上司に反対された話", type: "体験談・ストーリー", status: "ネタ" },
+        { title: "「AIは難しい」と思っている人へ", type: "共感・あるある", status: "ネタ" }
+      ] },
+      kpi: { d30: 300, d60: 1000, d90: 3000, likesGoal: 50, logs: [
+        { date: "2026-09-07", followers: 40, posts: 14, likes: 12, best: "議事録プロンプト", note: "リスト型が反応よし" },
+        { date: "2026-09-14", followers: 95, posts: 17, likes: 21, best: "上司に反対された話", note: "体験談の保存数が多い" },
+        { date: "2026-09-21", followers: 180, posts: 18, likes: 34, best: "メール整理", note: "" }
+      ], checks: [] }
+    };
+  }
+  function emptyState() {
+    const g = blankGenre("新しいジャンル");
+    return {
+      v: 1, step: 1, openGenre: g.id, selectedGenre: null, sample: false,
+      weights: { vol: 30, mon: 40, con: 30 }, genres: [g], competitors: [],
+      persona: { age: "", attr: "", pains: "", ideal: "", habits: "", wants: "", trigger: "" },
+      position: { diff: "", strengths: "", pillars: "", bio: "", target: "", theme: "", angle: "" },
+      plan: { freq: "", times: "", cta: "", draft: "", mix: "", ideas: [] },
+      kpi: { d30: null, d60: null, d90: null, likesGoal: null, logs: [], checks: [] }
+    };
+  }
+
+  let S;
+  let storageOk = true;
+  try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; } catch (e) { S = null; storageOk = false; }
+  if (!S || !Array.isArray(S.genres)) S = sampleState();
+
+  let saveTimer = null;
+  function save() {
+    const el = document.getElementById("save-state");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(KEY, JSON.stringify(S)); el.textContent = "このブラウザに保存しました"; }
+      catch (e) { el.textContent = "自動保存できません。まとめからバックアップをコピーしてください"; }
+    }, 300);
+  }
+
+  // ---------- helpers ----------
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fid = (p) => "f-" + p.replace(/\./g, "-");
+  const num = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+  const fmt = (v, d = 0) => (num(v) == null ? "—" : v.toLocaleString("ja-JP", { maximumFractionDigits: d, minimumFractionDigits: d }));
+  function getPath(p) { return p.split(".").reduce((o, k) => (o == null ? undefined : o[k]), S); }
+  function setPath(p, val) {
+    const ks = p.split("."); let o = S;
+    for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
+    o[ks[ks.length - 1]] = val;
+  }
+  const median = (arr) => { const a = arr.filter((x) => num(x) != null).sort((x, y) => x - y); if (!a.length) return null; const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  const avg = (arr) => { const a = arr.filter((x) => num(x) != null); return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; };
+  const filled = (v) => v != null && String(v).trim() !== "";
+
+  function input(p, ph = "", isNum = false) {
+    const v = getPath(p);
+    return `<input id="${fid(p)}" type="${isNum ? "number" : "text"}" ${isNum ? 'data-num inputmode="decimal" min="0"' : ""} data-bind="${p}" value="${esc(v == null ? "" : v)}" placeholder="${esc(ph)}">`;
+  }
+  function textarea(p, ph = "", rows = 3) {
+    return `<textarea id="${fid(p)}" rows="${rows}" data-bind="${p}" placeholder="${esc(ph)}">${esc(getPath(p) || "")}</textarea>`;
+  }
+  function select(p, opts) {
+    const v = getPath(p) || "";
+    return `<select id="${fid(p)}" data-bind="${p}"><option value="">選択</option>${opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  }
+  function checks(p, opts) {
+    const arr = getPath(p) || [];
+    return `<div class="checks">${opts.map((o, i) => `<label><input type="checkbox" id="${fid(p)}-${i}" data-arr="${p}" value="${esc(o)}"${arr.includes(o) ? " checked" : ""}>${esc(o)}</label>`).join("")}</div>`;
+  }
+  const field = (label, html, wide) => `<label class="field${wide ? " wide" : ""}"><span>${label}</span>${html}</label>`;
+  function rate(p, label) {
+    const v = getPath(p);
+    return `<div class="rate-wrap"><b>${label}</b><div class="rate" role="group" aria-label="${esc(label)}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-act="rate" data-path="${p}" data-v="${n}" class="${v === n ? "on" : ""}" aria-pressed="${v === n}">${n}</button>`).join("")}</div><span class="note" data-calc="ratehint" data-path="${p}"></span></div>`;
+  }
+  function verdict(t) {
+    if (t == null) return `<span class="pill none">未評価</span>`;
+    if (t >= 4) return `<span class="pill good">有力</span>`;
+    if (t >= 3) return `<span class="pill warn">検討</span>`;
+    return `<span class="pill bad">見送り</span>`;
+  }
+  const scoreCell = (v) => (v == null ? `<td class="n">—</td>` : `<td class="n"><span class="scorebar"><i style="width:${v * 20}%"></i></span>${fmt(v, v % 1 ? 1 : 0)}</td>`);
+
+  function total(g) {
+    const w = S.weights, sum = (w.vol || 0) + (w.mon || 0) + (w.con || 0);
+    if (g.vol.score == null || g.mon.score == null || g.con.score == null || !sum) return null;
+    return (g.vol.score * (w.vol || 0) + g.mon.score * (w.mon || 0) + g.con.score * (w.con || 0)) / sum;
+  }
+  function volHint(g) {
+    const l = num(g.vol.avgLikes); if (l == null) return null;
+    let s = l >= 500 ? 5 : l >= 200 ? 4 : l >= 50 ? 3 : l >= 10 ? 2 : 1;
+    if (g.vol.trend === "上昇" && s < 5) s += 1;
+    if (g.vol.trend === "下降" && s > 1) s -= 1;
+    return s;
+  }
+  const genreById = (id) => S.genres.find((g) => g.id === id);
+  const target = () => genreById(S.selectedGenre);
+  function typeStats(posts) {
+    const m = {};
+    posts.forEach((p) => { if (!p.type) return; (m[p.type] = m[p.type] || []).push(num(p.likes)); });
+    return Object.entries(m).map(([t, ls]) => ({ type: t, n: ls.length, avg: avg(ls) })).sort((a, b) => (b.avg || 0) - (a.avg || 0));
+  }
+
+  // ---------- progress ----------
+  function progress(id) {
+    const ratio = (vals) => vals.filter(filled).length / vals.length;
+    switch (id) {
+      case 1: { const done = S.genres.filter((g) => total(g) != null).length; return Math.min(1, (done / Math.max(2, S.genres.length)) * 0.8 + (S.selectedGenre ? 0.2 : 0)); }
+      case 2: return Math.min(1, S.competitors.filter((c) => filled(c.name)).length / 5);
+      case 3: return ratio(Object.values(S.persona));
+      case 4: return ratio(Object.values(S.position));
+      case 5: return Math.min(1, (filled(S.plan.freq) ? 0.2 : 0) + (filled(S.plan.cta) ? 0.2 : 0) + Math.min(0.6, S.plan.ideas.length / 10 * 0.6));
+      case 6: return Math.min(1, (filled(S.kpi.d30) ? 0.4 : 0) + Math.min(0.6, S.kpi.logs.length / 4 * 0.6));
+      default: return null;
+    }
+  }
+
+  // ---------- chrome ----------
+  function renderRail() {
+    document.getElementById("rail").innerHTML = STEPS.map((s) => {
+      const p = progress(s.id), done = p != null && p >= 1;
+      return `<button type="button" data-act="step" data-v="${s.id}" ${S.step === s.id ? 'aria-current="step"' : ""}>
+        <span class="no${done && S.step !== s.id ? " done" : ""}">${s.id === 7 ? "≡" : done ? "✓" : s.id}</span>
+        <span class="nm">${s.name}</span>
+        ${p == null ? "<span></span>" : `<span class="bar"><i style="width:${Math.round(p * 100)}%"></i></span>`}
+      </button>`;
+    }).join("");
+    const cur = document.querySelector('#rail [aria-current="step"]');
+    if (cur && window.innerWidth <= 860) cur.scrollIntoView({ block: "nearest", inline: "center" });
+    const t = target(), chip = document.getElementById("target-chip");
+    chip.className = "chip" + (t ? " on" : "");
+    chip.innerHTML = t ? `対象ジャンル <b>${esc(t.name)}</b>` : "対象ジャンル 未決定";
+  }
+  function head(id, lead) {
+    const s = STEPS.find((x) => x.id === id);
+    return `<div class="head"><span class="eyebrow">${id === 7 ? "Summary" : "Step " + id + " / 6"}</span><h2>${s.name}<span style="font-weight:500;font-size:.6em;color:var(--muted)">　${s.sub}</span></h2><p>${lead}</p></div>`;
+  }
+  function nextbar(id) {
+    const prev = STEPS.find((s) => s.id === id - 1), next = STEPS.find((s) => s.id === id + 1);
+    return `<div class="nextbar">${prev ? `<button class="btn" data-act="step" data-v="${prev.id}">← ${prev.name}</button>` : "<span></span>"}${next ? `<button class="btn primary" data-act="step" data-v="${next.id}">${next.name} へ →</button>` : ""}</div>`;
+  }
+  const sampleNote = () => (S.sample ? `<p class="note"><span class="ex">例</span> いま入っているのは記入例です。数字は架空です。「まとめ」から消して自分の調査を始められます。</p>` : "");
+
+  // ---------- step 1 ----------
+  function viewStep1() {
+    if (!genreById(S.openGenre)) S.openGenre = S.genres[0] && S.genres[0].id;
+    const gi = S.genres.findIndex((g) => g.id === S.openGenre);
+    const g = S.genres[gi];
+    const P = `genres.${gi}`;
+    return `${head(1, "候補のジャンルを並べ、Threads で実際に検索して「人が集まっているか」「お金が動いているか」「自分が書き続けられるか」を 5 段階で評価します。重みを付けた総合点で比較して、1 つに絞ります。")}
+    ${sampleNote()}
+    <section class="panel">
+      <h3>ジャンル比較 <span class="tag">総合 = 3 項目の加重平均（5 点満点）</span></h3>
+      <div class="row" style="gap:12px">
+        ${["vol", "mon", "con"].map((k) => `<label class="row" style="gap:6px"><span class="note">${{ vol: "ボリューム", mon: "収益化", con: "発信内容" }[k]}の重み</span><input type="number" data-num min="0" max="100" style="width:72px" id="${fid("weights." + k)}" data-bind="weights.${k}" value="${esc(S.weights[k])}"></label>`).join("")}
+      </div>
+      <div class="tablewrap" data-calc="compare"></div>
+    </section>
+
+    <section class="panel">
+      <h3>候補ジャンル</h3>
+      <div class="tabs" role="tablist">
+        ${S.genres.map((x) => `<button type="button" role="tab" aria-selected="${x.id === S.openGenre}" data-act="openGenre" data-v="${x.id}">${esc(x.name)}${x.sample ? ' <span class="ex">例</span>' : ""}</button>`).join("")}
+      </div>
+      <form class="row" data-form="addGenre"><input type="text" id="new-genre" placeholder="例）40代の転職、ペット×手作りごはん、投資初心者" aria-label="追加するジャンル名"><button class="btn" type="submit">＋ ジャンルを追加</button></form>
+    </section>
+
+    ${g ? `
+    <section class="panel">
+      <div class="grid">
+        ${field("ジャンル名", input(P + ".name"))}
+        ${field("検索キーワード（カンマ区切り）", input(P + ".keywords", "例）AI 副業, ChatGPT 活用"))}
+      </div>
+      <div><span class="note">Threads で検索して上位投稿を確認する：</span><div class="kw-links" data-calc="kwlinks"></div></div>
+      <div class="row"><button class="btn primary" type="button" data-act="pickGenre" data-v="${g.id}">このジャンルに決める</button><button class="btn danger sm" type="button" data-act="delGenre" data-v="${g.id}">このジャンルを削除</button></div>
+    </section>
+
+    <section class="panel">
+      <h3>① ボリュームの調査 <span class="tag">人が集まっているか</span></h3>
+      <p class="note">キーワード検索の「人気」タブで上位 10〜20 投稿を見て記録します。</p>
+      <div class="grid">
+        ${field("上位投稿の平均いいね数", input(P + ".vol.avgLikes", "例）300", true))}
+        ${field("上位アカウントのフォロワー中央値", input(P + ".vol.topFollowers", "例）15000", true))}
+        ${field("フォロワー1万人超のアカウント数", input(P + ".vol.bigAccounts", "例）10", true))}
+        ${field("直近1週間の投稿量", select(P + ".vol.density", DENSITY))}
+        ${field("トレンド", select(P + ".vol.trend", TREND))}
+        ${field("メモ", input(P + ".vol.memo", "気づいたこと"))}
+      </div>
+      ${rate(P + ".vol.score", "ボリューム評価")}
+      <ul class="rubric"><li>5：上位投稿が平均500いいね超、1万人超のアカウントが多い</li><li>3：平均50〜200いいね。一定の需要がある</li><li>1：平均10いいね未満。検索しても投稿が少ない</li></ul>
+    </section>
+
+    <section class="panel">
+      <h3>② 収益化の調査 <span class="tag">お金が動いているか</span></h3>
+      <p class="note">上位アカウントのプロフィールのリンク先と固定投稿を見て、何を売っているかを記録します。</p>
+      ${field("競合がやっている収益化の方法", checks(P + ".mon.methods", MONETIZE), true)}
+      ${field("プロフィールからの導線", checks(P + ".mon.funnel", FUNNEL), true)}
+      <div class="grid">
+        ${field("主な商品の単価（円）", input(P + ".mon.price", "例）9800", true))}
+        ${field("売れている証拠", input(P + ".mon.proof", "レビュー数、販売数、実績報告など"))}
+        ${field("自分が売れそうな商品", input(P + ".mon.offer", "例）テンプレート集、個別相談"))}
+        ${field("メモ", input(P + ".mon.memo"))}
+      </div>
+      ${rate(P + ".mon.score", "収益化評価")}
+      <ul class="rubric"><li>5：1万円以上の商品が売れている例が複数あり、導線がはっきりしている</li><li>3：アフィリエイトや低単価の商品が中心</li><li>1：収益化している人が見つからない</li></ul>
+    </section>
+
+    <section class="panel">
+      <h3>③ 発信内容の調査 <span class="tag">何が伸びているか</span></h3>
+      <p class="note">伸びている投稿を集めて「型」で分類します。どの型が強いかは下の集計に出ます。</p>
+      <div class="tablewrap"><table class="edit">
+        <thead><tr><th>1行目（フック）</th><th>型</th><th class="n">いいね</th><th>URL</th><th></th></tr></thead>
+        <tbody>${g.con.posts.length ? g.con.posts.map((p, i) => `<tr>
+          <td class="w-l">${input(`${P}.con.posts.${i}.hook`, "冒頭の一文")}</td>
+          <td class="w-m">${select(`${P}.con.posts.${i}.type`, POST_TYPES)}</td>
+          <td class="w-s">${input(`${P}.con.posts.${i}.likes`, "0", true)}</td>
+          <td class="w-m">${input(`${P}.con.posts.${i}.url`, "https://www.threads.com/...")}</td>
+          <td><button class="btn icon" type="button" data-act="delRow" data-path="${P}.con.posts" data-v="${i}" aria-label="この投稿を削除">✕</button></td></tr>`).join("") : `<tr><td colspan="5"><div class="empty">まだ投稿がありません。下のボタンから追加します。</div></td></tr>`}</tbody>
+      </table></div>
+      <div><button class="btn sm" type="button" data-act="addRow" data-path="${P}.con.posts" data-v="post">＋ 投稿を追加</button></div>
+      <div data-calc="typestats"></div>
+      <div class="grid">
+        ${field("よく出るテーマ", input(P + ".con.themes", "例）プロンプト例、時短事例"))}
+        ${field("メモ", input(P + ".con.memo", "文字数、画像の有無、投稿時間など"))}
+      </div>
+      ${rate(P + ".con.score", "発信のしやすさ")}
+      <ul class="rubric"><li>5：伸びている型がはっきりしていて、自分の経験で毎日書ける</li><li>3：調べれば書けるが、ネタ切れが心配</li><li>1：自分の経験や興味と合わない</li></ul>
+    </section>` : `<div class="empty">ジャンルを追加してください。</div>`}
+    ${nextbar(1)}`;
+  }
+  function calcStep1() {
+    const cmp = document.querySelector('[data-calc="compare"]');
+    if (cmp) {
+      const rows = S.genres.map((g) => ({ g, t: total(g) })).sort((a, b) => (b.t ?? -1) - (a.t ?? -1));
+      cmp.innerHTML = `<table><thead><tr><th>ジャンル</th><th class="n">ボリューム</th><th class="n">収益化</th><th class="n">発信内容</th><th class="n">総合</th><th>判定</th><th></th></tr></thead><tbody>${rows.map(({ g, t }) => `<tr class="${g.id === S.selectedGenre ? "picked" : ""}">
+        <td><b>${esc(g.name)}</b>${g.sample ? ' <span class="ex">例</span>' : ""}</td>${scoreCell(g.vol.score)}${scoreCell(g.mon.score)}${scoreCell(g.con.score)}
+        <td class="n"><b>${t == null ? "—" : t.toFixed(2)}</b></td><td>${verdict(t)}</td>
+        <td>${g.id === S.selectedGenre ? '<span class="pill good">決定</span>' : `<button class="btn sm" type="button" data-act="pickGenre" data-v="${g.id}">決める</button>`}</td></tr>`).join("")}</tbody></table>`;
+    }
+    const gi = S.genres.findIndex((g) => g.id === S.openGenre), g = S.genres[gi];
+    if (!g) return;
+    const kw = document.querySelector('[data-calc="kwlinks"]');
+    if (kw) {
+      const ks = (g.keywords || g.name).split(/[,、，]/).map((s) => s.trim()).filter(Boolean);
+      kw.innerHTML = ks.map((k) => `<a href="${SEARCH(k)}" target="_blank" rel="noopener">${esc(k)} ↗</a>`).join("") || '<span class="note">キーワードを入力すると検索リンクが出ます</span>';
+    }
+    document.querySelectorAll('[data-calc="ratehint"]').forEach((el) => {
+      if (el.dataset.path.endsWith(".vol.score")) { const h = volHint(g); el.textContent = h ? `いいね数とトレンドからの目安：${h}` : ""; }
+    });
+    const ts = document.querySelector('[data-calc="typestats"]');
+    if (ts) {
+      const st = typeStats(g.con.posts);
+      ts.innerHTML = st.length ? `<div class="stats">${st.map((s, i) => `<div class="stat"><span>${i === 0 ? "最も強い型 · " : ""}${esc(s.type)}</span><b>${fmt(s.avg)}</b><small>平均いいね · ${s.n}件</small></div>`).join("")}</div>` : "";
+    }
+  }
+
+  // ---------- step 2 ----------
+  function viewStep2() {
+    const t = target();
+    return `${head(2, "決めたジャンルで伸びているアカウントを 5〜10 件記録します。エンゲージメント率（平均いいね ÷ フォロワー）を見ると、フォロワー数のわりに反応が強い＝勢いのあるアカウントが分かります。")}
+    ${sampleNote()}
+    ${t ? "" : `<p class="note">先に Step 1 で対象ジャンルを決めると、検索リンクがそのジャンルになります。</p>`}
+    ${t ? `<div class="kw-links">${(t.keywords || t.name).split(/[,、，]/).map((s) => s.trim()).filter(Boolean).map((k) => `<a href="${SEARCH(k)}" target="_blank" rel="noopener">${esc(k)} で検索 ↗</a>`).join("")}</div>` : ""}
+    <section class="panel">
+      <h3>競合アカウント</h3>
+      <div class="tablewrap"><table class="edit">
+        <thead><tr><th>アカウント名</th><th class="n">フォロワー</th><th class="n">週の投稿数</th><th class="n">平均いいね</th><th class="n">ER</th><th>主なテーマ</th><th>収益化</th><th>強み</th><th>隙・弱み</th><th>URL</th><th></th></tr></thead>
+        <tbody>${S.competitors.length ? S.competitors.map((c, i) => `<tr>
+          <td class="w-m">${input(`competitors.${i}.name`, "@name")}</td>
+          <td class="w-s">${input(`competitors.${i}.followers`, "0", true)}</td>
+          <td class="w-s">${input(`competitors.${i}.ppw`, "0", true)}</td>
+          <td class="w-s">${input(`competitors.${i}.likes`, "0", true)}</td>
+          <td class="n" data-calc="er" data-i="${i}"></td>
+          <td class="w-m">${input(`competitors.${i}.theme`)}</td>
+          <td class="w-m">${input(`competitors.${i}.monetize`)}</td>
+          <td class="w-m">${input(`competitors.${i}.strength`)}</td>
+          <td class="w-m">${input(`competitors.${i}.gap`)}</td>
+          <td class="w-m">${input(`competitors.${i}.url`, "https://www.threads.com/@...")}</td>
+          <td><button class="btn icon" type="button" data-act="delRow" data-path="competitors" data-v="${i}" aria-label="このアカウントを削除">✕</button></td></tr>`).join("") : `<tr><td colspan="11"><div class="empty">まだ競合がいません。下のボタンから追加します。</div></td></tr>`}</tbody>
+      </table></div>
+      <div><button class="btn sm" type="button" data-act="addRow" data-path="competitors" data-v="comp">＋ アカウントを追加</button></div>
+    </section>
+    <section class="panel"><h3>集計</h3><div data-calc="compstats"></div><p class="note">ER の目安：1% 未満は反応が弱め、2% 以上は熱量が高いアカウントです。「隙・弱み」の列が、Step 4 で差別化を考える材料になります。</p></section>
+    ${nextbar(2)}`;
+  }
+  const er = (c) => (num(c.likes) != null && num(c.followers) ? (c.likes / c.followers) * 100 : null);
+  function calcStep2() {
+    document.querySelectorAll('[data-calc="er"]').forEach((el) => {
+      const v = er(S.competitors[+el.dataset.i] || {});
+      el.innerHTML = v == null ? "—" : `${v.toFixed(1)}%`;
+      el.style.color = v == null ? "" : v >= 2 ? "var(--good)" : v < 1 ? "var(--bad)" : "";
+    });
+    const el = document.querySelector('[data-calc="compstats"]'); if (!el) return;
+    const cs = S.competitors;
+    if (!cs.length) { el.innerHTML = '<div class="empty">競合を追加すると、ここに中央値と平均が出ます。</div>'; return; }
+    const best = cs.map((c) => ({ c, e: er(c) })).filter((x) => x.e != null).sort((a, b) => b.e - a.e)[0];
+    el.innerHTML = `<div class="stats">
+      <div class="stat"><span>記録したアカウント</span><b>${cs.length}</b><small>件</small></div>
+      <div class="stat"><span>フォロワー中央値</span><b>${fmt(median(cs.map((c) => num(c.followers))))}</b><small>人</small></div>
+      <div class="stat"><span>平均いいね中央値</span><b>${fmt(median(cs.map((c) => num(c.likes))))}</b><small>いいね</small></div>
+      <div class="stat"><span>週の投稿数 平均</span><b>${fmt(avg(cs.map((c) => num(c.ppw))), 1)}</b><small>投稿 / 週</small></div>
+      <div class="stat"><span>ER が最も高い</span><b style="font-size:15px;font-family:var(--font-body)">${best ? esc(best.c.name || "名前なし") : "—"}</b><small>${best ? best.e.toFixed(1) + "%" : ""}</small></div>
+    </div>`;
+  }
+
+  // ---------- step 3 ----------
+  function viewStep3() {
+    const F = [["age", "年齢層・立場", "例）20代後半〜30代の会社員"], ["attr", "属性・状況", "仕事、家族、収入など"], ["pains", "悩み・不満", "スラッシュ区切りで複数"], ["ideal", "理想の状態", "どうなりたいか"], ["habits", "Threads を見る時間・場面", "例）通勤中、寝る前"], ["wants", "Threads で求めている情報", "例）すぐ真似できる具体例"], ["trigger", "お金を払うきっかけ", "例）自分でもできそうと感じた時"]];
+    return `${head(3, "Step 1 と 2 で見た投稿のコメント欄や引用を読み、反応している人の像を 1 人に絞って書きます。「誰にでも」向けた投稿は誰にも刺さりません。")}
+    ${sampleNote()}
+    <section class="panel"><h3>ペルソナ</h3><div class="grid">${F.map(([k, l, ph]) => field(l, textarea("persona." + k, ph, 2))).join("")}</div>
+    <p class="note">ヒント：伸びている投稿のコメント欄に出てくる言葉をそのまま書き写すと、後で投稿の 1 行目に使えます。</p></section>
+    ${nextbar(3)}`;
+  }
+
+  // ---------- step 4 ----------
+  function viewStep4() {
+    const gaps = S.competitors.map((c) => c.gap).filter(filled);
+    return `${head(4, "競合の「隙」と自分の経験が重なる場所を探し、一文で言える立ち位置にします。プロフィール文もここで作ります。")}
+    ${sampleNote()}
+    <div class="split">
+      <section class="panel"><h3>材料</h3>
+        <div><span class="note">Step 2 で見つけた競合の隙</span>${gaps.length ? `<ul class="rubric" style="font-size:13px;color:var(--ink)">${gaps.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : '<p class="note">まだありません。</p>'}</div>
+        ${field("自分の強み・経験・実績", textarea("position.strengths", "仕事、資格、失敗談、数字で言える実績", 3))}
+        ${field("競合との違い", textarea("position.diff", "誰に・何を・どう伝えるかで違いを出す", 3))}
+        ${field("発信の柱（3つ程度）", input("position.pillars", "例）ノウハウ / 失敗談 / 応用"))}
+      </section>
+      <section class="panel"><h3>ポジション文</h3>
+        <div class="grid">
+          ${field("誰に", input("position.target", "例）AIを使い始めたい会社員"))}
+          ${field("何を", input("position.theme", "例）業務効率化"))}
+          ${field("どんな切り口で", input("position.angle", "例）事務職の実体験と、そのまま使える例"), true)}
+        </div>
+        <p class="statement" data-calc="statement"></p>
+        ${field("プロフィール文", textarea("position.bio", "肩書き｜実績｜何を発信しているか｜導線", 4), true)}
+        <div class="counter" data-calc="biocount"></div>
+      </section>
+    </div>
+    ${nextbar(4)}`;
+  }
+  function calcStep4() {
+    const st = document.querySelector('[data-calc="statement"]');
+    if (st) { const p = S.position; st.textContent = `「${p.target || "（誰に）"}」に向けて、「${p.theme || "（何を）"}」を「${p.angle || "（どんな切り口で）"}」発信するアカウント`; }
+    const bc = document.querySelector('[data-calc="biocount"]');
+    if (bc) { const n = [...(S.position.bio || "")].length; bc.textContent = `${n} / 150 文字`; bc.classList.toggle("over", n > 150); }
+  }
+
+  // ---------- step 5 ----------
+  function viewStep5() {
+    return `${head(5, "Step 1 で強かった型を中心に、投稿の配分・頻度・時間帯を決めます。ネタは 10 本以上ストックしてから始めると止まりません。")}
+    ${sampleNote()}
+    <div class="split">
+      <section class="panel"><h3>運用ルール</h3>
+        <div class="grid">
+          ${field("投稿頻度", select("plan.freq", FREQ))}
+          ${field("投稿する時間帯", input("plan.times", "例）7:00 / 12:15 / 21:30"))}
+          ${field("型の配分", input("plan.mix", "例）ノウハウ5：体験談3：共感2"), true)}
+          ${field("収益への導線", textarea("plan.cta", "例）固定投稿 → プロフのリンク → 公式LINE", 2), true)}
+        </div>
+        <div data-calc="mixref"></div>
+      </section>
+      <section class="panel"><h3>投稿の下書き</h3>
+        ${textarea("plan.draft", "1行目で手を止めさせる。改行で読みやすく。", 8)}
+        <div class="counter" data-calc="draftcount"></div>
+        <p class="note">Threads の投稿は 1 件 500 文字までです。</p>
+      </section>
+    </div>
+    <section class="panel"><h3>ネタ帳 <span class="tag" data-calc="ideacount"></span></h3>
+      <div class="tablewrap"><table class="edit">
+        <thead><tr><th>タイトル・1行目</th><th>型</th><th>状態</th><th></th></tr></thead>
+        <tbody>${S.plan.ideas.length ? S.plan.ideas.map((x, i) => `<tr>
+          <td class="w-l">${input(`plan.ideas.${i}.title`, "ネタ")}</td>
+          <td class="w-m">${select(`plan.ideas.${i}.type`, POST_TYPES)}</td>
+          <td class="w-m">${select(`plan.ideas.${i}.status`, IDEA_STATUS)}</td>
+          <td><button class="btn icon" type="button" data-act="delRow" data-path="plan.ideas" data-v="${i}" aria-label="このネタを削除">✕</button></td></tr>`).join("") : `<tr><td colspan="4"><div class="empty">ネタを追加します。Step 1 で集めた投稿の 1 行目を自分の言葉に置き換えると作りやすいです。</div></td></tr>`}</tbody>
+      </table></div>
+      <div><button class="btn sm" type="button" data-act="addRow" data-path="plan.ideas" data-v="idea">＋ ネタを追加</button></div>
+    </section>
+    ${nextbar(5)}`;
+  }
+  function calcStep5() {
+    const dc = document.querySelector('[data-calc="draftcount"]');
+    if (dc) { const n = [...(S.plan.draft || "")].length; dc.textContent = `${n} / 500 文字`; dc.classList.toggle("over", n > 500); }
+    const ic = document.querySelector('[data-calc="ideacount"]');
+    if (ic) { const c = (s) => S.plan.ideas.filter((x) => x.status === s).length; ic.textContent = `全${S.plan.ideas.length}本 · ネタ${c("ネタ")} · 下書き${c("下書き")} · 投稿済${c("投稿済")}`; }
+    const mr = document.querySelector('[data-calc="mixref"]');
+    if (mr) {
+      const t = target(); const st = t ? typeStats(t.con.posts) : [];
+      mr.innerHTML = st.length ? `<p class="note">参考：「${esc(t.name)}」で反応が強かった型（平均いいね順）</p><div class="checks">${st.map((s) => `<span class="pill none">${esc(s.type)} ${fmt(s.avg)}</span>`).join("")}</div>` : "";
+    }
+  }
+
+  // ---------- step 6 ----------
+  const CHECKS = ["平均いいねが目標を超えた週がある", "フォロワーが週ごとに増えている", "保存・引用が付く投稿の型が見つかった", "プロフィールのリンクが押されている", "DM・LINE 登録など見込み客の反応があった", "週の投稿数を予定どおり続けられた"];
+  function viewStep6() {
+    return `${head(6, "目標を決め、週に 1 回だけ数字を記録します。30 日たったら下のチェックで「続ける・切り口を変える・ジャンルを変える」を判断します。")}
+    ${sampleNote()}
+    <section class="panel"><h3>目標</h3><div class="grid">
+      ${field("30日後のフォロワー", input("kpi.d30", "例）300", true))}
+      ${field("60日後のフォロワー", input("kpi.d60", "例）1000", true))}
+      ${field("90日後のフォロワー", input("kpi.d90", "例）3000", true))}
+      ${field("1投稿あたりの平均いいね目標", input("kpi.likesGoal", "例）50", true))}
+    </div></section>
+    <section class="panel"><h3>週次ログ</h3>
+      <div class="tablewrap"><table class="edit">
+        <thead><tr><th>記録日</th><th class="n">フォロワー</th><th class="n">週の投稿数</th><th class="n">平均いいね</th><th>一番伸びた投稿</th><th>気づき</th><th></th></tr></thead>
+        <tbody>${S.kpi.logs.length ? S.kpi.logs.map((l, i) => `<tr>
+          <td class="w-m"><input type="date" id="${fid(`kpi.logs.${i}.date`)}" data-bind="kpi.logs.${i}.date" value="${esc(l.date || "")}"></td>
+          <td class="w-s">${input(`kpi.logs.${i}.followers`, "0", true)}</td>
+          <td class="w-s">${input(`kpi.logs.${i}.posts`, "0", true)}</td>
+          <td class="w-s">${input(`kpi.logs.${i}.likes`, "0", true)}</td>
+          <td class="w-m">${input(`kpi.logs.${i}.best`)}</td>
+          <td class="w-l">${input(`kpi.logs.${i}.note`)}</td>
+          <td><button class="btn icon" type="button" data-act="delRow" data-path="kpi.logs" data-v="${i}" aria-label="この週を削除">✕</button></td></tr>`).join("") : `<tr><td colspan="7"><div class="empty">運用を始めたら、週に 1 回ここに記録します。</div></td></tr>`}</tbody>
+      </table></div>
+      <div><button class="btn sm" type="button" data-act="addRow" data-path="kpi.logs" data-v="log">＋ 今週の記録を追加</button></div>
+      <div class="chart" data-calc="chart"></div>
+    </section>
+    <section class="panel"><h3>30日後の判断 <span class="tag" data-calc="judge"></span></h3>
+      ${checks("kpi.checks", CHECKS)}
+      <ul class="rubric"><li>4つ以上：このまま続ける。伸びた型の比率を上げる</li><li>2〜3つ：ジャンルはそのままで、ターゲットか切り口（Step 3・4）を見直す</li><li>1つ以下：Step 1 に戻って 2 番目のジャンルを試す</li></ul>
+    </section>
+    ${nextbar(6)}`;
+  }
+  function calcStep6() {
+    const j = document.querySelector('[data-calc="judge"]');
+    if (j) { const n = (S.kpi.checks || []).length; j.textContent = `${n} / ${CHECKS.length}` + (n >= 4 ? " · 続ける" : n >= 2 ? " · 切り口を見直す" : " · ジャンル再検討"); }
+    const el = document.querySelector('[data-calc="chart"]'); if (!el) return;
+    const logs = S.kpi.logs.map((l, i) => ({ i, d: l.date, f: num(l.followers) })).filter((x) => x.f != null);
+    if (logs.length < 2) { el.innerHTML = '<p class="note">2 週分の記録がたまると、フォロワー推移のグラフが出ます。</p>'; return; }
+    const W = 640, H = 220, L = 52, R = 70, T = 16, B = 30;
+    const goal = num(S.kpi.d30);
+    const maxY = Math.max(...logs.map((x) => x.f), goal || 0) * 1.1 || 1;
+    const nice = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; };
+    const step = nice(maxY / 4), top = Math.ceil(maxY / step) * step;
+    const x = (k) => L + (k / (logs.length - 1)) * (W - L - R), y = (v) => T + (1 - v / top) * (H - T - B);
+    let g = "";
+    for (let v = 0; v <= top + 1e-9; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--font-mono)">${v.toLocaleString("ja-JP")}</text>`;
+    const pts = logs.map((p, k) => `${x(k)},${y(p.f)}`).join(" ");
+    const area = `${x(0)},${y(0)} ${pts} ${x(logs.length - 1)},${y(0)}`;
+    const last = logs[logs.length - 1];
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="フォロワー推移">
+      ${g}
+      ${goal ? `<line x1="${L}" x2="${W - R}" y1="${y(goal)}" y2="${y(goal)}" stroke="var(--warn)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W - R + 6}" y="${y(goal) + 4}" font-size="11" fill="var(--warn)">30日目標</text>` : ""}
+      <polygon points="${area}" fill="var(--accent)" opacity=".12"/>
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+      ${logs.map((p, k) => `<circle cx="${x(k)}" cy="${y(p.f)}" r="${k === logs.length - 1 ? 5 : 3}" fill="var(--accent)"/><text x="${x(k)}" y="${H - 10}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="var(--font-mono)">${esc((p.d || "").slice(5).replace("-", "/") || "W" + (k + 1))}</text>`).join("")}
+      <text x="${x(logs.length - 1) + 9}" y="${y(last.f) - 8}" font-size="12" font-weight="700" fill="var(--ink)" font-family="var(--font-mono)">${last.f.toLocaleString("ja-JP")}</text>
+    </svg>`;
+  }
+
+  // ---------- step 7 ----------
+  function report() {
+    const t = target(), L = [];
+    L.push("# スレッズ市場調査レポート", "");
+    L.push("## 1. ジャンル比較", "", "| ジャンル | ボリューム | 収益化 | 発信内容 | 総合 |", "|---|---|---|---|---|");
+    S.genres.forEach((g) => { const tt = total(g); L.push(`| ${g.name}${g.id === S.selectedGenre ? "（決定）" : ""} | ${g.vol.score ?? "-"} | ${g.mon.score ?? "-"} | ${g.con.score ?? "-"} | ${tt == null ? "-" : tt.toFixed(2)} |`); });
+    L.push("", `重み：ボリューム ${S.weights.vol} / 収益化 ${S.weights.mon} / 発信内容 ${S.weights.con}`, "");
+    if (t) {
+      L.push(`### 対象ジャンル：${t.name}`, "");
+      L.push(`- キーワード：${t.keywords || "-"}`);
+      L.push(`- ボリューム：上位投稿の平均いいね ${fmt(num(t.vol.avgLikes))} / フォロワー中央値 ${fmt(num(t.vol.topFollowers))} / 1万人超 ${fmt(num(t.vol.bigAccounts))}件 / 投稿量 ${t.vol.density || "-"} / トレンド ${t.vol.trend || "-"}`);
+      L.push(`- 収益化：${t.mon.methods.join("、") || "-"}（単価 ${fmt(num(t.mon.price))}円、導線 ${t.mon.funnel.join("→") || "-"}）`);
+      if (t.mon.proof) L.push(`  - 売れている証拠：${t.mon.proof}`);
+      const st = typeStats(t.con.posts);
+      L.push(`- 発信内容：${st.map((s) => `${s.type}（平均${fmt(s.avg)}いいね・${s.n}件）`).join("、") || "-"}`);
+      if (t.con.themes) L.push(`  - テーマ：${t.con.themes}`);
+      L.push("");
+    }
+    L.push("## 2. 競合分析", "");
+    if (S.competitors.length) {
+      L.push("| アカウント | フォロワー | 平均いいね | ER | 隙・弱み |", "|---|---|---|---|---|");
+      S.competitors.forEach((c) => { const e = er(c); L.push(`| ${c.name || "-"} | ${fmt(num(c.followers))} | ${fmt(num(c.likes))} | ${e == null ? "-" : e.toFixed(1) + "%"} | ${c.gap || "-"} |`); });
+    } else L.push("未記入");
+    const p = S.persona;
+    L.push("", "## 3. ターゲット", "", `- ${p.age || "-"}／${p.attr || "-"}`, `- 悩み：${p.pains || "-"}`, `- 理想：${p.ideal || "-"}`, `- 見る場面：${p.habits || "-"}`, `- 求める情報：${p.wants || "-"}`, `- 購入のきっかけ：${p.trigger || "-"}`);
+    const o = S.position;
+    L.push("", "## 4. ポジション", "", `「${o.target || "-"}」に向けて、「${o.theme || "-"}」を「${o.angle || "-"}」発信する`, "", `- 違い：${o.diff || "-"}`, `- 強み：${o.strengths || "-"}`, `- 発信の柱：${o.pillars || "-"}`, `- プロフィール：${o.bio || "-"}`);
+    const pl = S.plan;
+    L.push("", "## 5. 投稿設計", "", `- 頻度：${pl.freq || "-"}　時間帯：${pl.times || "-"}`, `- 型の配分：${pl.mix || "-"}`, `- 導線：${pl.cta || "-"}`, `- ネタ：${pl.ideas.length}本`);
+    pl.ideas.slice(0, 20).forEach((x) => L.push(`  - [${x.status || "ネタ"}] ${x.title || "-"}（${x.type || "-"}）`));
+    const k = S.kpi;
+    L.push("", "## 6. KPI・検証", "", `- 目標フォロワー：30日 ${fmt(num(k.d30))} / 60日 ${fmt(num(k.d60))} / 90日 ${fmt(num(k.d90))}　平均いいね目標 ${fmt(num(k.likesGoal))}`);
+    k.logs.forEach((l) => L.push(`  - ${l.date || "-"}：フォロワー ${fmt(num(l.followers))} / 投稿 ${fmt(num(l.posts))} / 平均いいね ${fmt(num(l.likes))}${l.note ? " / " + l.note : ""}`));
+    L.push(`- 判断チェック：${(k.checks || []).length}/${CHECKS.length}`);
+    return L.join("\n");
+  }
+  function viewStep7() {
+    return `${head(7, "調査結果を Markdown のレポートにまとめます。データはこのブラウザにだけ保存されるので、区切りごとにバックアップをコピーしておくと安心です。")}
+    <section class="panel"><h3>レポート</h3>
+      <div class="row"><button class="btn primary" type="button" data-act="copyReport">レポートをコピー</button></div>
+      <pre class="md" id="report-text" tabindex="0"></pre>
+    </section>
+    <div class="split">
+      <section class="panel"><h3>バックアップ</h3>
+        <p class="note">全データを JSON 形式でコピーします。メモアプリなどに貼って保存してください。</p>
+        <div><button class="btn" type="button" data-act="copyJson">バックアップをコピー</button></div>
+        ${field("バックアップから復元（JSON を貼り付け）", `<textarea id="import-box" rows="4" placeholder='{"v":1, ...}'></textarea>`)}
+        <div><button class="btn" type="button" data-act="importJson">復元する</button></div>
+        <p class="note" id="import-msg" aria-live="polite"></p>
+      </section>
+      <section class="panel"><h3>データの初期化</h3>
+        <p class="note">記入例を消して白紙から始めます。今のデータは消えるので、必要なら先にバックアップをコピーしてください。</p>
+        <div class="row"><button class="btn danger" type="button" data-act="reset" data-v="empty">白紙から始める</button><button class="btn" type="button" data-act="reset" data-v="sample">記入例を読み込む</button></div>
+      </section>
+    </div>
+    ${nextbar(7)}`;
+  }
+  function calcStep7() { const el = document.getElementById("report-text"); if (el) el.textContent = report(); }
+
+  const VIEWS = { 1: viewStep1, 2: viewStep2, 3: viewStep3, 4: viewStep4, 5: viewStep5, 6: viewStep6, 7: viewStep7 };
+  const CALCS = { 1: calcStep1, 2: calcStep2, 4: calcStep4, 5: calcStep5, 6: calcStep6, 7: calcStep7 };
+  function refresh() { renderRail(); (CALCS[S.step] || (() => {}))(); }
+  function render() { document.getElementById("view").innerHTML = VIEWS[S.step](); refresh(); }
+
+  // ---------- events ----------
+  function toast(msg) {
+    const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 1800);
+  }
+  async function copy(text, okMsg) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (_) {}
+      ta.remove(); toast(ok ? okMsg : "コピーできませんでした。テキストを選択してコピーしてください");
+    }
+  }
+  const NEW_ROW = {
+    post: () => ({ url: "", type: "", likes: null, hook: "" }),
+    comp: () => ({ name: "", url: "", followers: null, ppw: null, likes: null, theme: "", monetize: "", strength: "", gap: "" }),
+    idea: () => ({ title: "", type: "", status: "ネタ" }),
+    log: () => ({ date: new Date().toISOString().slice(0, 10), followers: null, posts: null, likes: null, best: "", note: "" })
+  };
+
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el.dataset.bind) {
+      let v = el.value;
+      if ("num" in el.dataset) v = v === "" ? null : Number(v);
+      setPath(el.dataset.bind, v);
+      if (el.dataset.bind.endsWith(".name") && S.step === 1) {
+        const tab = document.querySelector('.tabs [aria-selected="true"]');
+        if (tab) tab.firstChild.textContent = v;
+      }
+      save(); refresh();
+    }
+  });
+  document.addEventListener("change", (e) => {
+    const el = e.target;
+    if (el.dataset.arr) {
+      const arr = (getPath(el.dataset.arr) || []).slice();
+      const i = arr.indexOf(el.value);
+      if (el.checked && i < 0) arr.push(el.value); else if (!el.checked && i >= 0) arr.splice(i, 1);
+      setPath(el.dataset.arr, arr); save(); refresh();
+    }
+  });
+  document.addEventListener("submit", (e) => {
+    if (e.target.dataset.form === "addGenre") {
+      e.preventDefault();
+      const box = document.getElementById("new-genre"), name = box.value.trim();
+      if (!name) { box.focus(); return; }
+      const g = blankGenre(name); S.genres.push(g); S.openGenre = g.id; save(); render();
+    }
+  });
+  let resetArmed = null;
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const act = b.dataset.act, v = b.dataset.v;
+    if (act === "step") { S.step = +v; save(); render(); window.scrollTo({ top: 0 }); }
+    else if (act === "openGenre") { S.openGenre = v; save(); render(); }
+    else if (act === "pickGenre") { S.selectedGenre = v; save(); refresh(); toast(`「${genreById(v).name}」を対象ジャンルにしました`); }
+    else if (act === "delGenre") {
+      if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "もう一度押すと削除"; return; }
+      S.genres = S.genres.filter((g) => g.id !== v);
+      if (S.selectedGenre === v) S.selectedGenre = null;
+      if (!S.genres.length) S.genres.push(blankGenre());
+      S.openGenre = S.genres[0].id; save(); render();
+    }
+    else if (act === "rate") {
+      const p = b.dataset.path, n = +v, cur = getPath(p);
+      setPath(p, cur === n ? null : n);
+      b.parentElement.querySelectorAll("button").forEach((x) => { const on = +x.dataset.v === getPath(p); x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+      save(); refresh();
+    }
+    else if (act === "addRow") { getPath(b.dataset.path).push(NEW_ROW[v]()); save(); render(); }
+    else if (act === "delRow") { getPath(b.dataset.path).splice(+v, 1); save(); render(); }
+    else if (act === "copyReport") copy(report(), "レポートをコピーしました");
+    else if (act === "copyJson") copy(JSON.stringify(S), "バックアップをコピーしました");
+    else if (act === "importJson") {
+      const msg = document.getElementById("import-msg");
+      try {
+        const d = JSON.parse(document.getElementById("import-box").value);
+        if (!d || !Array.isArray(d.genres) || !d.kpi || !d.plan) throw new Error("shape");
+        S = d; S.step = 7; save(); render(); toast("バックアップから復元しました");
+      } catch (err) { msg.textContent = "読み込めませんでした。「バックアップをコピー」で取った JSON をそのまま貼り付けてください。"; }
+    }
+    else if (act === "reset") {
+      if (resetArmed !== v) { resetArmed = v; b.textContent = "もう一度押すと実行"; return; }
+      resetArmed = null; S = v === "sample" ? sampleState() : emptyState(); save(); render(); toast(v === "sample" ? "記入例を読み込みました" : "白紙にしました。Step 1 から始めましょう");
+    }
+  });
+
+  if (!storageOk) document.getElementById("save-state").textContent = "このブラウザでは自動保存できません";
+  render();
+})();
+</script>
