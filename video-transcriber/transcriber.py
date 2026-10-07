@@ -123,8 +123,9 @@ def find_media_in_html(page_url: str) -> list[str]:
     for a in soup.find_all("a", href=True):
         if VIDEO_EXT_RE.search(a["href"]):
             add(a["href"])
-    # スクリプト内に直書きされた動画 URL
-    for m in re.finditer(r"https?://[^\s\"'<>\\]+?\.(?:mp4|webm|m3u8)(?:\?[^\s\"'<>\\]*)?", resp.text):
+    # スクリプト内に直書きされた動画 URL（JSON 内の "https:\/\/..." のようなエスケープも戻して探す）
+    raw = resp.text.replace("\\/", "/")
+    for m in re.finditer(r"https?://[^\s\"'<>\\]+?\.(?:mp4|webm|m3u8)(?:\?[^\s\"'<>\\]*)?", raw):
         add(m.group(0))
     return found
 
