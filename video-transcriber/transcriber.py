@@ -376,6 +376,21 @@ def download_audio(info: dict, workdir: Path, log: Log = print) -> Path:
     return files[0]
 
 
+def _decode_audio(path: Path, sr: int = 16000):
+    """ffmpeg で 16kHz モノラルの波形に変換する。
+
+    faster-whisper 内蔵のデコーダは PyAV のバージョン差で壊れることがある（PyAV 19 で
+    open() の引数が削除された）ため、どの環境にもある ffmpeg で自前デコードする。
+    """
+    import subprocess
+    import numpy as np
+
+    cmd = ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(path),
+           "-f", "f32le", "-ac", "1", "-ar", str(sr), "-"]
+    out = subprocess.run(cmd, capture_output=True, check=True).stdout
+    return np.frombuffer(out, dtype=np.float32)
+
+
 def transcribe_file(
     audio_path: Path,
     model_size: str = "small",
@@ -385,7 +400,7 @@ def transcribe_file(
 ) -> tuple[list[Segment], str | None]:
     log(f"Whisper（{model_size}）で文字起こし中…")
     model = _load_model(model_size, device)
-    seg_iter, meta = model.transcribe(str(audio_path), language=language, vad_filter=True)
+    seg_iter, meta = model.transcribe(_decode_audio(audio_path), language=language, vad_filter=True)
     segments = []
     for s in seg_iter:
         segments.append(Segment(round(s.start, 2), round(s.end, 2), s.text.strip()))
