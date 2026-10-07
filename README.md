@@ -7,6 +7,7 @@
 ```
 upwork-research/
 ├── UPWORK_RESEARCH_2026.md    # 市場調査レポート
+├── video-transcriber/          # ページ内動画の文字起こしツール
 ├── portfolio/                  # ポートフォリオ用ツール（開発予定）
 │   ├── tool-1/                # ツール1（データ抽出・可視化）
 │   ├── tool-2/                # ツール2（Web スクレイピング自動化）

@@ -1,0 +1,6 @@
+yt-dlp>=2026.8.19
+faster-whisper>=1.2.1
+requests>=2.32
+beautifulsoup4>=4.12
+fastapi>=0.110
+uvicorn>=0.30
