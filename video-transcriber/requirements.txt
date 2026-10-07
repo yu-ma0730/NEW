@@ -4,3 +4,4 @@ requests>=2.32
 beautifulsoup4>=4.12
 fastapi>=0.110
 uvicorn>=0.30
+playwright>=1.47

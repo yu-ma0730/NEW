@@ -64,16 +64,32 @@ class Transcript:
 # 動画の検出
 # ---------------------------------------------------------------------------
 
-def _ydl_probe(url: str) -> list[dict]:
+def _http_headers(referer: str | None) -> dict:
+    # 埋め込み動画（Vimeo の非公開埋め込みや独自 HLS 配信など）は Referer が無いと 403 になることが多い
+    headers = {"User-Agent": USER_AGENT}
+    if referer:
+        headers["Referer"] = referer
+    return headers
+
+
+def _ydl_probe(url: str, referer: str | None = None) -> list[dict]:
     """yt-dlp でページ内の動画情報を取得する（プレイリスト・埋め込みも展開）。"""
-    opts = {"quiet": True, "no_warnings": True, "skip_download": True, "noplaylist": False}
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "noplaylist": False,
+        "http_headers": _http_headers(referer),
+    }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
     if info is None:
         return []
-    if info.get("_type") in ("playlist", "multi_video"):
-        return [e for e in (info.get("entries") or []) if e]
-    return [info]
+    entries = info.get("entries") if info.get("_type") in ("playlist", "multi_video") else [info]
+    entries = [e for e in (entries or []) if e]
+    for e in entries:
+        e["_referer"] = referer
+    return entries
 
 
 def find_media_in_html(page_url: str) -> list[str]:
@@ -113,8 +129,109 @@ def find_media_in_html(page_url: str) -> list[str]:
     return found
 
 
-def discover_videos(page_url: str, log: Log = print) -> list[dict]:
-    """ページ内の動画を検出し、yt-dlp の info dict のリストを返す。"""
+MEDIA_CT_RE = re.compile(r"^(video/|audio/)|mpegurl|dash\+xml", re.I)
+PLAY_SELECTORS = [
+    "video", ".vjs-big-play-button", ".plyr__control--overlaid", "[aria-label*=Play i]",
+    "[class*=play-button]", "[class*=play_button]", "[class*=playBtn]", "button[class*=play]",
+]
+
+
+def _launch_browser(pw):
+    """Chromium を起動。Playwright 同梱版が無ければ CHROMIUM_PATH / 既知パスを試す。"""
+    try:
+        return pw.chromium.launch()
+    except Exception:
+        import os
+        for path in (os.environ.get("CHROMIUM_PATH"), "/opt/pw-browsers/chromium"):
+            if path and Path(path).exists():
+                return pw.chromium.launch(executable_path=path)
+        raise
+
+
+def find_media_with_browser(page_url: str, log: Log = print, wait_ms: int = 8000) -> list[str]:
+    """ヘッドレスブラウザでページを実際に開き、JavaScript で読み込まれる動画を探す。
+
+    UTAGE などの LP 作成ツールや独自プレイヤーは、HTML に動画 URL が書かれておらず
+    再生ボタンを押した時点で .m3u8 / .mp4 を読み込むことが多いため、通信を監視して拾う。
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        log("Playwright が未インストールのためブラウザ解析をスキップします（pip install playwright）")
+        return []
+
+    found: list[str] = []
+
+    def add(u: str | None) -> None:
+        if u and not u.startswith(("data:", "blob:")) and u not in found:
+            found.append(u)
+
+    def on_response(resp) -> None:
+        url = resp.url
+        ct = resp.headers.get("content-type", "")
+        # HLS/DASH の分割ファイル（.ts / .m4s）はマニフェストだけ拾えば十分
+        if re.search(r"\.(ts|m4s|aac)(\?|$)", url, re.I):
+            return
+        if VIDEO_EXT_RE.search(url) or MEDIA_CT_RE.search(ct):
+            add(url)
+
+    with sync_playwright() as pw:
+        browser = _launch_browser(pw)
+        try:
+            page = browser.new_page(user_agent=USER_AGENT)
+            page.on("response", on_response)
+            page.goto(page_url, wait_until="domcontentloaded", timeout=45000)
+            page.wait_for_timeout(2500)
+            # 遅延読み込み対策でページ下までスクロール
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            page.wait_for_timeout(1000)
+            # 再生ボタンを押して動画の読み込みを発生させる（メインページと iframe 内の両方）
+            for frame in page.frames:
+                for sel in PLAY_SELECTORS:
+                    try:
+                        for el in frame.query_selector_all(sel)[:5]:
+                            el.click(timeout=1500, force=True)
+                    except Exception:
+                        pass
+            page.wait_for_timeout(wait_ms)
+            # 描画後の DOM から <video> と埋め込み iframe を回収
+            for frame in page.frames:
+                if EMBED_HOST_RE.search(frame.url):
+                    add(frame.url)
+                try:
+                    srcs = frame.eval_on_selector_all(
+                        "video, video source, audio, audio source",
+                        "els => els.map(e => e.currentSrc || e.src).filter(Boolean)",
+                    )
+                    for src in srcs:
+                        add(src)
+                except Exception:
+                    pass
+        finally:
+            browser.close()
+    return found
+
+
+def _probe_all(urls: list[str], referer: str, log: Log) -> list[dict]:
+    entries: list[dict] = []
+    seen_ids: set[str] = set()
+    for media_url in urls:
+        try:
+            for e in _ydl_probe(media_url, referer=referer):
+                key = f"{e.get('extractor')}:{e.get('id')}"
+                if key not in seen_ids:
+                    seen_ids.add(key)
+                    entries.append(e)
+        except yt_dlp.utils.DownloadError:
+            log(f"  取得できませんでした: {media_url[:150]}")
+    return entries
+
+
+def discover_videos(page_url: str, log: Log = print, use_browser: bool = True) -> list[dict]:
+    """ページ内の動画を検出し、yt-dlp の info dict のリストを返す。
+
+    1. yt-dlp に直接渡す  2. HTML を解析  3. ヘッドレスブラウザで実際に開く  の順に試す。
+    """
     try:
         entries = _ydl_probe(page_url)
         if entries:
@@ -123,13 +240,24 @@ def discover_videos(page_url: str, log: Log = print) -> list[dict]:
     except yt_dlp.utils.DownloadError as e:
         log(f"yt-dlp で直接取得できませんでした。HTML を解析します ({str(e).splitlines()[0][:120]})")
 
-    entries: list[dict] = []
-    for media_url in find_media_in_html(page_url):
+    try:
+        entries = _probe_all(find_media_in_html(page_url), page_url, log)
+    except requests.RequestException as e:
+        log(f"ページを取得できませんでした: {e}")
+        entries = []
+    if entries:
+        log(f"HTML 解析で {len(entries)} 件の動画を検出しました")
+        return entries
+
+    if use_browser:
+        log("HTML に動画が無いため、ブラウザでページを開いて探します…")
         try:
-            entries.extend(_ydl_probe(media_url))
-        except yt_dlp.utils.DownloadError:
-            log(f"  取得できませんでした: {media_url}")
-    log(f"HTML 解析で {len(entries)} 件の動画を検出しました")
+            urls = find_media_with_browser(page_url, log)
+        except Exception as e:  # noqa: BLE001 - ブラウザ起動失敗やタイムアウトはログに出して続行
+            log(f"ブラウザ解析に失敗しました: {str(e).splitlines()[0]}")
+            urls = []
+        entries = _probe_all(urls, page_url, log)
+        log(f"ブラウザ解析で {len(entries)} 件の動画を検出しました")
     return entries
 
 
@@ -230,6 +358,7 @@ def _load_model(model_size: str, device: str):
 def download_audio(info: dict, workdir: Path, log: Log = print) -> Path:
     url = info.get("webpage_url") or info.get("url")
     opts = {
+        "http_headers": _http_headers(info.get("_referer")),
         "quiet": True,
         "no_warnings": True,
         "noprogress": True,
@@ -297,8 +426,10 @@ def transcribe_video(
     )
 
 
-def transcribe_page(page_url: str, max_videos: int | None = None, log: Log = print, **kwargs) -> list[Transcript]:
-    videos = discover_videos(page_url, log)
+def transcribe_page(
+    page_url: str, max_videos: int | None = None, use_browser: bool = True, log: Log = print, **kwargs
+) -> list[Transcript]:
+    videos = discover_videos(page_url, log, use_browser=use_browser)
     if not videos:
         raise RuntimeError("ページ内に動画が見つかりませんでした")
     if max_videos:

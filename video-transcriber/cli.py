@@ -27,6 +27,8 @@ def main() -> int:
                    help="Whisper モデル: tiny/base/small/medium/large-v3（大きいほど高精度・低速）")
     p.add_argument("--device", default="cpu", help="cpu または cuda")
     p.add_argument("--no-subtitles", action="store_true", help="既存字幕を使わず必ず Whisper で文字起こし")
+    p.add_argument("--no-browser", action="store_true",
+                   help="ヘッドレスブラウザでのページ解析（JavaScript で読み込む動画の検出）を行わない")
     p.add_argument("--max-videos", type=int, help="処理する動画数の上限")
     p.add_argument("-t", "--timestamps", action="store_true", help="txt 出力にタイムスタンプを付ける")
     args = p.parse_args()
@@ -36,6 +38,7 @@ def main() -> int:
         results = transcriber.transcribe_page(
             args.url,
             max_videos=args.max_videos,
+            use_browser=not args.no_browser,
             language=args.language,
             model_size=args.model,
             device=args.device,
