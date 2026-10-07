@@ -12,24 +12,24 @@ from __future__ import annotations
 import json
 import re
 import tempfile
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable, Iterable
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable, Iterable
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
 import yt_dlp
+from bs4 import BeautifulSoup
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/128.0 Safari/537.36"
 )
-VIDEO_EXT_RE = re.compile(r"\.(mp4|webm|m4v|mov|mkv|m3u8|mpd|mp3|m4a|wav|ogg)(\?|$)", re.I)
+VIDEO_EXT_RE = re.compile(r"\.(mp4|webm|m4v|mov|mkv|m3u8|mpd|mp3|m4a|wav|ogg)(\?|$)", re.IGNORECASE)
 EMBED_HOST_RE = re.compile(
     r"(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|dailymotion\.com|"
     r"wistia\.(com|net)|loom\.com|streamable\.com|nicovideo\.jp|tiktok\.com)",
-    re.I,
+    re.IGNORECASE,
 )
 
 Log = Callable[[str], None]
@@ -92,8 +92,27 @@ def _ydl_probe(url: str, referer: str | None = None) -> list[dict]:
     return entries
 
 
-def find_media_in_html(page_url: str) -> list[str]:
-    """HTML を解析して動画らしき URL を列挙する（yt-dlp が対応していないページ用）。"""
+def _json_title_near(raw: str, start: int, end: int) -> str | None:
+    """URL を囲む JSON オブジェクト内の "title" を取り出す（UTAGE などのプレイヤー設定用）。"""
+    obj_start = raw.rfind("{", 0, start)
+    obj_end = raw.find("}", end)
+    if obj_start < 0 or obj_end < 0:
+        return None
+    m = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"', raw[obj_start:obj_end])
+    if not m:
+        return None
+    try:
+        title = json.loads(f'"{m.group(1)}"').strip()
+    except json.JSONDecodeError:
+        return None
+    return title or None
+
+
+def find_media_in_html(page_url: str, titles: dict[str, str] | None = None) -> list[str]:
+    """HTML を解析して動画らしき URL を列挙する（yt-dlp が対応していないページ用）。
+
+    titles を渡すと、JSON 設定内で見つかった動画の題名を {URL: 題名} で書き込む。
+    """
     resp = requests.get(page_url, headers={"User-Agent": USER_AGENT}, timeout=30)
     resp.raise_for_status()
     if "charset" not in resp.headers.get("content-type", "").lower():
@@ -127,10 +146,13 @@ def find_media_in_html(page_url: str) -> list[str]:
     raw = resp.text.replace("\\/", "/")
     for m in re.finditer(r"https?://[^\s\"'<>\\]+?\.(?:mp4|webm|m3u8)(?:\?[^\s\"'<>\\]*)?", raw):
         add(m.group(0))
+        title = _json_title_near(raw, m.start(), m.end())
+        if titles is not None and title:
+            titles.setdefault(m.group(0), title)
     return found
 
 
-MEDIA_CT_RE = re.compile(r"^(video/|audio/)|mpegurl|dash\+xml", re.I)
+MEDIA_CT_RE = re.compile(r"^(video/|audio/)|mpegurl|dash\+xml", re.IGNORECASE)
 PLAY_SELECTORS = [
     "video", ".vjs-big-play-button", ".plyr__control--overlaid", "[aria-label*=Play i]",
     "[class*=play-button]", "[class*=play_button]", "[class*=playBtn]", "button[class*=play]",
@@ -171,7 +193,7 @@ def find_media_with_browser(page_url: str, log: Log = print, wait_ms: int = 8000
         url = resp.url
         ct = resp.headers.get("content-type", "")
         # HLS/DASH の分割ファイル（.ts / .m4s）はマニフェストだけ拾えば十分
-        if re.search(r"\.(ts|m4s|aac)(\?|$)", url, re.I):
+        if re.search(r"\.(ts|m4s|aac)(\?|$)", url, re.IGNORECASE):
             return
         if VIDEO_EXT_RE.search(url) or MEDIA_CT_RE.search(ct):
             add(url)
@@ -192,7 +214,7 @@ def find_media_with_browser(page_url: str, log: Log = print, wait_ms: int = 8000
                     try:
                         for el in frame.query_selector_all(sel)[:5]:
                             el.click(timeout=1500, force=True)
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110 - 押せないボタンは無視して次を試す
                         pass
             page.wait_for_timeout(wait_ms)
             # 描画後の DOM から <video> と埋め込み iframe を回収
@@ -206,14 +228,14 @@ def find_media_with_browser(page_url: str, log: Log = print, wait_ms: int = 8000
                     )
                     for src in srcs:
                         add(src)
-                except Exception:
+                except Exception:  # noqa: BLE001, S110 - 閉じた iframe などは無視する
                     pass
         finally:
             browser.close()
     return found
 
 
-def _probe_all(urls: list[str], referer: str, log: Log) -> list[dict]:
+def _probe_all(urls: list[str], referer: str, log: Log, titles: dict[str, str] | None = None) -> list[dict]:
     entries: list[dict] = []
     seen_ids: set[str] = set()
     for media_url in urls:
@@ -222,9 +244,37 @@ def _probe_all(urls: list[str], referer: str, log: Log) -> list[dict]:
                 key = f"{e.get('extractor')}:{e.get('id')}"
                 if key not in seen_ids:
                     seen_ids.add(key)
+                    if titles and media_url in titles:
+                        e["title"] = titles[media_url]
+                        e["_titled"] = True
                     entries.append(e)
         except yt_dlp.utils.DownloadError:
             log(f"  取得できませんでした: {media_url[:150]}")
+    return entries
+
+
+def _page_title(page_url: str) -> str | None:
+    try:
+        resp = requests.get(page_url, headers={"User-Agent": USER_AGENT}, timeout=30)
+        if "charset" not in resp.headers.get("content-type", "").lower():
+            resp.encoding = resp.apparent_encoding
+        soup = BeautifulSoup(resp.text, "html.parser")
+    except requests.RequestException:
+        return None
+    og = soup.find("meta", property="og:title")
+    title = (og.get("content") if og else None) or (soup.title.string if soup.title else None)
+    return title.strip() if title and title.strip() else None
+
+
+def _label_with_page_title(entries: list[dict], page_url: str) -> list[dict]:
+    """直リンク（.m3u8 等）から取った動画は題名が "video" などになるので、ページの題名を付ける。"""
+    generic = [e for e in entries if e.get("extractor") == "generic" and not e.get("_titled")]
+    if not generic:
+        return entries
+    title = _page_title(page_url)
+    if title:
+        for i, e in enumerate(generic, 1):
+            e["title"] = title if len(generic) == 1 else f"{title} ({i})"
     return entries
 
 
@@ -242,13 +292,14 @@ def discover_videos(page_url: str, log: Log = print, use_browser: bool = True) -
         log(f"yt-dlp で直接取得できませんでした。HTML を解析します ({str(e).splitlines()[0][:120]})")
 
     try:
-        entries = _probe_all(find_media_in_html(page_url), page_url, log)
+        titles: dict[str, str] = {}
+        entries = _probe_all(find_media_in_html(page_url, titles), page_url, log, titles)
     except requests.RequestException as e:
         log(f"ページを取得できませんでした: {e}")
         entries = []
     if entries:
         log(f"HTML 解析で {len(entries)} 件の動画を検出しました")
-        return entries
+        return _label_with_page_title(entries, page_url)
 
     if use_browser:
         log("HTML に動画が無いため、ブラウザでページを開いて探します…")
@@ -259,7 +310,7 @@ def discover_videos(page_url: str, log: Log = print, use_browser: bool = True) -
             urls = []
         entries = _probe_all(urls, page_url, log)
         log(f"ブラウザ解析で {len(entries)} 件の動画を検出しました")
-    return entries
+    return _label_with_page_title(entries, page_url)
 
 
 # ---------------------------------------------------------------------------
@@ -383,6 +434,7 @@ def _decode_audio(path: Path, sr: int = 16000):
     open() の引数が削除された）ため、どの環境にもある ffmpeg で自前デコードする。
     """
     import subprocess
+
     import numpy as np
 
     cmd = ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(path),
@@ -458,7 +510,7 @@ def transcribe_page(
 # ---------------------------------------------------------------------------
 
 def format_ts(sec: float, sep: str = ".") -> str:
-    ms = int(round(sec * 1000))
+    ms = round(sec * 1000)
     h, ms = divmod(ms, 3_600_000)
     m, ms = divmod(ms, 60_000)
     s, ms = divmod(ms, 1000)

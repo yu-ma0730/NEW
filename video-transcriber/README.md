@@ -2,6 +2,20 @@
 
 Web ページの URL を渡すと、ページ内の動画を自動で見つけて文字起こしします。
 
+## かんたん手順（Claude に頼む場合）
+
+プログラミングの知識がなくても、次の流れで使えます。
+
+1. claude.ai/code でこのリポジトリの新しいセッションを開く
+2. 文字起こししたいページの URL を貼って「**この動画を文字起こしして**」と送る
+3. 「ページに届かない」と言われたら、画面上部のタイトル横の ⌄ →「**クラウド環境を編集**」→
+   「ネットワークアクセス」を **Full** にして「**変更を保存**」→ Claude に「設定しました」と送る
+4. 15〜20 分ほど待つと（23 分の動画の場合）、文字起こしのファイルが届く
+5. 終わったら、ネットワークアクセスを **Trusted** に戻す
+
+セッション開始時に必要な部品が自動で入り（`.claude/hooks/session-start.sh`）、手順は
+`.claude/skills/transcribe-video/SKILL.md` に書いてあるので、Claude が毎回同じやり方で作業します。
+
 ## 仕組み
 
 1. **動画の検出**: [yt-dlp](https://github.com/yt-dlp/yt-dlp)（YouTube・Vimeo・ニコニコ等 1000 以上のサイトに対応）でページを解析。
@@ -47,13 +61,16 @@ python cli.py "https://example.com/page" -f srt -o out/ -l ja -m medium
 # UTAGE などのページ（JavaScript で読み込まれる動画も自動で探します）
 python cli.py "https://utage-system.com/p/XXXXXXXX" -t -o out/
 
+# 全形式（txt / タイムスタンプ付き txt / srt / vtt / json）をまとめて out/ に保存
+python cli.py "https://example.com/page" -f all -l ja
+
 # 既存字幕を無視して必ず Whisper で文字起こし
 python cli.py "https://example.com/page" --no-subtitles
 ```
 
 | オプション | 説明 |
 |---|---|
-| `-f, --format` | `txt`（既定） / `srt` / `vtt` / `json` |
+| `-f, --format` | `txt`（既定） / `srt` / `vtt` / `json` / `all`（全形式を保存） |
 | `-o, --output-dir` | 保存先フォルダ（省略時は画面に表示） |
 | `-l, --language` | 言語コード（`ja`, `en` など）。省略時は自動判定 |
 | `-m, --model` | `tiny` / `base` / `small`（既定） / `medium` / `large-v3` |
@@ -77,5 +94,6 @@ video-transcriber/
 ├── transcriber.py   # コア処理（検出・字幕取得・Whisper・出力変換）
 ├── cli.py           # コマンドライン版
 ├── main.py          # Web 版（FastAPI）
-└── static/index.html
+├── static/index.html
+└── tests/           # 単体テスト（python -m pytest -q tests）
 ```

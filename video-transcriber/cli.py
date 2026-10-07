@@ -20,7 +20,8 @@ def safe_name(name: str) -> str:
 def main() -> int:
     p = argparse.ArgumentParser(description="Web ページ内の動画を文字起こしします")
     p.add_argument("url", help="動画を含むページ（または動画）の URL")
-    p.add_argument("-f", "--format", choices=["txt", "srt", "vtt", "json"], default="txt")
+    p.add_argument("-f", "--format", choices=["txt", "srt", "vtt", "json", "all"], default="txt",
+                   help="all を指定すると全形式（タイムスタンプ付き txt を含む）を保存します")
     p.add_argument("-o", "--output-dir", type=Path, help="出力先ディレクトリ（省略時は標準出力）")
     p.add_argument("-l", "--language", help="言語コード（例: ja, en）。省略時は自動判定")
     p.add_argument("-m", "--model", default="small",
@@ -32,6 +33,8 @@ def main() -> int:
     p.add_argument("--max-videos", type=int, help="処理する動画数の上限")
     p.add_argument("-t", "--timestamps", action="store_true", help="txt 出力にタイムスタンプを付ける")
     args = p.parse_args()
+    if args.format == "all" and not args.output_dir:
+        args.output_dir = Path("out")
 
     log = lambda msg: print(msg, file=sys.stderr)
     try:
@@ -50,13 +53,20 @@ def main() -> int:
         return 1
 
     for i, t in enumerate(results, 1):
-        out = transcriber.render(t, args.format, args.timestamps)
         if args.output_dir:
             args.output_dir.mkdir(parents=True, exist_ok=True)
-            path = args.output_dir / f"{i:02d}_{safe_name(t.title)}.{args.format}"
-            path.write_text(out, encoding="utf-8")
-            log(f"保存しました: {path}  （方式: {t.method}）")
+            stem = args.output_dir / f"{i:02d}_{safe_name(t.title)}"
+            if args.format == "all":
+                outputs = {f".{f}": transcriber.render(t, f) for f in ("txt", "srt", "vtt", "json")}
+                outputs["_timestamps.txt"] = transcriber.render(t, "txt", timestamps=True)
+            else:
+                outputs = {f".{args.format}": transcriber.render(t, args.format, args.timestamps)}
+            for suffix, body in outputs.items():
+                path = stem.with_name(stem.name + suffix)
+                path.write_text(body, encoding="utf-8")
+                log(f"保存しました: {path}  （方式: {t.method}）")
         else:
+            out = transcriber.render(t, args.format, args.timestamps)
             if len(results) > 1:
                 print(f"===== {t.title} =====")
             print(out)
