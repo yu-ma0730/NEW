@@ -1,0 +1,503 @@
+<title>LINE導線ビルダー</title>
+<meta name="description" content="アフィリエイト向けLINEステップ配信の導線を、テンプレートから設計・編集・チェックして書き出すツール">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=BIZ+UDGothic&display=swap">
+<style>
+/* Layout: 左に「材料とチェック」、右に配信タイムライン。分岐は左右に枝分かれ。スマホでは縦一列。 */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #18302b;
+  --muted: #5f716c;
+  --line: #d6ded9;
+  --accent: #e2b007;
+  --accent-ink: #3a2c00;
+  --teal: #1f6b5c;
+  --teal-soft: #e3efeb;
+  --warn: #b5530f;
+  --warn-soft: #fbeadb;
+  --bad: #b3261e;
+  --bad-soft: #f9e1df;
+  --ok: #2e7d4f;
+  --ok-soft: #e1f2e7;
+  --font-display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-data: "BIZ UDGothic", ui-monospace, "Menlo", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111916; --surface: #18221f; --ink: #e4ece8; --muted: #9aaba5; --line: #2c3a35;
+    --accent: #f0c434; --accent-ink: #251c00; --teal: #6cc3ad; --teal-soft: #1d332d;
+    --warn: #f0a265; --warn-soft: #3a2615; --bad: #f2867e; --bad-soft: #3b1d1b; --ok: #7fd09e; --ok-soft: #1a3324;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111916; --surface: #18221f; --ink: #e4ece8; --muted: #9aaba5; --line: #2c3a35;
+  --accent: #f0c434; --accent-ink: #251c00; --teal: #6cc3ad; --teal-soft: #1d332d;
+  --warn: #f0a265; --warn-soft: #3a2615; --bad: #f2867e; --bad-soft: #3b1d1b; --ok: #7fd09e; --ok-soft: #1a3324;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 64px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 2px solid var(--ink); margin-bottom: 20px; }
+header.top h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 5vw, 34px); line-height: 1.2; margin: 0; letter-spacing: .02em; }
+header.top h1 span { background: linear-gradient(transparent 62%, var(--accent) 62%); }
+header.top p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+aside.side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 860px) { aside.side { position: static; } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.panel h2 { font-size: 13px; letter-spacing: .08em; margin: 0 0 12px; color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.panel h2 b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 12px; letter-spacing: 0; }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field label { font-size: 12px; font-weight: 700; }
+.field small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+input[type="text"], input[type="number"], textarea, select {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%;
+}
+textarea { resize: vertical; line-height: 1.65; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+
+.btn { font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+.btn:hover { background: var(--teal-soft); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(.95); }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn.small { font-size: 12px; padding: 3px 8px; font-weight: 500; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.ghost:hover { color: var(--ink); background: var(--teal-soft); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+.stat .k { font-size: 11px; color: var(--muted); }
+.stat .v { font-family: var(--font-data); font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat.bad .v { color: var(--bad); } .stat.warn .v { color: var(--warn); } .stat.ok .v { color: var(--ok); }
+.issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; line-height: 1.55; }
+.issues li { padding: 6px 8px; border-radius: 6px; border-left: 3px solid; }
+.issues li.bad { background: var(--bad-soft); border-color: var(--bad); }
+.issues li.warn { background: var(--warn-soft); border-color: var(--warn); }
+.issues li.ok { background: var(--ok-soft); border-color: var(--ok); }
+.issues li a { color: inherit; font-weight: 700; }
+
+/* timeline */
+.flow-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.flow-head h2 { margin: 0; font-size: 18px; }
+.flow { position: relative; display: flex; flex-direction: column; gap: 14px; padding-left: 22px; }
+.flow::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.flow > .card::before { content: ""; position: absolute; left: -20px; top: 18px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--teal); }
+.flow > .card.is-branch::before { background: var(--accent); border-color: var(--accent); border-radius: 2px; transform: rotate(45deg); }
+.card.flagged { border-color: var(--bad); }
+.card-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.day { display: inline-flex; align-items: center; gap: 2px; font-family: var(--font-data); font-size: 12px; background: var(--teal-soft); color: var(--teal); border-radius: 4px; padding: 2px 4px 2px 7px; }
+.day input { width: 3.4em; padding: 0 2px; border: 0; background: transparent; color: inherit; font-family: var(--font-data); font-size: 12px; text-align: right; }
+.card-head .title { flex: 1 1 160px; min-width: 0; font-weight: 700; border: 1px solid transparent; background: transparent; padding: 2px 6px; }
+.card-head .title:hover { border-color: var(--line); }
+.kind { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.tools { display: flex; gap: 2px; margin-left: auto; }
+.card textarea { min-height: 120px; background: var(--bg); }
+.card-foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.count { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.badge { font-size: 11px; border-radius: 4px; padding: 0 6px; }
+.badge.bad { background: var(--bad-soft); color: var(--bad); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+
+.branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.route { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-width: 0; background: var(--bg); }
+.route-head { display: flex; gap: 6px; align-items: center; }
+.route-head .tag { font-family: var(--font-data); font-size: 12px; font-weight: 700; background: var(--ink); color: var(--bg); border-radius: 4px; padding: 0 6px; }
+.route-head input { flex: 1; min-width: 0; font-weight: 700; background: var(--surface); }
+.route .card { padding: 10px; }
+.route .card textarea { min-height: 90px; background: var(--surface); }
+.confirming { background: var(--bad) !important; color: var(--surface) !important; border-color: var(--bad) !important; }
+
+.adds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.export { margin-top: 20px; }
+.export pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-data); font-size: 12.5px; line-height: 1.7; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; max-height: 420px; overflow: auto; margin: 10px 0 0; }
+.note { font-size: 12px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.toast.show { opacity: 1; }
+mark.ph { background: var(--warn-soft); color: var(--warn); }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1><span>LINE導線</span>ビルダー</h1>
+      <p>材料を入れる → テンプレートで下書き → 自分の言葉に直す → チェックして書き出す</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="btn-reset" type="button">サンプルに戻す</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <aside class="side">
+      <section class="panel" aria-labelledby="h-input">
+        <h2 id="h-input"><b>1</b>導線の材料</h2>
+        <div class="field">
+          <label for="in-genre">ジャンル</label>
+          <select id="in-genre">
+            <option value="side">副業・ブログ</option>
+            <option value="beauty">美容・健康</option>
+            <option value="study">学習・資格</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="in-sender">あなたの呼び名</label>
+          <input type="text" id="in-sender">
+        </div>
+        <div class="field">
+          <label for="in-target">届けたい相手</label>
+          <input type="text" id="in-target">
+          <small>「30代会社員」より「残業が多くて副業の時間が取れない30代会社員」のように具体的に。</small>
+        </div>
+        <div class="field">
+          <label for="in-pain">相手の悩み</label>
+          <input type="text" id="in-pain">
+        </div>
+        <div class="field">
+          <label for="in-magnet">登録特典</label>
+          <input type="text" id="in-magnet">
+        </div>
+        <div class="field">
+          <label for="in-product">紹介する商品・サービス</label>
+          <input type="text" id="in-product">
+        </div>
+        <div class="field">
+          <label for="in-me">あなたの体験（実績・失敗談）</label>
+          <textarea id="in-me" rows="3"></textarea>
+          <small>導線の説得力はここで決まります。盛らずに、実際の数字と失敗を書くのが一番強いです。</small>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btn-gen" type="button">この材料で下書きを作る</button>
+        </div>
+        <p class="note" id="gen-note">作り直すと、配信シナリオで編集した文章は上書きされます。</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-check">
+        <h2 id="h-check"><b>3</b>公開前チェック</h2>
+        <div class="stats" id="stats"></div>
+        <ul class="issues" id="issues"></ul>
+      </section>
+    </aside>
+
+    <main>
+      <div class="flow-head">
+        <h2><span class="note" style="font-size:13px">2&nbsp;</span>配信シナリオ</h2>
+        <span class="note">〔要記入〕の部分をあなたの言葉に置き換えてください</span>
+      </div>
+      <div class="flow" id="flow"></div>
+      <div class="adds">
+        <button class="btn" type="button" data-act="add-msg">＋メッセージを追加</button>
+        <button class="btn" type="button" data-act="add-branch">＋分岐（質問）を追加</button>
+      </div>
+
+      <section class="panel export" aria-labelledby="h-export">
+        <h2 id="h-export"><b>4</b>書き出し</h2>
+        <div class="row">
+          <button class="btn primary" id="btn-copy" type="button">テキストをコピー</button>
+          <span class="note">配信ツールの設定や、外注・相談用の資料にそのまま使えます。</span>
+        </div>
+        <pre id="export-text"></pre>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  const STORE_KEY = "line-funnel-builder:v1";
+
+  const PRESETS = {
+    side: {
+      sender: "ユウ", target: "残業が多くて副業の時間が取れない30代会社員",
+      pain: "副業を始めたいけど何からやればいいかわからない",
+      magnet: "ブログ開設から初収益までのチェックリスト（PDF）",
+      product: "レンタルサーバー（〇〇サーバー）",
+      me: "会社員をしながらブログ3年目です。最初の半年は収益0円でしたが、記事の順番を変えてから月3万円ほどになりました。"
+    },
+    beauty: {
+      sender: "ミカ", target: "仕事が忙しくてスキンケアに時間をかけられない20〜30代",
+      pain: "肌荒れが続くのに、どの化粧品を選べばいいかわからない",
+      magnet: "朝3分のスキンケア手順シート",
+      product: "〇〇オールインワンジェル",
+      me: "敏感肌で10種類以上の化粧品を試しては失敗してきました。手順を減らしてから肌が落ち着いてきました。"
+    },
+    study: {
+      sender: "ケン", target: "働きながら資格を取りたい社会人",
+      pain: "勉強時間が確保できず、途中で挫折してしまう",
+      magnet: "1日30分の学習スケジュール表",
+      product: "〇〇オンライン講座",
+      me: "フルタイムで働きながら1年で〇〇資格に合格しました。最初の受験は独学で不合格でした。"
+    },
+    other: { sender: "", target: "", pain: "", magnet: "", product: "", me: "" }
+  };
+
+  const LABELS = { sender: "あなたの呼び名", target: "届けたい相手", pain: "相手の悩み", magnet: "登録特典", product: "紹介する商品", me: "あなたの体験" };
+
+  let uid = 0;
+  const nid = () => "s" + (++uid) + Math.random().toString(36).slice(2, 6);
+  const msg = (day, title, text) => ({ id: nid(), day, title, text });
+
+  function fill(tpl, inp) {
+    return tpl.replace(/\{(\w+)\}/g, (_, k) => (inp[k] && inp[k].trim()) ? inp[k].trim() : "〔要記入：" + (LABELS[k] || k) + "〕");
+  }
+
+  function buildTemplate(inp) {
+    const f = (t) => fill(t, inp);
+    return [
+      msg(0, "友だち追加のお礼と特典", f("友だち追加ありがとうございます！\n{sender}です。\n\nお約束の特典「{magnet}」はこちらからどうぞ。\n▶ 〔要記入：特典のURL〕\n\nこのアカウントでは「{pain}」という方に向けて、遠回りしないためのヒントをお届けします。")),
+      msg(0, "自己紹介", f("改めまして、{sender}です。\n\n{me}\n\n同じように「{pain}」と悩んでいる方の力になりたくて、このアカウントを始めました。")),
+      {
+        id: nid(), day: 0, title: "今の状況を聞く", branch: true,
+        text: "よければ教えてください。\n今のあなたに近いのはどちらですか？\n（下のボタンをタップしてください）",
+        options: [
+          { label: "まだ何も始めていない", steps: [msg(0, "Aへの返信", "教えてくださってありがとうございます！\nまだ始めていなくても大丈夫です。最初に正しい順番を知っておけば、遠回りせずに済みます。\n明日から、最初の一歩を順番にお伝えしますね。")] },
+          { label: "始めたけどうまくいかない", steps: [msg(0, "Bへの返信", "教えてくださってありがとうございます！\n始めているだけで一歩前進です。うまくいかないときは、たいてい共通の原因があります。\n明日は、その原因からお話ししますね。")] }
+        ]
+      },
+      msg(1, "教育①：つまずく原因", f("【1日目】「{pain}」と感じる一番の原因\n\n多くの人がつまずくのは、才能ではなく「順番」です。\n\n〔要記入：あなたが順番を間違えて失敗した体験を1つ〕\n\n明日は、具体的な進め方をお伝えします。")),
+      msg(2, "教育②：解決の全体像", "【2日目】遠回りしない進め方\n\n① 〔要記入：ステップ1〕\n② 〔要記入：ステップ2〕\n③ 〔要記入：ステップ3〕\n\nこの中で、多くの人が自力で苦労するのが〔要記入：どのステップか〕です。ここを楽にする方法は、明後日お伝えします。"),
+      msg(3, "実体験・レビュー", f("【3日目】実際に私がやってみた結果\n\n使う前：〔要記入：使う前の状態〕\n使った後：〔要記入：使った後の変化〕\n\n良かった点：〔要記入〕\nいまいちだった点：〔要記入〕\n\n※感じ方や結果には個人差があります。")),
+      msg(4, "商品紹介（PR）", f("【PR】\n今日は、私が実際に使っている「{product}」を紹介します。\n\n▼こんな人に向いています\n・{target}\n・{pain}\n\n▼向いていない人\n・〔要記入：正直に書く〕\n\n詳しくはこちら\n▶ 〔要記入：アフィリエイトリンク〕\n\n※このメッセージには広告（アフィリエイトリンク）が含まれます。")),
+      msg(5, "よくある質問", "【5日目】よくいただく質問\n\nQ. 〔要記入：質問1〕\nA. 〔要記入：回答1〕\n\nQ. 〔要記入：質問2〕\nA. 〔要記入：回答2〕\n\nほかにも気になることがあれば、このトークにそのまま送ってください。"),
+      msg(7, "まとめと今後の配信", f("【7日目】ここまで読んでくださり、ありがとうございました。\n\n今週お伝えしたこと\n・つまずく原因は「順番」\n・遠回りしない3ステップ\n・{product}の正直なレビュー\n\nこれからも週1回、「{pain}」を解消するヒントをお届けします。"))
+    ];
+  }
+
+  // ---- state ----
+  let state;
+  function defaultState() {
+    const inputs = Object.assign({ genre: "side" }, PRESETS.side);
+    return { inputs, steps: buildTemplate(inputs) };
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) { const s = JSON.parse(raw); if (s && Array.isArray(s.steps) && s.inputs) return s; }
+    } catch (e) {}
+    return defaultState();
+  }
+  let saveTimer;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }, 300);
+  }
+
+  // ---- helpers ----
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function locate(path) {
+    const p = path.split(".").map(Number);
+    if (p.length === 1) return { list: state.steps, i: p[0] };
+    return { list: state.steps[p[0]].options[p[1]].steps, i: p[2] };
+  }
+  const getStep = (path) => { const l = locate(path); return l.list[l.i]; };
+  function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 1800); }
+
+  // ---- checks ----
+  const RISKY = [
+    { re: /絶対(に)?(稼|儲|痩|治|受か|成功)/, why: "「絶対〜」は断定表現。景品表示法・薬機法上リスクがあります" },
+    { re: /必ず(稼|儲|痩|治|受か|成功|結果)/, why: "効果を保証する断定表現です" },
+    { re: /確実に/, why: "確実性をうたう表現は誇大広告とみなされやすいです" },
+    { re: /誰でも(簡単に)?(稼|儲|できる)/, why: "「誰でも稼げる」はASPの禁止表現に当たることが多いです" },
+    { re: /(完全)?自動で(稼|儲|収益)|完全自動|放置で/, why: "「自動で稼げる」系の表現は情報商材と同一視されます" },
+    { re: /(月収|月商|日給)\s*\d+\s*万/, why: "収入額の提示は根拠と「個人差」の注記が必要です" },
+    { re: /100\s*[%％]/, why: "100%表現は根拠が求められます" },
+    { re: /(今だけ|本日限り|残りわずか|先着\d+)/, why: "事実でない限定表現は有利誤認になります" },
+    { re: /(シミが消え|治る|治ります|アンチエイジング|若返)/, why: "化粧品・健康食品で使えない効能表現（薬機法）の可能性" }
+  ];
+  const PH = /〔要記入[^〕]*〕/g;
+  const AD_HINT = /(アフィリエイトリンク|https?:\/\/|購入|申し込み|申込|詳しくはこちら)/;
+  const AD_MARK = /(PR|広告|プロモーション)/;
+
+  function walk(cb) {
+    state.steps.forEach((s, i) => {
+      cb(s, String(i), null);
+      if (s.branch) s.options.forEach((o, oi) => o.steps.forEach((c, ci) => cb(c, i + "." + oi + "." + ci, o)));
+    });
+  }
+  function checkStep(s) {
+    const out = [];
+    const t = s.text || "";
+    const ph = (t.match(PH) || []).length;
+    if (ph) out.push({ lv: "warn", short: "未記入 " + ph, long: "未記入の箇所が" + ph + "つあります" });
+    RISKY.forEach((r) => { const m = t.match(r.re); if (m) out.push({ lv: "bad", short: "注意表現", long: "「" + m[0] + "」：" + r.why }); });
+    if (AD_HINT.test(t) && /商品|リンク|紹介/.test(t + s.title) && !AD_MARK.test(t)) out.push({ lv: "bad", short: "PR表記なし", long: "商品紹介にPR・広告の表記がありません（ステマ規制の対象）" });
+    if (t.length > 500) out.push({ lv: "warn", short: "長め", long: t.length + "文字あります。スマホで読みやすいのは300文字前後です" });
+    return out;
+  }
+
+  function renderChecks() {
+    let msgs = 0, maxDay = 0, phTotal = 0, bad = 0;
+    const items = [];
+    let prevDay = -1, orderIssue = null;
+    walk((s, path) => {
+      msgs++;
+      maxDay = Math.max(maxDay, Number(s.day) || 0);
+      if (!path.includes(".")) { if ((Number(s.day) || 0) < prevDay && !orderIssue) orderIssue = s.title; prevDay = Number(s.day) || 0; }
+      const res = checkStep(s);
+      res.forEach((r) => {
+        if (r.lv === "bad") bad++;
+        if (r.short.startsWith("未記入")) phTotal += Number(r.short.split(" ")[1]);
+        else items.push({ lv: r.lv, html: '<a href="#c-' + s.id + '">' + esc(s.title || "無題") + "</a>：" + esc(r.long) });
+      });
+      const b = document.querySelector('[data-badges="' + s.id + '"]');
+      if (b) {
+        b.innerHTML = res.map((r) => '<span class="badge ' + r.lv + '">' + esc(r.short) + "</span>").join("");
+        const card = $("c-" + s.id); if (card) card.classList.toggle("flagged", res.some((r) => r.lv === "bad"));
+      }
+      const c = document.querySelector('[data-count="' + s.id + '"]');
+      if (c) c.textContent = (s.text || "").length + "文字";
+    });
+    if (orderIssue) items.push({ lv: "warn", html: "「" + esc(orderIssue) + "」の配信日が前のメッセージより早くなっています" });
+    if (phTotal) items.unshift({ lv: "warn", html: "〔要記入〕が残り" + phTotal + "か所あります。ここがあなたにしか書けない部分です" });
+    const hasAd = (() => { let f = false; walk((s) => { if (AD_MARK.test(s.text || "")) f = true; }); return f; })();
+    if (!hasAd) items.push({ lv: "warn", html: "どのメッセージにもPR・広告の表記がありません。商品を紹介するなら必須です" });
+    if (!items.length) items.push({ lv: "ok", html: "大きな問題は見つかりませんでした。最後は声に出して読み、自分の言葉になっているか確かめてください" });
+
+    $("stats").innerHTML =
+      stat("メッセージ数", msgs, "") + stat("配信期間", "Day0–" + maxDay, "") +
+      stat("未記入", phTotal, phTotal ? "warn" : "ok") + stat("要修正", bad, bad ? "bad" : "ok");
+    $("issues").innerHTML = items.map((it) => '<li class="' + it.lv + '">' + it.html + "</li>").join("");
+    renderExport();
+  }
+  const stat = (k, v, cls) => '<div class="stat ' + cls + '"><div class="k">' + k + '</div><div class="v">' + v + "</div></div>";
+
+  // ---- render ----
+  function cardHTML(s, path, inRoute) {
+    const isB = !!s.branch;
+    let h = '<div class="card' + (isB ? " is-branch" : "") + '" id="c-' + s.id + '">' +
+      '<div class="card-head">' +
+      '<label class="day">Day<input type="number" min="0" max="365" data-path="' + path + '" data-f="day" value="' + esc(s.day) + '" aria-label="配信日"></label>' +
+      (isB ? '<span class="kind">分岐</span>' : "") +
+      '<input class="title" type="text" data-path="' + path + '" data-f="title" value="' + esc(s.title) + '" aria-label="見出し">' +
+      '<span class="tools">' +
+      '<button class="btn ghost small" type="button" data-act="up" data-path="' + path + '" aria-label="上へ">↑</button>' +
+      '<button class="btn ghost small" type="button" data-act="down" data-path="' + path + '" aria-label="下へ">↓</button>' +
+      '<button class="btn ghost small" type="button" data-act="del" data-path="' + path + '">削除</button>' +
+      "</span></div>" +
+      '<textarea id="t-' + s.id + '" data-path="' + path + '" data-f="text" rows="' + Math.min(14, Math.max(inRoute ? 4 : 5, (s.text || "").split("\n").length + 1)) + '" aria-label="本文">' + esc(s.text) + "</textarea>" +
+      '<div class="card-foot"><span class="count" data-count="' + s.id + '"></span><span data-badges="' + s.id + '"></span></div>';
+    if (isB) {
+      h += '<div class="branches">' + s.options.map((o, oi) =>
+        '<div class="route"><div class="route-head"><span class="tag">' + "ABCD"[oi] + '</span>' +
+        '<input type="text" data-path="' + path + '" data-opt="' + oi + '" value="' + esc(o.label) + '" aria-label="選択肢' + "ABCD"[oi] + '"></div>' +
+        o.steps.map((c, ci) => cardHTML(c, path + "." + oi + "." + ci, true)).join("") +
+        '<button class="btn small" type="button" data-act="add-in-route" data-path="' + path + '" data-opt="' + oi + '">＋このルートに追加</button></div>'
+      ).join("") + "</div>";
+    }
+    return h + "</div>";
+  }
+  function render() {
+    $("flow").innerHTML = state.steps.map((s, i) => cardHTML(s, String(i), false)).join("");
+    renderChecks();
+  }
+  function renderInputs() {
+    $("in-genre").value = state.inputs.genre || "side";
+    ["sender", "target", "pain", "magnet", "product", "me"].forEach((k) => { $("in-" + k).value = state.inputs[k] || ""; });
+  }
+
+  // ---- export ----
+  function exportText() {
+    const L = [];
+    const block = (s, ind) => {
+      L.push(ind + "■ Day" + s.day + "｜" + (s.title || "無題") + (s.branch ? "（分岐）" : ""));
+      (s.text || "").split("\n").forEach((ln) => L.push(ind + "  " + ln));
+      L.push("");
+    };
+    state.steps.forEach((s) => {
+      block(s, "");
+      if (s.branch) s.options.forEach((o, oi) => {
+        L.push("  ◆ 選択肢" + "ABCD"[oi] + "：" + o.label);
+        o.steps.forEach((c) => block(c, "    "));
+      });
+    });
+    return L.join("\n").trim();
+  }
+  function renderExport() { $("export-text").textContent = exportText(); }
+
+  // ---- events ----
+  let checkTimer;
+  const scheduleChecks = () => { clearTimeout(checkTimer); checkTimer = setTimeout(renderChecks, 200); };
+
+  $("flow").addEventListener("input", (e) => {
+    const el = e.target; const path = el.dataset.path; if (path == null) return;
+    const s = getStep(path);
+    if (el.dataset.opt != null) s.options[+el.dataset.opt].label = el.value;
+    else if (el.dataset.f === "day") s.day = Math.max(0, parseInt(el.value, 10) || 0);
+    else s[el.dataset.f] = el.value;
+    save(); scheduleChecks();
+  });
+
+  function armConfirm(btn, label, fn) {
+    if (btn.dataset.armed) { fn(); return; }
+    const orig = btn.textContent;
+    btn.dataset.armed = "1"; btn.textContent = label; btn.classList.add("confirming");
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = orig; btn.classList.remove("confirming"); } }, 2500);
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-act]"); if (!btn) return;
+    const act = btn.dataset.act, path = btn.dataset.path;
+    const lastDay = () => { const s = state.steps[state.steps.length - 1]; return s ? Number(s.day) || 0 : 0; };
+    if (act === "up" || act === "down") {
+      const { list, i } = locate(path); const j = act === "up" ? i - 1 : i + 1;
+      if (j < 0 || j >= list.length) return;
+      [list[i], list[j]] = [list[j], list[i]];
+    } else if (act === "del") {
+      armConfirm(btn, "本当に削除", () => { const { list, i } = locate(path); list.splice(i, 1); save(); render(); toast("削除しました"); });
+      return;
+    } else if (act === "add-msg") {
+      state.steps.push(msg(lastDay() + 1, "新しいメッセージ", "〔要記入：本文〕"));
+    } else if (act === "add-branch") {
+      state.steps.push({ id: nid(), day: lastDay(), title: "質問で分岐", branch: true, text: "〔要記入：質問文〕",
+        options: [{ label: "選択肢A", steps: [msg(lastDay(), "Aへの返信", "〔要記入：返信〕")] }, { label: "選択肢B", steps: [msg(lastDay(), "Bへの返信", "〔要記入：返信〕")] }] });
+    } else if (act === "add-in-route") {
+      const b = state.steps[+path]; const r = b.options[+btn.dataset.opt];
+      const d = r.steps.length ? Number(r.steps[r.steps.length - 1].day) || 0 : Number(b.day) || 0;
+      r.steps.push(msg(d, "続きのメッセージ", "〔要記入：本文〕"));
+    } else return;
+    save(); render();
+  });
+
+  ["sender", "target", "pain", "magnet", "product", "me"].forEach((k) => {
+    $("in-" + k).addEventListener("input", (e) => { state.inputs[k] = e.target.value; save(); });
+  });
+  $("in-genre").addEventListener("change", (e) => {
+    const g = e.target.value; state.inputs = Object.assign({ genre: g }, PRESETS[g]); renderInputs(); save();
+    $("gen-note").textContent = "ジャンルの例を入れました。書き換えてから「下書きを作る」を押してください。";
+  });
+  $("btn-gen").addEventListener("click", (e) => {
+    armConfirm(e.currentTarget, "編集内容を上書きして作る", () => {
+      state.steps = buildTemplate(state.inputs); save(); render(); toast("下書きを作りました");
+      $("gen-note").textContent = "作り直すと、配信シナリオで編集した文章は上書きされます。";
+    });
+  });
+  $("btn-reset").addEventListener("click", (e) => {
+    armConfirm(e.currentTarget, "全部消してサンプルに戻す", () => { state = defaultState(); renderInputs(); save(); render(); toast("サンプルに戻しました"); });
+  });
+  $("btn-copy").addEventListener("click", () => {
+    const text = exportText();
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents($("export-text")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("選択しました。長押しでコピーしてください"); };
+    try { navigator.clipboard.writeText(text).then(() => toast("コピーしました"), fallback); } catch (err) { fallback(); }
+  });
+
+  state = load();
+  renderInputs();
+  render();
+})();
+</script>
