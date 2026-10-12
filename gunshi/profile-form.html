@@ -160,43 +160,57 @@ const PREP = ["ターゲット（誰に届けるか）を決めた", "競合ア�
 const GENRES = [["金融（クレカ・証券・保険）", 1], ["転職・副業", 1], ["美容・コスメ", 1], ["脱毛・美容医療", 1], ["健康食品・ダイエット", 1], ["恋愛・婚活・マッチング"], ["教育・資格・スクール"], ["通信（格安SIM・光回線）"], ["動画配信・エンタメ"], ["ガジェット・家電"], ["ゲーム・アプリ"], ["旅行・ホテル"], ["不動産・引越し", 1], ["子育て"], ["ペット"], ["食品・宅配"], ["AI・ITツール"], ["物販（Amazon・楽天）"], ["情報商材・オンライン講座", 1], ["テーマはまだ決めていない"]];
 const FREQ = ["まだ投稿していない", "不定期", "週1〜2回", "週3〜5回", "毎日"];
 const PLATFORMS = [
-  { id: "youtube", name: "YouTube", tag: "検索とおすすめの両方から長く見られる。信頼が積み上がりやすいが、制作の手間は一番大きい。",
+  { id: "youtube", limit: 5000, unit: "字", limitLabel: "概要欄（タイトルは100字まで）", draftLabel: "タイトルと概要欄", draftCount: 2,
+    rules: ["タイトルは100字まで。大事な言葉を前半に置く", "概要欄の最初の2〜3行で動画の約束を伝える（ここだけ表示されやすい）", "紹介リンクはすべて「URL PR」の形にし、動画内でも口頭かテロップで広告であることを伝える", "チャプター（タイムスタンプ）を入れる", "1本の動画で促す行動は1つ"],
+    name: "YouTube", tag: "検索とおすすめの両方から長く見られる。信頼が積み上がりやすいが、制作の手間は一番大きい。",
     facts: ["広告収益（YPP）には登録者数と視聴時間などの条件がある", "ショートで認知、長尺で信頼、概要欄でブログ・LINEへ誘導が定番", "アフィリエイトリンクを貼る動画は、動画内と概要欄で PR 表記を"],
     formats: ["長尺動画", "ショート", "ライブ配信", "顔出しあり", "顔なし（声・テロップ）"],
     money: ["まだ無い", "広告収益（AdSense）", "概要欄のアフィリエイト", "企業案件", "メンバーシップ", "自分の商品"],
     metrics: [["登録者数", "人"], ["直近28日の再生回数", "回"], ["平均視聴率", "%"], ["動画本数", "本"]],
     shotHint: "YouTube Studio のダッシュボード・アナリティクスの画面" },
-  { id: "blog", name: "ブログ", tag: "検索から「買う直前の人」が来るので、成果に一番近い。結果が出るまで3〜6か月かかることが多い。",
+  { id: "blog", limit: 5000, unit: "字", limitLabel: "本文（目安4,500字）", draftLabel: "記事", draftCount: 1,
+    rules: ["本文は5,000字まで（調査では3,000〜5,000字が上位に多く、目安は4,500字）。狙うキーワードの上位記事の文字数も確認する", "記事の冒頭に「本記事はアフィリエイト広告を利用しています」と書く", "アフィリエイトリンクはすべて「URL PR」の形にする", "見出し（H2・H3）で構成し、比較表・デメリット・向いていない人を入れる", "自分で撮った写真や体験を入れる。料金やキャンペーンには確認日を書く"],
+    name: "ブログ", tag: "検索から「買う直前の人」が来るので、成果に一番近い。結果が出るまで3〜6か月かかることが多い。",
     facts: ["「〇〇 おすすめ」「〇〇 比較」「〇〇 評判」など購入前のキーワードが成果に近い", "体験の写真・デメリット・向いていない人を書くほど信頼される", "記事の冒頭に「アフィリエイト広告を利用しています」などの PR 表記を"],
     formats: ["WordPress", "はてなブログ", "アメブロ", "その他の無料ブログ"],
     money: ["まだ無い", "ASP のアフィリエイト", "Google AdSense", "Amazon・楽天", "自分の商品"],
     metrics: [["記事数", "記事"], ["月間PV", "PV"], ["検索からの割合", "%"], ["運営期間", "か月"]],
     shotHint: "Google アナリティクス・Search Console・ブログの管理画面" },
-  { id: "x", name: "X", tag: "拡散力が高く、反応がすぐ分かる。プロフィールや固定ポストからブログ・note・LINE へ誘導するのが定番。",
+  { id: "x", limit: 140, unit: "全角", limitLabel: "1投稿（全角140字・半角280字）", draftLabel: "ポスト", draftCount: 3,
+    rules: ["1投稿は全角140字まで（無料アカウント）。リンクは1本23字（半角）として数える", "リンクは1投稿に1本まで。必ず「URL PR」の形にする", "1投稿で話を完結させる。宣伝の投稿は全体の2割以下にする", "同じ文章を繰り返し投稿しない。ハッシュタグは0〜2個", "「クリックして」など、クリックをお願いする表現は使わない"],
+    name: "X", tag: "拡散力が高く、反応がすぐ分かる。プロフィールや固定ポストからブログ・note・LINE へ誘導するのが定番。",
     facts: ["外部リンク付きの投稿は表示が伸びにくいと言われ、リンクはプロフィールや返信に置く人が多い", "毎日の発信で「誰の・何の人か」を覚えてもらうのが先", "案件の紹介ポストには #PR などの表記を"],
     formats: ["短文ポスト", "長文・スレッド", "画像・図解", "動画", "スペース（音声）"],
     money: ["まだ無い", "ブログ・note への誘導", "ASP のアフィリエイト", "note・Brain・Tips の販売", "X の収益配分", "企業案件"],
     metrics: [["フォロワー", "人"], ["月間インプレッション", "回"], ["1日の投稿数", "回"]],
     shotHint: "プロフィール画面・アナリティクス（インプレッション）の画面" },
-  { id: "threads", name: "Threads", tag: "Instagram とつながる会話中心の SNS。宣伝色が強いと嫌われやすく、共感と日常の投稿から信頼を作る。",
+  { id: "threads", limit: 500, unit: "字", limitLabel: "1投稿", draftLabel: "投稿", draftCount: 3,
+    rules: ["1投稿は500字まで", "リンクは必ず「URL PR」の形にする", "宣伝色を弱め、問いかけで終えて会話を生む", "同じ文章を繰り返し投稿しない", "「クリックして」など、クリックをお願いする表現は使わない"],
+    name: "Threads", tag: "Instagram とつながる会話中心の SNS。宣伝色が強いと嫌われやすく、共感と日常の投稿から信頼を作る。",
     facts: ["問いかけで終わる投稿にコメントが集まりやすい", "Instagram のフォロワーと相互に行き来できる", "直接の売り込みより、プロフィール経由の誘導が向いている"],
     formats: ["短文", "画像付き", "連投"],
     money: ["まだ無い", "プロフィールリンク経由", "Instagram への誘導", "企業案件"],
     metrics: [["フォロワー", "人"], ["1投稿の平均閲覧", "回"]],
     shotHint: "プロフィール画面・インサイトの画面" },
-  { id: "tiktok", name: "TikTok", tag: "フォロワーが少なくても、おすすめに載れば一気に見られる。冒頭2秒が勝負。",
+  { id: "tiktok", limit: 2200, unit: "字", limitLabel: "キャプション（目安）", draftLabel: "台本とキャプション", draftCount: 2,
+    rules: ["キャプションは2,200字以内を目安にする（短いほど読まれる）", "冒頭2秒のひと言で、見る理由を伝える", "紹介する商品はPR表記をし、リンクは「URL PR」の形にする", "効果を断定しない・誇張しない", "顔なし（手元・テロップ）でもOK"],
+    name: "TikTok", tag: "フォロワーが少なくても、おすすめに載れば一気に見られる。冒頭2秒が勝負。",
     facts: ["若い層が中心だが、利用者の年齢層は広がっている", "顔なし（手元・画面録画・テロップ）でも伸ばせる", "商品紹介は PR 表記と、誇張しない言い回しを"],
     formats: ["顔出し", "顔なし（手元・テロップ）", "画像スライド", "ライブ"],
     money: ["まだ無い", "TikTok Shop のアフィリエイト", "プロフィールリンク経由", "企業案件", "ライブのギフト"],
     metrics: [["フォロワー", "人"], ["平均再生数", "回"], ["投稿本数", "本"]],
     shotHint: "プロフィール画面・アナリティクスの画面" },
-  { id: "instagram", name: "Instagram", tag: "保存されるカルーセルと、新しい人に届くリール。美容・暮らし・グルメ・旅行と相性が良い。",
+  { id: "instagram", limit: 2200, unit: "字", limitLabel: "キャプション", draftLabel: "キャプション", draftCount: 2,
+    rules: ["キャプションは2,200字まで。最初の1行で続きを読ませる", "ハッシュタグは5〜10個（上限は30個）", "PR投稿はタイアップ投稿ラベルか #PR を付け、リンクは「URL PR」の形にする", "保存したくなる情報（まとめ・手順）を入れる", "カルーセルの1枚目は13字×2行以内"],
+    name: "Instagram", tag: "保存されるカルーセルと、新しい人に届くリール。美容・暮らし・グルメ・旅行と相性が良い。",
     facts: ["保存数が多い投稿はおすすめに載りやすい", "ストーリーズのリンクやハイライトで案件へ誘導できる", "PR 投稿はタイアップ投稿ラベルや #PR を"],
     formats: ["カルーセル（画像）", "リール", "ストーリーズ", "ライブ"],
     money: ["まだ無い", "ストーリーズ・プロフィールのリンク", "企業案件", "楽天ROOM などへの誘導", "自分の商品"],
     metrics: [["フォロワー", "人"], ["平均保存数", "件"], ["リールの平均再生", "回"]],
     shotHint: "プロフィール画面・プロフェッショナルダッシュボード・インサイト" },
-  { id: "note", name: "note", tag: "文章で信頼を作り、有料記事やメンバーシップで直接売ることもできる。検索にも出やすい。",
+  { id: "note", limit: 5000, unit: "字", limitLabel: "本文（ブログと同じ目安）", draftLabel: "記事", draftCount: 1,
+    rules: ["本文は5,000字まで（ブログと同じ目安）", "紹介リンクを入れる記事は冒頭にPR表記をし、リンクは「URL PR」の形にする", "無料部分だけで価値が伝わるようにする", "見出しで区切り、スマホで読みやすく", "X で記事の要点を紹介して読んでもらう"],
+    name: "note", tag: "文章で信頼を作り、有料記事やメンバーシップで直接売ることもできる。検索にも出やすい。",
     facts: ["X との組み合わせで読まれることが多い", "無料記事で信頼を作り、有料記事・メンバーシップへ", "紹介リンクを入れる記事は PR 表記を"],
     formats: ["無料記事", "有料記事", "メンバーシップ", "マガジン"],
     money: ["まだ無い", "有料記事", "メンバーシップ", "Amazon アソシエイト", "ブログ・LINE への誘導"],
@@ -223,6 +237,32 @@ const MODELS = [["claude-opus-5-5", "Claude Opus 5.5（おすすめ・高品質�
 const KEY = "gunshi-profile-v3", KEY_API = "gunshi-apikey";
 const SAMPLE = { "c.asp.0": "登録済み", "c.asp_other": "A8.net はチャレンジランク", "c.n_period": "今月", "c.n_imp": "4", "c.n_click": "219", "c.n_cv": "0", "c.n_ok": "0", "c.n_yen": "0" };
 const DEAL_F = ["name", "asp", "pay", "cond", "where"];
+
+// ---------- 文字数と PR ----------
+const LINK_RE = /(https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+|【案件リンク】)/g;
+function xWeight(t) {
+  let w = 0;
+  const rest = t.replace(/https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+/g, () => { w += 23; return ""; });
+  for (const ch of rest) { const c = ch.codePointAt(0); w += (c <= 0x10FF || (c >= 0x2000 && c <= 0x200D) || (c >= 0x2010 && c <= 0x201F) || (c >= 0x2032 && c <= 0x2037)) ? 1 : 2; }
+  return w;
+}
+function countFor(p, t) {
+  if (p.unit === "全角") return Math.ceil(xWeight(t) / 2);
+  return [...t.replace(/\r?\n/g, "")].length;
+}
+function limitOf(p) { const n = Number(v(p.id + ".limit")); return n > 0 ? n : p.limit; }
+// すべてのリンクの直後が「 PR」（半角スペース＋PR）になっているか
+function prMissing(t) {
+  const bad = []; let m; LINK_RE.lastIndex = 0;
+  while ((m = LINK_RE.exec(t))) { if (t.slice(m.index + m[0].length, m.index + m[0].length + 3) !== " PR") bad.push(m[0]); }
+  return bad;
+}
+const fixPR = t => t.replace(new RegExp(LINK_RE.source + "(?:[ 　]*PR)?", "g"), "$1 PR");
+function checkHTML(p, t) {
+  const n = countFor(p, t), lim = limitOf(p), miss = prMissing(t);
+  return `<span class="status ${n > lim ? "ng" : "ok"}">${n.toLocaleString()} / ${lim.toLocaleString()}${p.unit === "全角" ? "（全角換算）" : "字"}${n > lim ? "　上限を超えています" : ""}</span>
+    <span class="status ${miss.length ? "ng" : "ok"}">${(t.match(LINK_RE) || []).length ? (miss.length ? `「 PR」が無いリンクが${miss.length}本あります` : "リンクはすべて「 PR」付き") : "リンクなし"}</span>`;
+}
 
 // ---------- 状態 ----------
 let S = {};
@@ -328,6 +368,10 @@ function platformView(p) {
   const k = s => `${p.id}.${s}`;
   return `<header><div class="eyebrow">媒体別ページ</div><h1>${p.name}</h1><p class="lead">${p.tag}</p></header>
   <section class="card"><h2>${p.name} の基本</h2><ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></section>
+  <section class="card"><h2>${p.name} のルールとやり方</h2>
+    <div class="calc"><div><small>文字数の上限：${esc(p.limitLabel)}</small><b>${limitOf(p).toLocaleString()} ${p.unit === "全角" ? "全角" : "字"}</b></div><div><small>リンクの書き方（必ず）</small><b>URL PR</b></div></div>
+    <ul class="facts">${p.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+    ${field("文字数の上限を変える（空欄なら上の値）", text(k("limit"), String(p.limit), "number"))}</section>
   ${shotBlock(p.id, p.shotHint)}
   <section class="card"><h2>${p.name} の数字</h2><p class="hint">スクショから読み取った値が入ります。手で直してもOKです。</p>
     <div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"), k("m" + i))).join("")}</div></section>
@@ -340,7 +384,25 @@ function platformView(p) {
     ${field("URL・アカウント名", text(k("url"), "まだ無ければ空欄でOK"))}
     ${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
   <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
-  <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>`;
+  <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>
+  ${draftBlock(p)}`;
+}
+
+function draftBlock(p) {
+  const k = s => `${p.id}.${s}`, drafts = arr(k("drafts"));
+  return `<section class="card"><h2>${p.name} の${esc(p.draftLabel)}を作る</h2>
+    <p class="hint">ルールと文字数の上限を守って、AIが下書きを作ります。戦略を作ってあれば、おすすめの戦略に沿って書きます。投稿は自分で読んで直してから、手で行ってください。</p>
+    <div class="actions"><button type="button" class="primary" data-draft="${p.id}">AIで下書きを作る</button><span class="status" id="draftStatus-${p.id}"></span></div>
+    ${drafts.map((d, i) => `<div class="sub"><div class="sub-head"><span>${esc(d.title || p.draftLabel)}</span><span class="actions"><button type="button" class="small" data-copydraft="${p.id}" data-i="${i}">コピー</button><button type="button" class="ghost small" data-del="${k("drafts")}" data-i="${i}">削除</button></span></div>
+      <textarea class="big" id="${fid(k("drafts") + "-" + i)}" data-draftedit="${p.id}" data-i="${i}">${esc(d.text)}</textarea>
+      <div class="actions" id="chk-${p.id}-${i}">${checkHTML(p, d.text || "")}</div>
+      <div class="actions"><button type="button" class="ghost small" data-fixpr="${p.id}" data-i="${i}">リンクに「 PR」を付ける</button></div>
+      ${d.note ? `<p class="hint" style="margin:0">${esc(d.note)}</p>` : ""}</div>`).join("")}
+    <div class="sub"><div class="sub-head">自分で書いた文章をチェック</div>
+      <textarea id="${fid(k("mydraft"))}" data-k="${k("mydraft")}" data-check="${p.id}" placeholder="ここに貼ると、文字数と「 PR」をその場で確認します">${esc(S[k("mydraft")])}</textarea>
+      <div class="actions" id="chk-${p.id}-my">${checkHTML(p, v(k("mydraft")))}</div>
+      <div class="actions"><button type="button" class="ghost small" data-fixmy="${p.id}">リンクに「 PR」を付ける</button><button type="button" class="small" data-copymy="${p.id}">コピー</button></div></div>
+  </section>`;
 }
 
 function commonView() {
@@ -547,6 +609,40 @@ async function readShots(scope) {
   }
 }
 
+// 下書きづくり
+async function makeDrafts(pid) {
+  const p = PLATFORMS.find(x => x.id === pid), st = $("#draftStatus-" + pid), btn = document.querySelector(`[data-draft="${pid}"]`);
+  const data = profileData(), mine = data.platforms.find(x => x.媒体 === p.name) || { 媒体: p.name };
+  let strategy = null;
+  if (S.result) { const R = S.result; const i = R.recommendation && R.strategies[R.recommendation.index] ? R.recommendation.index : 0; strategy = R.strategies[i]; }
+  const lim = limitOf(p);
+  const prompt = `あなたは日本市場に詳しいマーケティング担当「軍師」です。ユーザー本人が${p.name}で使う${p.draftLabel}の下書きを${p.draftCount}つ作ってください。
+
+# 絶対に守るルール
+- 文字数の上限：${p.unit === "全角" ? `全角換算で${lim}字（半角は0.5字、URLは1本で全角12字として数える）` : `${lim}字（改行は数えない）`}。必ず上限より少し短く収める
+- リンクを入れるときは、必ず URL の直後に半角スペースと PR を付ける（例：https://example.com PR）。実際の URL が分からない場合は「【案件リンク】 PR」と書く
+${p.rules.map(r => "- " + r).join("\n")}
+- 入力に無い実績・数字・体験談・お客様の声を作らない。体験が必要な所は【あなたの体験：〇〇】と空けておく
+- 日本の読者向けに、煽らず誠実に。効果や収入を断定しない
+- 下書きどうしは切り口を変える。番号や日付は付けない
+
+# ユーザー情報
+${JSON.stringify({ common: data.common, platform: mine }, null, 1)}
+${strategy ? `\n# 沿うべき戦略\n${JSON.stringify({ title: strategy.title, catch: strategy.catch, target: strategy.target, frameworks: strategy.frameworks, steps: strategy.steps }, null, 1)}` : ""}
+
+# 返す形式（この JSON だけ）
+{ "drafts": [ { "title": "この下書きの切り口（15字以内）", "text": "そのまま投稿・掲載できる本文${pid === "blog" || pid === "note" ? "（見出しは ## で書く。冒頭にPR表記の一文を入れる）" : ""}${pid === "youtube" ? "（1行目にタイトル、空行のあとに概要欄）" : ""}", "note": "使った型と、投稿前に確認すること（1文）" } ] }`;
+  btn.disabled = true; st.className = "status"; st.textContent = "下書きを作っています…（20秒〜2分ほど）";
+  try {
+    const out = await askAI(prompt, { tier: pid === "blog" || pid === "note" ? "complex" : "default", maxTokens: 20000 });
+    const ds = (out.drafts || []).filter(d => d && d.text).map(d => ({ title: String(d.title || ""), text: fixPR(String(d.text)), note: String(d.note || "") }));
+    if (!ds.length) throw { message: "下書きを受け取れませんでした。もう一度お試しください。" };
+    S[pid + ".drafts"] = ds.concat(arr(pid + ".drafts")); save(); go(view, false, true);
+    const over = ds.filter(d => countFor(p, d.text) > lim).length;
+    toast(over ? `${ds.length}つ作りました。${over}つが上限を超えているので短くしてください` : `${ds.length}つ作りました。リンクには「 PR」を付けてあります`);
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
+}
+
 // マーケティング開始
 let mkCtl = null;
 async function startMarketing() {
@@ -562,6 +658,8 @@ async function startMarketing() {
 - 使える時間・予算・顔出しの可否・得意なことを必ず考慮し、続けられる計画にする
 - 日本の読者向けに、煽らず誠実に。「絶対稼げる」など収益の保証はしない
 - アフィリエイトは PR 表記（ステマ規制）、景品表示法・薬機法・ASP規約を守る前提で書く
+- リンクは必ず「URL PR」（URL の直後に半角スペースと PR）の形で扱う前提にする。自動投稿は使わず、手で投稿する前提にする
+- 各媒体の文字数の上限：${PLATFORMS.map(p => `${p.name} ${limitOf(p)}${p.unit === "全角" ? "全角" : "字"}`).join("、")}
 - 5本は互いに違う方向にする（例：最短で初成果／資産として積み上がる／SNS起点／実体験・ストーリー型／低リスク・小さく検証）
 - 使う型には、新PASONA・顧客の認識度・飢えた群衆・ULSSAS・リーズンホワイ・エピファニーブリッジ・バリューラダー・ポジショニングなどから合うものを選ぶ
 - 採点は甘くしない。各観点 0〜20 の整数で、理由を1文ずつ書く
@@ -659,7 +757,9 @@ function setKey(k, val, el) {
 document.addEventListener("input", e => {
   const el = e.target;
   if (el.id === "f-apikey") { apiKey = el.value.trim(); try { if ($("#f-keysave")?.checked) localStorage.setItem(KEY_API, apiKey); } catch (x) {} $("#connStatus").className = "status"; $("#connStatus").textContent = "いまの接続：" + engineLabel(); return; }
+  if (el.dataset && el.dataset.draftedit) { const pid = el.dataset.draftedit, i = +el.dataset.i, a = arr(pid + ".drafts"); if (a[i]) { a[i].text = el.value; save(); } const box = $(`#chk-${pid}-${i}`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === pid), el.value); return; }
   if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
+  if (el.dataset && el.dataset.check) { const box = $(`#chk-${el.dataset.check}-my`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === el.dataset.check), el.value); }
 });
 document.addEventListener("change", async e => {
   const el = e.target;
@@ -690,6 +790,11 @@ document.addEventListener("click", async e => {
   if (t.id === "copyBar") view === "result" ? copy(resultMd(), "戦略") : copy(profileMd(), "profile.md");
   if (t.id === "copyResult") copy(resultMd(), "戦略");
   if (t.dataset.read) readShots(t.dataset.read);
+  if (t.dataset.draft) makeDrafts(t.dataset.draft);
+  if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
+  if (t.dataset.fixpr) { const pid = t.dataset.fixpr, a = arr(pid + ".drafts"), d = a[+t.dataset.i]; if (d) { d.text = fixPR(d.text); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
+  if (t.dataset.fixmy) { const pid = t.dataset.fixmy; S[pid + ".mydraft"] = fixPR(v(pid + ".mydraft")); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); }
+  if (t.dataset.copymy) { const pid = t.dataset.copymy, p = PLATFORMS.find(x => x.id === pid), tx = v(pid + ".mydraft"); if (prMissing(tx).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, tx) > limitOf(p)) toast("文字数の上限を超えています"); else copy(tx, "文章"); }
   if (t.dataset.delshot) { SHOTS[t.dataset.delshot] = (SHOTS[t.dataset.delshot] || []).filter(s => s.id !== t.dataset.id); saveShots(); go(view, false, true); }
   if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
   if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
