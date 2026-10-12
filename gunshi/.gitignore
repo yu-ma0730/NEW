@@ -10,3 +10,5 @@ swipe/*
 !swipe/README.md
 memory/*
 !memory/MEMORY.md
+prompts/*
+!prompts/README.md
