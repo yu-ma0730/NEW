@@ -51,6 +51,7 @@ h3 { margin: 0; font-size: 1rem; }
 .badge.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .tile.sub { background: var(--accent-soft); border-color: transparent; }
 section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 16px; display: grid; gap: 14px; min-width: 0; }
+section.card > *, .strat > *, .sub > * { min-width: 0; }
 section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; text-wrap: balance; }
 .hint { color: var(--muted); font-size: .85rem; margin: -6px 0 0; }
 .field { display: grid; gap: 6px; min-width: 0; }
@@ -65,7 +66,7 @@ section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600;
 .chip .w { color: var(--gold); font-size: .78rem; margin-left: 4px; }
 .chip input:checked + span .w { color: inherit; }
 .chips.stage .chip span { border-style: dashed; }
-input[type=text], input[type=number], input[type=url], input[type=password], textarea, select {
+input[type=text], input[type=number], input[type=url], input[type=password], input[type=date], textarea, select {
   width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
 }
 textarea { min-height: 84px; resize: vertical; }
@@ -243,6 +244,18 @@ const CRITERIA = [
   ["specific", "具体", 4, "4U", "数字・場面が具体的か"]
 ];
 const MAXTOTAL = CRITERIA.reduce((a, c) => a + c[2], 0);
+// 投稿の記録：媒体ごとに記録する数字。最初が「届いた数」、最後が「行動した数」で、率＝最後÷最初
+const LOGM = {
+  x: ["表示回数", "いいね", "プロフィール表示", "リンククリック"],
+  threads: ["閲覧", "いいね", "返信", "リンククリック"],
+  blog: ["PV", "検索順位", "リンククリック"],
+  note: ["ビュー", "スキ", "リンククリック"],
+  youtube: ["再生回数", "平均視聴率（%）", "高評価", "概要欄クリック"],
+  tiktok: ["再生回数", "いいね", "保存", "プロフィール表示"],
+  instagram: ["リーチ", "保存", "いいね", "プロフィール表示"]
+};
+const LOG_TYPES = ["共感型", "比較型", "体験談ストーリー型", "ノウハウ・保存型", "問いかけ型", "理由づけ型", "失敗回避型", "その他"];
+const MIN_N = 3; // 型どうしを比べるのに必要な最低本数（これ未満は「まだ判断できない」）
 const MODELS = [["claude-opus-5-5", "Claude Opus 5.5（おすすめ・高品質）"], ["claude-sonnet-5-5", "Claude Sonnet 5.5（速い・安い）"], ["claude-haiku-5-5", "Claude Haiku 5.5（最速・最安）"]];
 const KEY = "gunshi-profile-v3", KEY_API = "gunshi-apikey";
 const SAMPLE = { "c.asp.0": "登録済み", "c.asp_other": "A8.net はチャレンジランク", "c.n_period": "今月", "c.n_imp": "4", "c.n_click": "219", "c.n_cv": "0", "c.n_ok": "0", "c.n_yen": "0" };
@@ -332,7 +345,7 @@ function shotBlock(scope, hint) {
 }
 
 // ---------- 画面 ----------
-function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && !/\.(result|drafts|mydraft|limit)$/.test(k) && (Array.isArray(S[k]) ? S[k].length : S[k])).length + (SHOTS[prefix] || []).length; }
+function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && !/\.(result|drafts|mydraft|limit|log|review)$/.test(k) && (Array.isArray(S[k]) ? S[k].length : S[k])).length + (SHOTS[prefix] || []).length; }
 function engine() { return apiKey ? "api" : sampleFn ? "claude" : ""; }
 function engineLabel() {
   const e = engine();
@@ -394,6 +407,7 @@ function platformView(p) {
   <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
   <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>
   ${draftBlock(p)}
+  ${logBlock(p)}
   <section class="launch"><h2>${p.name}でマーケティング開始</h2>
     <p>このページの入力・スクショから読み取った数字・段階のチェックと、共通プロフィールをもとに、${p.name}用に違う「型」の戦略を5本作ります。それぞれ、そのままコピーできる本文・評価点・合計点・感想を付け、最後に総合判断を書きます。</p>
     <div class="actions"><button type="button" class="go" data-start="${p.id}">マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button>${S[p.id + ".result"] ? `<button type="button" class="ghost small" data-go="result-${p.id}" style="color:inherit;border-color:currentColor">前回の戦略を見る</button>` : ""}</div>
@@ -409,13 +423,92 @@ function draftBlock(p) {
     ${drafts.map((d, i) => `<div class="sub"><div class="sub-head"><span>${esc(d.title || p.draftLabel)}</span><span class="actions"><button type="button" class="small" data-copydraft="${p.id}" data-i="${i}">コピー</button><button type="button" class="ghost small" data-del="${k("drafts")}" data-i="${i}">削除</button></span></div>
       <textarea class="big" id="${fid(k("drafts") + "-" + i)}" data-draftedit="${p.id}" data-i="${i}">${esc(d.text)}</textarea>
       <div class="actions" id="chk-${p.id}-${i}">${checkHTML(p, d.text || "")}</div>
-      <div class="actions"><button type="button" class="ghost small" data-fixpr="${p.id}" data-i="${i}">リンクに「 PR」を付ける</button></div>
+      <div class="actions"><button type="button" class="ghost small" data-fixpr="${p.id}" data-i="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logdraft="${p.id}" data-i="${i}">投稿したので記録</button></div>
       ${d.note ? `<p class="hint" style="margin:0">${esc(d.note)}</p>` : ""}</div>`).join("")}
     <div class="sub"><div class="sub-head">自分で書いた文章をチェック</div>
       <textarea id="${fid(k("mydraft"))}" data-k="${k("mydraft")}" data-check="${p.id}" placeholder="ここに貼ると、文字数と「 PR」をその場で確認します">${esc(S[k("mydraft")])}</textarea>
       <div class="actions" id="chk-${p.id}-my">${checkHTML(p, v(k("mydraft")))}</div>
       <div class="actions"><button type="button" class="ghost small" data-fixmy="${p.id}">リンクに「 PR」を付ける</button><button type="button" class="small" data-copymy="${p.id}">コピー</button></div></div>
   </section>`;
+}
+
+// ---------- 投稿の記録と振り返り ----------
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const num = x => { const n = Number(String(x ?? "").replace(/[,，]/g, "")); return String(x ?? "").trim() !== "" && isFinite(n) ? n : null; };
+function logRate(p, e) { const M = LOGM[p.id], a = num(e.m?.[0]), b = num(e.m?.[M.length - 1]); return a && b !== null ? b / a : null; }
+const pct = r => r === null ? "―" : (r * 100).toFixed(r < 0.01 ? 2 : 1) + "%";
+function logDigest(p) {
+  const M = LOGM[p.id], groups = {};
+  arr(p.id + ".log").forEach(e => { (groups[e.type || "その他"] = groups[e.type || "その他"] || []).push(e); });
+  return Object.entries(groups).map(([type, es]) => {
+    const avg = j => { const vs = es.map(e => num(e.m?.[j])).filter(x => x !== null); return vs.length ? Math.round(vs.reduce((a, b) => a + b, 0) / vs.length * 10) / 10 : null; };
+    const withBoth = es.filter(e => logRate(p, e) !== null);
+    const sumA = withBoth.reduce((a, e) => a + num(e.m[0]), 0), sumB = withBoth.reduce((a, e) => a + num(e.m[M.length - 1]), 0);
+    return { type, n: es.length, measured: withBoth.length, avg: M.map((_, j) => avg(j)), rate: sumA ? sumB / sumA : null };
+  }).sort((a, b) => b.n - a.n);
+}
+function logSummary(p) {
+  const M = LOGM[p.id], d = logDigest(p), total = arr(p.id + ".log").length;
+  if (!total) return "";
+  const ok = d.filter(g => g.measured >= MIN_N && g.rate !== null);
+  const best = ok.length >= 2 ? ok.reduce((a, b) => b.rate > a.rate ? b : a) : null;
+  return `<div class="scorebox"><table class="score"><thead><tr><th>型</th><th>本数</th>${M.map(m => `<th>平均 ${esc(m)}</th>`).join("")}<th>${esc(M[M.length - 1])}率</th></tr></thead>
+    <tbody>${d.map(g => `<tr class="${best && g.type === best.type ? "best" : ""}"><td>${esc(g.type)}</td><td>${g.n}</td>${g.avg.map(x => `<td>${x === null ? "―" : x.toLocaleString()}</td>`).join("")}<td class="total">${g.measured >= MIN_N ? pct(g.rate) : `<span class="status">${g.measured}/${MIN_N}本</span>`}</td></tr>`).join("")}</tbody></table></div>
+    <p class="reading">${best ? `今のところ「${esc(best.type)}」の${esc(M[M.length - 1])}率が一番高いです（${pct(best.rate)}）。ただし本数が少ないうちは偶然の差もあります。` : `型どうしを比べるには、数字を入れた投稿が1つの型につき${MIN_N}本以上、2つ以上の型で必要です。今はまだ判断できません。`}</p>`;
+}
+function logBlock(p) {
+  const k = p.id + ".log", L = arr(k), M = LOGM[p.id], R = S[p.id + ".review"];
+  return `<section class="card" id="log-${p.id}"><h2>${p.name} の投稿の記録と振り返り</h2>
+    <p class="hint">投稿したら記録して、数日〜1週間後に数字を入れます。型ごとの成績がまとまり、次の「マーケティング開始」の判断材料（確信度）にも使われます。</p>
+    <div class="sub"><div class="sub-head">投稿を記録する</div>
+      <div class="grid2">${field("投稿した日", `<input type="date" id="f-logdate-${p.id}" value="${today()}">`)}${field("型", `<select id="f-logtype-${p.id}">${LOG_TYPES.map(t => `<option>${t}</option>`).join("")}</select>`)}</div>
+      ${field("投稿した本文", `<textarea id="f-logbody-${p.id}" placeholder="投稿した文章を貼り付け"></textarea>`)}
+      ${field("投稿のURL（あれば）", `<input type="url" id="f-logurl-${p.id}">`)}
+      <div class="actions"><button type="button" class="primary small" data-logadd="${p.id}">記録する</button></div></div>
+    ${L.length ? `<div class="rows">${L.map((e, i) => i).reverse().map(i => { const e = L[i]; return `<div class="sub"><div class="sub-head"><span>${esc(e.date || "")}・${esc(e.type || "")}</span><button type="button" class="ghost small" data-del="${k}" data-i="${i}">削除</button></div>
+      <p class="hint" style="margin:0">${esc((e.body || "").replace(/\n/g, " ").slice(0, 70))}${(e.body || "").length > 70 ? "…" : ""}</p>
+      <div class="grid2">${M.map((m, j) => field(esc(m), `<input type="number" inputmode="decimal" min="0" id="f-logm-${p.id}-${i}-${j}" data-logm="${p.id}|${i}|${j}" value="${esc(e.m?.[j] ?? "")}">`)).join("")}</div>
+      <div class="actions"><span class="status" id="lograte-${p.id}-${i}">${esc(M[M.length - 1])}率：${pct(logRate(p, e))}</span></div>
+      ${field("メモ（気づいたこと）", `<input type="text" id="f-logmemo-${p.id}-${i}" data-logmemo="${p.id}|${i}" value="${esc(e.memo || "")}">`)}</div>`; }).join("")}</div>` : `<p class="hint" style="margin:0">まだ記録がありません。戦略の本文や下書きの「投稿したので記録」ボタンからも追加できます。</p>`}
+    <div id="logsum-${p.id}">${logSummary(p)}</div>
+    ${L.length ? `<div class="actions"><button type="button" data-logai="${p.id}">AIで振り返る</button><button type="button" class="ghost" data-logcopy="${p.id}">記録をコピー</button><span class="status" id="logStatus-${p.id}"></span></div>` : ""}
+    ${R ? `<div class="sub"><div class="sub-head">AIの振り返り（${esc(R.at || "")}）</div>
+      ${R.good?.length ? `<div><b>効いていそうなこと</b><ul class="facts">${R.good.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${R.bad?.length ? `<div><b>効いていなさそうなこと</b><ul class="facts">${R.bad.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${R.next?.length ? `<div><b>次にやること</b><ul class="facts">${R.next.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${R.note ? `<p class="reading">${esc(R.note)}</p>` : ""}</div>` : ""}
+  </section>`;
+}
+function logMd(p) {
+  const M = LOGM[p.id], L = arr(p.id + ".log");
+  return [`# ${p.name} の投稿の記録`, "", `| 日付 | 型 | ${M.join(" | ")} | ${M[M.length - 1]}率 | メモ | 本文 |`, `|${"---|".repeat(M.length + 5)}`,
+    ...L.map(e => `| ${e.date || ""} | ${e.type || ""} | ${M.map((_, j) => e.m?.[j] ?? "").join(" | ")} | ${pct(logRate(p, e))} | ${(e.memo || "").replace(/\|/g, "／")} | ${(e.body || "").replace(/\n/g, " ").replace(/\|/g, "／").slice(0, 80)} |`),
+    "", "## 型ごとのまとめ", ...logDigest(p).map(g => `- ${g.type}：${g.n}本（数字あり${g.measured}本）、${M[M.length - 1]}率 ${g.measured >= MIN_N ? pct(g.rate) : "まだ判断できない"}`)].join("\n");
+}
+function addLog(pid, entry) {
+  const L = arr(pid + ".log"); L.push({ date: today(), type: "その他", body: "", url: "", m: [], memo: "", ...entry }); S[pid + ".log"] = L; save();
+}
+async function reviewLog(pid) {
+  const p = PLATFORMS.find(x => x.id === pid), st = $("#logStatus-" + pid), btn = document.querySelector(`[data-logai="${pid}"]`);
+  const prompt = `あなたは日本市場に詳しいマーケティング担当「軍師」です。ユーザーが${p.name}に投稿した記録と数字を振り返ってください。
+
+# 守ること
+- 数字は本人が入力したものだけを使う。無い数字を推測しない
+- 1つの型につき数字のある投稿が${MIN_N}本未満なら、その型の良し悪しは「まだ判断できない」と書く。少ない本数で言い切らない
+- 次にやることは、来週すぐできる具体的な行動を3つ。リンクは「URL PR」の形、手で投稿する前提
+- 煽らず、誠実に
+
+# 記録（${LOGM[pid].join("・")}。率は「${LOGM[pid].slice(-1)[0]} ÷ ${LOGM[pid][0]}」）
+${logMd(p)}
+
+# 返す形式（この JSON だけ）
+{ "good": ["効いていそうなこと"], "bad": ["効いていなさそうなこと"], "next": ["次にやること", "", ""], "note": "データ量についての注意や全体の一言（1〜2文）" }`;
+  btn.disabled = true; st.className = "status"; st.textContent = "振り返っています…（20秒〜1分ほど）";
+  try {
+    const out = await askAI(prompt, { tier: "default", maxTokens: 8000 });
+    S[pid + ".review"] = { good: [].concat(out.good || []), bad: [].concat(out.bad || []), next: [].concat(out.next || []), note: String(out.note || ""), at: new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" }) };
+    save(); go(view, false, true); toast("振り返りました");
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
 }
 
 function commonView() {
@@ -482,7 +575,7 @@ function stratCard(s, i, best, p) {
     <div class="field"><span class="label">本文</span>
       <textarea class="big" id="f-body-${i}" data-bodyedit="${i}">${esc(s.body || "")}</textarea>
       <div class="actions" id="chk-body-${i}">${checkHTML(p, s.body || "")}</div>
-      <div class="actions"><button type="button" class="primary small" data-copybody="${i}">本文をコピー</button><button type="button" class="ghost small" data-fixbody="${i}">リンクに「 PR」を付ける</button></div></div>
+      <div class="actions"><button type="button" class="primary small" data-copybody="${i}">本文をコピー</button><button type="button" class="ghost small" data-fixbody="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logfrom="${i}">投稿したので記録</button></div></div>
     <div class="field"><span class="label">評価点</span>
       <div class="bars"><div class="no">ICE（戦略の見込み）${sub(s, "ICE")}/${subMax("ICE")}</div>${CRITERIA.filter(c => c[3] === "ICE").map(row).join("")}
       <div class="no">4U（本文の出来）${sub(s, "4U")}/${subMax("4U")}</div>${CRITERIA.filter(c => c[3] === "4U").map(row).join("")}</div></div>
@@ -493,7 +586,7 @@ function stratCard(s, i, best, p) {
 
 // ---------- markdown ----------
 function profileData() {
-  const chosen = PLATFORMS.filter(p => filled(p.id));
+  const chosen = PLATFORMS.filter(p => filled(p.id) || arr(p.id + ".log").length);
   const st = (base, names, other) => {
     const r = names.map((n, i) => [n, v(`${base}.${i}`)]).filter(x => x[1]).map(x => `${x[0]}（${x[1]}）`);
     if (other && v(other)) r.push(v(other));
@@ -513,7 +606,8 @@ function profileData() {
         媒体: p.name, 段階: v(k("stage")), 準備済み: arr(k("prep")), 未着手の準備: PREP.filter(x => !arr(k("prep")).includes(x)),
         テーマ: arr(k("theme")), テーマ詳細: v(k("theme_detail")), 形式: arr(k("format")), 頻度: v(k("freq")), 収益化: arr(k("money")), URL: v(k("url")),
         数字: Object.fromEntries(p.metrics.map((m, i) => [`${m[0]}（${m[1]}）`, v(k("m" + i))]).filter(x => x[1])),
-        スクショから読み取った値: (SHOTS[p.id] || []).flatMap(s => s.reads || []), 困っていること: v(k("trouble"))
+        スクショから読み取った値: (SHOTS[p.id] || []).flatMap(s => s.reads || []), 困っていること: v(k("trouble")),
+        投稿の記録: logDigest(p).map(g => ({ 型: g.type, 本数: g.n, 数字あり: g.measured, [LOGM[p.id].slice(-1)[0] + "率"]: g.measured >= MIN_N ? pct(g.rate) : "まだ判断できない" }))
       };
     })
   };
@@ -781,6 +875,8 @@ document.addEventListener("input", e => {
   if (el.dataset && el.dataset.bodyedit !== undefined && curRes()) { const p = curRes(), R = S[p.id + ".result"], i = +el.dataset.bodyedit; if (R.strategies[i]) { R.strategies[i].body = el.value; save(); } const box = $("#chk-body-" + i); if (box) box.innerHTML = checkHTML(p, el.value); return; }
   if (el.dataset && el.dataset.draftedit) { const pid = el.dataset.draftedit, i = +el.dataset.i, a = arr(pid + ".drafts"); if (a[i]) { a[i].text = el.value; save(); } const box = $(`#chk-${pid}-${i}`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === pid), el.value); return; }
   if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
+  if (el.dataset && el.dataset.logm) { const [pid, i, j] = el.dataset.logm.split("|"), e = arr(pid + ".log")[+i]; if (e) { e.m = e.m || []; e.m[+j] = el.value; save(); const p = PLATFORMS.find(x => x.id === pid); const r = $(`#lograte-${pid}-${i}`); if (r) r.textContent = `${LOGM[pid].slice(-1)[0]}率：${pct(logRate(p, e))}`; const sm = $("#logsum-" + pid); if (sm) sm.innerHTML = logSummary(p); } return; }
+  if (el.dataset && el.dataset.logmemo) { const [pid, i] = el.dataset.logmemo.split("|"), e = arr(pid + ".log")[+i]; if (e) { e.memo = el.value; save(); } return; }
   if (el.dataset && el.dataset.check) { const box = $(`#chk-${el.dataset.check}-my`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === el.dataset.check), el.value); }
 });
 document.addEventListener("change", async e => {
@@ -815,6 +911,11 @@ document.addEventListener("click", async e => {
   if (t.dataset.fixbody !== undefined && curRes()) { const s = S[curRes().id + ".result"].strategies[+t.dataset.fixbody]; if (s) { s.body = fixPR(s.body || ""); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.read) readShots(t.dataset.read);
   if (t.dataset.draft) makeDrafts(t.dataset.draft);
+  if (t.dataset.logadd) { const pid = t.dataset.logadd, body = $(`#f-logbody-${pid}`).value.trim(); if (!body) { toast("投稿した本文を貼り付けてください"); return; } addLog(pid, { date: $(`#f-logdate-${pid}`).value || today(), type: $(`#f-logtype-${pid}`).value, body, url: $(`#f-logurl-${pid}`).value.trim() }); go(view, false, true); toast("記録しました。数日後に数字を入れてください"); }
+  if (t.dataset.logfrom !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.logfrom]; if (s) { addLog(p.id, { type: LOG_TYPES.includes(s.type) ? s.type : (LOG_TYPES.find(x => (s.type || "").includes(x.replace("型", ""))) || "その他"), body: s.body || "" }); toast(`${p.name}の記録に追加しました。数日後に数字を入れてください`); } }
+  if (t.dataset.logdraft) { const pid = t.dataset.logdraft, d = arr(pid + ".drafts")[+t.dataset.i]; if (d) { addLog(pid, { type: LOG_TYPES.find(x => (d.title || "").includes(x.replace("型", ""))) || "その他", body: d.text || "" }); go(view, false, true); toast("記録に追加しました"); } }
+  if (t.dataset.logai) reviewLog(t.dataset.logai);
+  if (t.dataset.logcopy) copy(logMd(PLATFORMS.find(x => x.id === t.dataset.logcopy)), "記録");
   if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
   if (t.dataset.fixpr) { const pid = t.dataset.fixpr, a = arr(pid + ".drafts"), d = a[+t.dataset.i]; if (d) { d.text = fixPR(d.text); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.fixmy) { const pid = t.dataset.fixmy; S[pid + ".mydraft"] = fixPR(v(pid + ".mydraft")); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); }
