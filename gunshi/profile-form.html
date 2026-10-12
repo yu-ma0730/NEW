@@ -279,6 +279,9 @@ let S = {};
 try { S = JSON.parse(localStorage.getItem(KEY) || "null") || { ...SAMPLE }; } catch (e) { S = { ...SAMPLE }; }
 let SHOTS = {}; // { scope: [{id, url, reads:[{label,value}], done}] } 画像は容量が大きいので別保存
 try { SHOTS = JSON.parse(localStorage.getItem(KEY + "-shots") || "{}"); } catch (e) { SHOTS = {}; }
+// 以前の「メインページで1つだけ」の結果を、媒体ごとの保存に移す
+if (S.result) { if (S.result.plat && S.result.strategies?.some(x => x.body)) S[S.result.plat + ".result"] = S.result; delete S.result; }
+delete S._bodyPlat;
 let apiKey = "";
 try { apiKey = localStorage.getItem(KEY_API) || ""; } catch (e) {}
 let sampleFn = null, sampleImages = false;
@@ -329,7 +332,7 @@ function shotBlock(scope, hint) {
 }
 
 // ---------- 画面 ----------
-function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && (Array.isArray(S[k]) ? S[k].length : S[k])).length + (SHOTS[prefix] || []).length; }
+function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && !/\.(result|drafts|mydraft|limit)$/.test(k) && (Array.isArray(S[k]) ? S[k].length : S[k])).length + (SHOTS[prefix] || []).length; }
 function engine() { return apiKey ? "api" : sampleFn ? "claude" : ""; }
 function engineLabel() {
   const e = engine();
@@ -339,9 +342,9 @@ function engineLabel() {
 }
 
 function homeView() {
-  const hasData = PLATFORMS.some(p => filled(p.id)) || filled("c");
+  const done = PLATFORMS.filter(p => S[p.id + ".result"]);
   return `<header><div class="eyebrow">軍師 GUNSHI</div><h1>あなた専用のマーケティング室</h1>
-    <p class="lead">① AIをつなぐ → ② 媒体を選んでスクショを取り込む → ③ 一番下の「マーケティング開始」で、戦略を5本作って採点します。</p></header>
+    <p class="lead">① AIをつなぐ → ② 媒体を選ぶ → 媒体のページでスクショを取り込み、一番下の「マーケティング開始」で、その媒体の戦略を5本作って採点します。</p></header>
 
   <section class="card"><h2>① AIの接続</h2>
     ${field("Anthropic APIキー", `<input type="password" id="f-apikey" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." value="${esc(apiKey)}">`)}
@@ -358,20 +361,14 @@ function homeView() {
   <section class="card"><h2>② 使っている媒体・使いたい媒体</h2><p class="hint">当てはまるものをタップして、それぞれのページで現状を入力します。いくつ選んでも大丈夫です。</p>
     <div class="tiles">${PLATFORMS.map(p => {
       const st = S[`${p.id}.stage`], n = filled(p.id);
-      return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span></button>`;
+      return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span>${S[p.id + ".result"] ? '<span class="badge">戦略あり</span>' : ""}</button>`;
     }).join("")}
       <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・AI・ASP（管理画面のスクショ取込あり）・自分のこと・目標・案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
     </div>
   </section>
 
-  ${S.result ? `<section class="card"><h2>前回のマーケティング戦略</h2><div class="actions"><button type="button" data-go="result">5本の戦略を見る</button><span class="status">${esc(S.result.at || "")}</span></div></section>` : ""}
+  ${done.length ? `<section class="card"><h2>作った戦略</h2><p class="hint">媒体ごとに保存されています。</p><div class="actions">${done.map(p => `<button type="button" data-go="result-${p.id}">${p.name}の戦略5本</button>`).join("")}</div></section>` : ""}
 
-  <section class="launch"><h2>③ マーケティング開始</h2>
-    <p>入力した媒体・スクショから読み取った数字・段階のチェックをもとに、違う「型」の戦略を5本作ります。それぞれ、そのままコピーできる本文・評価点・合計点・感想を付け、最後に総合判断を書きます。</p>
-    <div class="field"><span class="label">本文を書く媒体</span><select id="f-bodyplat" data-k="_bodyPlat">${PLATFORMS.map(p => `<option value="${p.id}"${bodyPlat().id === p.id ? " selected" : ""}>${p.name}（${limitOf(p).toLocaleString()}${p.unit === "全角" ? "全角" : "字"}まで）</option>`).join("")}</select></div>
-    <div class="actions"><button type="button" class="go" id="startMk"${hasData ? "" : " disabled"}>マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button></div>
-    <span class="status" id="mkStatus">${hasData ? "" : "媒体を1つ以上選んで入力すると押せるようになります"}</span>
-  </section>
   <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ保存されます。</div>`;
 }
 
@@ -396,7 +393,12 @@ function platformView(p) {
     ${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
   <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
   <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>
-  ${draftBlock(p)}`;
+  ${draftBlock(p)}
+  <section class="launch"><h2>${p.name}でマーケティング開始</h2>
+    <p>このページの入力・スクショから読み取った数字・段階のチェックと、共通プロフィールをもとに、${p.name}用に違う「型」の戦略を5本作ります。それぞれ、そのままコピーできる本文・評価点・合計点・感想を付け、最後に総合判断を書きます。</p>
+    <div class="actions"><button type="button" class="go" data-start="${p.id}">マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button>${S[p.id + ".result"] ? `<button type="button" class="ghost small" data-go="result-${p.id}" style="color:inherit;border-color:currentColor">前回の戦略を見る</button>` : ""}</div>
+    <span class="status" id="mkStatus"></span>
+  </section>`;
 }
 
 function draftBlock(p) {
@@ -443,9 +445,6 @@ function commonView() {
       ${field("掲載している媒体・ページ", li(pre, "where", it))}</div>`)}</section>`;
 }
 
-function bodyPlat() {
-  return PLATFORMS.find(p => p.id === S._bodyPlat) || PLATFORMS.find(p => filled(p.id)) || PLATFORMS.find(p => p.id === "x");
-}
 const sc = (s, key) => { const c = CRITERIA.find(x => x[0] === key); return Math.max(0, Math.min(c[2], Math.round(Number(s.scores?.[key]?.score) || 0))); };
 const total = s => CRITERIA.reduce((a, c) => a + sc(s, c[0]), 0);
 const sub = (s, g) => CRITERIA.filter(c => c[3] === g).reduce((a, c) => a + sc(s, c[0]), 0);
@@ -457,11 +456,9 @@ function gate(s, p) {
   if (s.legal_ok === false) issues.push("法令・規約：" + (s.legal_note || "要確認"));
   return issues;
 }
-function resultView() {
-  const R = S.result;
-  if (!R) return `<header><h1>まだ戦略がありません</h1></header><section class="card"><p>メインページの一番下にある「マーケティング開始」を押してください。</p></section>`;
-  if (!R.strategies.some(s => s.body)) return `<header><h1>前の形式の結果です</h1></header><section class="card"><p>表示の形を新しくしました。「作り直す」を押してください。</p><div class="actions"><button type="button" class="primary" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div></section>`;
-  const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat();
+function resultView(p) {
+  const R = S[p.id + ".result"];
+  if (!R) return `<header><h1>まだ戦略がありません</h1></header><section class="card"><p>${p.name}のページの一番下にある「マーケティング開始」を押してください。</p><div class="actions"><button type="button" data-go="${p.id}">${p.name}のページへ</button></div></section>`;
   const order = R.strategies.map((s, i) => ({ s, i, t: total(s), ok: !gate(s, p).length })).sort((a, b) => (b.ok - a.ok) || (b.t - a.t));
   const best = R.overall && R.strategies[R.overall.best] ? R.overall.best : order[0].i;
   return `<header><div class="eyebrow">軍師からのご提案 ・ ${esc(R.at || "")} ・ ${esc(p.name)}用</div><h1>マーケティング戦略 5本</h1>
@@ -473,7 +470,7 @@ function resultView() {
     <p class="reading">合計点の高い順：${order.map(o => `戦略${o.i + 1}（${o.t}点${o.ok ? "" : "・関門NG"}）`).join(" → ")}</p>
     <div class="first">まず使うなら：戦略${best + 1}「${esc(R.strategies[best].type || "")}」</div></section>
   ${R.missing_info && R.missing_info.length ? `<section class="card"><h2>入力すると良くなる情報</h2><ul class="facts">${R.missing_info.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
-  <section class="card"><h2>この結果を使う</h2><div class="actions"><button type="button" class="primary" id="copyResult">全部コピー</button><button type="button" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div>
+  <section class="card"><h2>この結果を使う</h2><div class="actions"><button type="button" class="primary" id="copyResult">全部コピー</button><button type="button" data-start="${p.id}">作り直す</button><button type="button" class="ghost" data-go="${p.id}">${p.name}のページへ</button><span class="status" id="mkStatus"></span></div>
     <p class="hint" style="margin:0">本文は各戦略の「本文をコピー」から1つずつコピーできます。投稿は自分で読んで直してから、手で行ってください。</p></section>`;
 }
 function stratCard(s, i, best, p) {
@@ -535,9 +532,8 @@ function profileMd() {
   });
   return L.join("\n");
 }
-function resultMd() {
-  const R = S.result; if (!R || !R.strategies.some(s => s.body)) return "";
-  const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat();
+function resultMd(p) {
+  const R = S[p.id + ".result"]; if (!R) return "";
   const L = [`# 軍師のマーケティング戦略 5本（${p.name}用・${R.at}）`, "", R.summary || "", ""];
   R.strategies.forEach((s, i) => {
     const issues = gate(s, p);
@@ -640,7 +636,7 @@ async function makeDrafts(pid) {
   const p = PLATFORMS.find(x => x.id === pid), st = $("#draftStatus-" + pid), btn = document.querySelector(`[data-draft="${pid}"]`);
   const data = profileData(), mine = data.platforms.find(x => x.媒体 === p.name) || { 媒体: p.name };
   let strategy = null;
-  if (S.result) { const R = S.result; const i = R.overall && R.strategies[R.overall.best] ? R.overall.best : 0; strategy = R.strategies[i]; }
+  const R0 = S[pid + ".result"]; if (R0) { const i = R0.overall && R0.strategies[R0.overall.best] ? R0.overall.best : 0; strategy = R0.strategies[i]; }
   const lim = limitOf(p);
   const prompt = `あなたは日本市場に詳しいマーケティング担当「軍師」です。ユーザー本人が${p.name}で使う${p.draftLabel}の下書きを${p.draftCount}つ作ってください。
 
@@ -671,10 +667,10 @@ ${strategy ? `\n# 沿うべき戦略\n${JSON.stringify({ type: strategy.type, ti
 
 // マーケティング開始
 let mkCtl = null;
-async function startMarketing() {
-  const st = $("#mkStatus"), btn = $("#startMk") || $("#regen"), stop = $("#stopMk");
+async function startMarketing(pid) {
+  const st = $("#mkStatus"), btn = document.querySelector(`[data-start="${pid}"]`), stop = $("#stopMk");
   const data = profileData();
-  const p = bodyPlat(), lim = limitOf(p);
+  const p = PLATFORMS.find(x => x.id === pid), lim = limitOf(p);
   const prompt = `あなたは日本市場に精通したマーケティング参謀「軍師」です。以下はユーザー本人が入力した情報と、管理画面のスクリーンショットから読み取った数字です。
 この人のために、${p.name}で使う戦略を「型」の違う5本作ってください。各戦略には、そのまま${p.name}に貼れる本文を付け、評価点と感想を書き、最後に総合判断をしてください。
 
@@ -724,7 +720,7 @@ ${JSON.stringify(data, null, 1)}
     out.plat = p.id;
     out.at = new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
     if (!out.overall || !out.strategies[out.overall.best]) out.overall = { ...(out.overall || {}), best: 0 };
-    S.result = out; save(); go("result");
+    S[p.id + ".result"] = out; save(); go("result-" + p.id);
   } catch (err) {
     if (st) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; }
   } finally {
@@ -757,14 +753,15 @@ function calc() {
   $("#c_read").textContent = r; $("#c_read").hidden = !r;
 }
 let view = "home";
+const curRes = () => view.startsWith("result-") ? PLATFORMS.find(x => "result-" + x.id === view) : null;
 function go(to, push = true, keepScroll = false) {
   view = to;
-  const p = PLATFORMS.find(x => x.id === to);
+  const p = PLATFORMS.find(x => x.id === to), rp = to.startsWith("result-") ? PLATFORMS.find(x => "result-" + x.id === to) : null;
   const y = window.scrollY;
-  $("#app").innerHTML = to === "common" ? commonView() : to === "result" ? resultView() : p ? platformView(p) : homeView();
-  if (!p && to !== "common" && to !== "result") view = "home";
+  $("#app").innerHTML = to === "common" ? commonView() : rp ? resultView(rp) : p ? platformView(p) : homeView();
+  if (!p && !rp && to !== "common") view = "home";
   $("#navHome").hidden = view === "home";
-  $("#copyBar").textContent = view === "result" ? "全部コピー" : "profile.md をコピー";
+  $("#copyBar").textContent = view.startsWith("result-") ? "全部コピー" : "profile.md をコピー";
   if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
   calc();
   window.scrollTo(0, keepScroll ? y : 0);
@@ -781,7 +778,7 @@ function setKey(k, val, el) {
 document.addEventListener("input", e => {
   const el = e.target;
   if (el.id === "f-apikey") { apiKey = el.value.trim(); try { if ($("#f-keysave")?.checked) localStorage.setItem(KEY_API, apiKey); } catch (x) {} $("#connStatus").className = "status"; $("#connStatus").textContent = "いまの接続：" + engineLabel(); return; }
-  if (el.dataset && el.dataset.bodyedit !== undefined && S.result) { const i = +el.dataset.bodyedit, R = S.result; if (R.strategies[i]) { R.strategies[i].body = el.value; save(); } const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat(); const box = $("#chk-body-" + i); if (box) box.innerHTML = checkHTML(p, el.value); return; }
+  if (el.dataset && el.dataset.bodyedit !== undefined && curRes()) { const p = curRes(), R = S[p.id + ".result"], i = +el.dataset.bodyedit; if (R.strategies[i]) { R.strategies[i].body = el.value; save(); } const box = $("#chk-body-" + i); if (box) box.innerHTML = checkHTML(p, el.value); return; }
   if (el.dataset && el.dataset.draftedit) { const pid = el.dataset.draftedit, i = +el.dataset.i, a = arr(pid + ".drafts"); if (a[i]) { a[i].text = el.value; save(); } const box = $(`#chk-${pid}-${i}`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === pid), el.value); return; }
   if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
   if (el.dataset && el.dataset.check) { const box = $(`#chk-${el.dataset.check}-my`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === el.dataset.check), el.value); }
@@ -812,10 +809,10 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.go) go(t.dataset.go);
   if (t.id === "navHome") go("home");
-  if (t.id === "copyBar") view === "result" ? copy(resultMd(), "戦略") : copy(profileMd(), "profile.md");
-  if (t.id === "copyResult") copy(resultMd(), "戦略");
-  if (t.dataset.copybody !== undefined && S.result) { const R = S.result, s = R.strategies[+t.dataset.copybody], p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat(); if (s) { if (prMissing(s.body).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, s.body) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(s.body, "本文"); } }
-  if (t.dataset.fixbody !== undefined && S.result) { const s = S.result.strategies[+t.dataset.fixbody]; if (s) { s.body = fixPR(s.body || ""); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
+  if (t.id === "copyBar") curRes() ? copy(resultMd(curRes()), "戦略") : copy(profileMd(), "profile.md");
+  if (t.id === "copyResult" && curRes()) copy(resultMd(curRes()), "戦略");
+  if (t.dataset.copybody !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.copybody]; if (s) { if (prMissing(s.body).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, s.body) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(s.body, "本文"); } }
+  if (t.dataset.fixbody !== undefined && curRes()) { const s = S[curRes().id + ".result"].strategies[+t.dataset.fixbody]; if (s) { s.body = fixPR(s.body || ""); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.read) readShots(t.dataset.read);
   if (t.dataset.draft) makeDrafts(t.dataset.draft);
   if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
@@ -825,7 +822,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.delshot) { SHOTS[t.dataset.delshot] = (SHOTS[t.dataset.delshot] || []).filter(s => s.id !== t.dataset.id); saveShots(); go(view, false, true); }
   if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
   if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
-  if (t.id === "startMk" || t.id === "regen") startMarketing();
+  if (t.dataset.start) startMarketing(t.dataset.start);
   if (t.id === "stopMk") mkCtl?.abort();
   if (t.id === "testConn") {
     const s = $("#connStatus"); s.className = "status"; s.textContent = "テスト中…"; t.disabled = true;
