@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* Layout: one narrow column of numbered "帳" sections, sticky bottom bar with progress + copy. Indigo ink (藍) on cool paper. */
+/* Layout: home = grid of 媒体 cards (the parent choice) → each card opens its own page; sticky bottom bar for back / copy. Indigo ink (藍) on cool paper. */
 :root {
   --bg: #f3f4f7;
   --surface: #ffffff;
@@ -15,7 +15,6 @@
   --accent-ink: #ffffff;
   --gold: #9a6b12;
   --warn-bg: #fbf1dc;
-  --good: #2f6b4f;
   --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -23,24 +22,32 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
-    --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020; --good: #7cc3a0;
+    --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
-  --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020; --good: #7cc3a0;
+  --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
-.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 120px; display: grid; gap: 20px; }
-header h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; margin: 0; letter-spacing: .04em; text-wrap: balance; }
-header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
-.note { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; font-size: .9rem; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 120px; display: grid; gap: 18px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.85rem; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+.lead { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.eyebrow { font-size: .78rem; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
+.note { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; font-size: .88rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.tile { text-align: left; display: grid; gap: 6px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+.tile:hover { border-color: var(--accent); }
+.tile .nm { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; }
+.tile .tg { color: var(--muted); font-size: .85rem; line-height: 1.55; }
+.badge { justify-self: start; font-size: .75rem; padding: 2px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+.badge.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tile.sub { background: var(--accent-soft); border-color: transparent; }
 section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 16px; display: grid; gap: 14px; min-width: 0; }
-section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; display: flex; gap: 10px; align-items: baseline; text-wrap: balance; }
-section.card h2 .no { color: var(--accent); font-variant-numeric: tabular-nums; font-size: .95rem; letter-spacing: .08em; }
+section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; text-wrap: balance; }
 .hint { color: var(--muted); font-size: .85rem; margin: -6px 0 0; }
 .field { display: grid; gap: 6px; min-width: 0; }
 .field > .label { font-weight: 700; font-size: .92rem; }
@@ -52,6 +59,7 @@ section.card h2 .no { color: var(--accent); font-variant-numeric: tabular-nums; 
 .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chip .w { color: var(--gold); font-size: .78rem; margin-left: 4px; }
 .chip input:checked + span .w { color: inherit; }
+.chips.stage .chip span { border-style: dashed; }
 input[type=text], input[type=number], input[type=url], textarea, select {
   width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
 }
@@ -59,8 +67,7 @@ textarea { min-height: 84px; resize: vertical; }
 textarea.big { min-height: 220px; font-size: .9rem; }
 input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rows { display: grid; gap: 8px; }
-.row { display: grid; grid-template-columns: minmax(0,1fr) 9.5rem; gap: 8px; align-items: center; }
-.row .name { font-size: .92rem; }
+.row { display: grid; grid-template-columns: minmax(0,1fr) 10rem; gap: 8px; align-items: center; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .sub { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
 .sub-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; }
@@ -72,308 +79,289 @@ button.small { padding: 4px 10px; font-size: .85rem; }
 .calc div { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; }
 .calc b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 .calc small { color: var(--muted); }
-.reading { font-size: .92rem; border-left: 3px solid var(--gold); padding-left: 10px; }
+.reading { font-size: .92rem; border-left: 3px solid var(--gold); padding-left: 10px; margin: 0; }
+.facts { margin: 0; padding-left: 1.2em; font-size: .9rem; }
 pre.out { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
-.bar-in { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.progress { flex: 1 1 140px; min-width: 0; font-size: .85rem; color: var(--muted); }
-.meter { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 4px; }
-.meter i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.bar-in { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .9rem; }
-@media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
 </style>
 
-<div class="wrap">
-  <header>
-    <h1>軍師プロフィール帳</h1>
-    <p>タップと短い入力だけで、軍師（Claude Code）に渡す <code>profile.md</code> と <code>pages/</code> 用の文章を作ります。分からない項目は空欄のままで大丈夫です。</p>
-  </header>
-  <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ一時保存されます。</div>
-
-  <section class="card" id="s1"><h2><span class="no">一</span>立場</h2>
-    <div class="chips" data-group="role" data-type="radio"></div>
-  </section>
-
-  <section class="card" id="s2"><h2><span class="no">二</span>使っているAI</h2>
-    <p class="hint">右の欄で状態を選びます。使っていないものは「―」のままで大丈夫です。</p>
-    <div class="rows" data-status="ai"></div>
-    <div class="field"><span class="label">その他のAI</span><input type="text" id="ai_other" placeholder="例：Dify、Manus"></div>
-  </section>
-
-  <section class="card" id="s3"><h2><span class="no">三</span>使っているASP</h2>
-    <div class="rows" data-status="asp"></div>
-    <div class="field"><span class="label">その他のASP・メディアランクなどのメモ</span><input type="text" id="asp_other" placeholder="例：A8 はチャレンジランク"></div>
-  </section>
-
-  <section class="card" id="s4"><h2><span class="no">四</span>ジャンル</h2>
-    <p class="hint">複数選べます。<span style="color:var(--gold)">⚠</span> は広告の規制が強いジャンルです。</p>
-    <div class="chips" data-group="genre" data-type="check"></div>
-    <div class="field"><span class="label">詳しく（大まかでもOK）</span><input type="text" id="genre_detail" placeholder="例：30代向けの格安SIM乗り換え"></div>
-  </section>
-
-  <section class="card" id="s5"><h2><span class="no">五</span>媒体</h2>
-    <div class="chips" data-group="media" data-type="check"></div>
-    <div class="field"><span class="label">URL・アカウント名</span><input type="text" id="media_url" placeholder="例：https://〇〇.com / X @〇〇"></div>
-  </section>
-
-  <section class="card" id="s6"><h2><span class="no">六</span>自分のこと</h2>
-    <div class="field"><span class="label">アフィリエイト歴</span><div class="chips" data-group="career" data-type="radio"></div></div>
-    <div class="field"><span class="label">これまでの累計報酬</span><div class="chips" data-group="earned" data-type="radio"></div></div>
-    <div class="field"><span class="label">1週間に使える時間</span><div class="chips" data-group="time" data-type="radio"></div></div>
-    <div class="field"><span class="label">月の予算（ツール・広告）</span><div class="chips" data-group="budget" data-type="radio"></div></div>
-    <div class="field"><span class="label">顔出し</span><div class="chips" data-group="face" data-type="radio"></div></div>
-    <div class="field"><span class="label">得意なこと</span><div class="chips" data-group="skill" data-type="check"></div></div>
-    <div class="field"><span class="label">紹介する商品を実際に使ったことがある？</span><div class="chips" data-group="used" data-type="radio"></div></div>
-    <div class="field"><span class="label">自分の経験で語れること</span><textarea id="story" placeholder="仕事・趣味・失敗談・資格など。ここが一番の武器になります"></textarea></div>
-  </section>
-
-  <section class="card" id="s7"><h2><span class="no">七</span>目標</h2>
-    <div class="field"><span class="label">3か月後</span><input type="text" id="goal3" placeholder="例：初報酬を出す"></div>
-    <div class="field"><span class="label">1年後</span><input type="text" id="goal12" placeholder="例：月3万円"></div>
-    <div class="field"><span class="label">いちばん困っていること</span><textarea id="trouble" placeholder="例：クリックはされるのに成果が出ない"></textarea></div>
-  </section>
-
-  <section class="card" id="s8"><h2><span class="no">八</span>今の数字</h2>
-    <p class="hint">ASP の簡易レポートの数字です。最初はスクリーンショットの「今月」の数字を入れてあります。</p>
-    <div class="grid2">
-      <div class="field"><span class="label">期間</span><input type="text" id="n_period"></div>
-      <div class="field"><span class="label">表示回数</span><input type="number" inputmode="numeric" id="n_imp" min="0"></div>
-      <div class="field"><span class="label">クリック</span><input type="number" inputmode="numeric" id="n_click" min="0"></div>
-      <div class="field"><span class="label">発生件数</span><input type="number" inputmode="numeric" id="n_cv" min="0"></div>
-      <div class="field"><span class="label">確定件数</span><input type="number" inputmode="numeric" id="n_ok" min="0"></div>
-      <div class="field"><span class="label">発生金額（円）</span><input type="number" inputmode="numeric" id="n_yen" min="0"></div>
-    </div>
-    <div class="calc">
-      <div><small>CVR（発生 ÷ クリック）</small><b id="c_cvr">―</b></div>
-      <div><small>CVR 1% の案件なら期待される発生</small><b id="c_exp">―</b></div>
-    </div>
-    <p class="reading" id="c_read"></p>
-    <div class="field"><span class="label">PV・フォロワー数・クリックの多い場所など</span><textarea id="n_memo" placeholder="例：Xのフォロワー300人。クリックはたぶんXのプロフィールから"></textarea></div>
-  </section>
-
-  <section class="card" id="s9"><h2><span class="no">九</span>紹介している案件</h2>
-    <div id="deals" class="rows"></div>
-    <div><button type="button" id="addDeal">＋ 案件を追加</button></div>
-  </section>
-
-  <section class="card" id="s10"><h2><span class="no">十</span>ページの貼り付け</h2>
-    <p class="hint">ブログ記事・LP・SNS投稿・プロフィール文をまるごと貼ると、軍師の <code>/page</code> で診断と書き直しができます。1ページずつ追加してください。</p>
-    <div id="pages" class="rows"></div>
-    <div><button type="button" id="addPage">＋ ページを追加</button></div>
-  </section>
-
-  <section class="card" id="s11"><h2><span class="no">十一</span>できあがり</h2>
-    <p class="hint">下の文章をコピーして、gunshi フォルダの <code>profile.md</code> に保存するか、Claude Code に「これを profile.md に保存して」と貼り付けてください。</p>
-    <pre class="out" id="out"></pre>
-    <div class="chips"><button type="button" class="primary" id="copyProfile">profile.md をコピー</button></div>
-    <div id="pageOuts" class="rows"></div>
-    <div class="confirm" id="resetBox"><button type="button" class="ghost small" id="reset">入力をすべて消す</button></div>
-  </section>
-</div>
-
+<div class="wrap" id="app"></div>
 <div class="bar"><div class="bar-in">
-  <div class="progress"><span id="pg">0 / 11 項目</span><div class="meter"><i id="pgbar"></i></div></div>
+  <button type="button" class="ghost" id="navHome">← 媒体を選ぶ</button>
   <button type="button" class="primary" id="copyBar">profile.md をコピー</button>
 </div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const OPT = {
+// 段階：「まだ何もしていない」から「収益が出ている」まで。すべての媒体で共通。
+const STAGES = ["まだ何もしていない", "事前マーケティング（リサーチ・競合調査中）", "アカウント・サイトだけ作った", "発信を始めた（立ち上げ期）", "継続して発信中", "収益が出ている"];
+const GENRES = [["金融（クレカ・証券・保険）", 1], ["転職・副業", 1], ["美容・コスメ", 1], ["脱毛・美容医療", 1], ["健康食品・ダイエット", 1], ["恋愛・婚活・マッチング"], ["教育・資格・スクール"], ["通信（格安SIM・光回線）"], ["動画配信・エンタメ"], ["ガジェット・家電"], ["ゲーム・アプリ"], ["旅行・ホテル"], ["不動産・引越し", 1], ["子育て"], ["ペット"], ["食品・宅配"], ["AI・ITツール"], ["物販（Amazon・楽天）"], ["情報商材・オンライン講座", 1], ["テーマはまだ決めていない"]];
+const FREQ = ["まだ投稿していない", "不定期", "週1〜2回", "週3〜5回", "毎日"];
+
+const PLATFORMS = [
+  { id: "youtube", name: "YouTube", tag: "検索とおすすめの両方から長く見られる。信頼が積み上がりやすいが、制作の手間は一番大きい。",
+    facts: ["広告収益（YPP）には登録者数と視聴時間などの条件がある", "ショートで認知、長尺で信頼、概要欄でブログ・LINEへ誘導が定番", "アフィリエイトリンクを貼る動画は、動画内と概要欄で PR 表記を"],
+    formats: ["長尺動画", "ショート", "ライブ配信", "顔出しあり", "顔なし（声・テロップ）"],
+    money: ["まだ無い", "広告収益（AdSense）", "概要欄のアフィリエイト", "企業案件", "メンバーシップ", "自分の商品"],
+    metrics: [["登録者数", "人"], ["直近28日の再生回数", "回"], ["平均視聴率", "%"], ["動画本数", "本"]],
+    pageTypes: ["タイトル・サムネ文言", "台本", "概要欄", "チャンネル紹介文"] },
+  { id: "blog", name: "ブログ", tag: "検索から「買う直前の人」が来るので、成果に一番近い。結果が出るまで3〜6か月かかることが多い。",
+    facts: ["「〇〇 おすすめ」「〇〇 比較」「〇〇 評判」など購入前のキーワードが成果に近い", "体験の写真・デメリット・向いていない人を書くほど信頼される", "記事の冒頭に「アフィリエイト広告を利用しています」などの PR 表記を"],
+    formats: ["WordPress", "はてなブログ", "アメブロ", "その他の無料ブログ"],
+    money: ["まだ無い", "ASP のアフィリエイト", "Google AdSense", "Amazon・楽天", "自分の商品"],
+    metrics: [["記事数", "記事"], ["月間PV", "PV"], ["検索からの割合", "%"], ["運営期間", "か月"]],
+    pageTypes: ["ブログ記事", "プロフィール", "トップページ"] },
+  { id: "x", name: "X", tag: "拡散力が高く、反応がすぐ分かる。プロフィールや固定ポストからブログ・note・LINE へ誘導するのが定番。",
+    facts: ["外部リンク付きの投稿は表示が伸びにくいと言われ、リンクはプロフィールや返信に置く人が多い", "毎日の発信で「誰の・何の人か」を覚えてもらうのが先", "案件の紹介ポストには #PR などの表記を"],
+    formats: ["短文ポスト", "長文・スレッド", "画像・図解", "動画", "スペース（音声）"],
+    money: ["まだ無い", "ブログ・note への誘導", "ASP のアフィリエイト", "note・Brain・Tips の販売", "X の収益配分", "企業案件"],
+    metrics: [["フォロワー", "人"], ["月間インプレッション", "回"], ["1日の投稿数", "回"]],
+    pageTypes: ["ポスト", "固定ポスト", "プロフィール文"] },
+  { id: "threads", name: "Threads", tag: "Instagram とつながる会話中心の SNS。宣伝色が強いと嫌われやすく、共感と日常の投稿から信頼を作る。",
+    facts: ["問いかけで終わる投稿にコメントが集まりやすい", "Instagram のフォロワーと相互に行き来できる", "直接の売り込みより、プロフィール経由の誘導が向いている"],
+    formats: ["短文", "画像付き", "連投"],
+    money: ["まだ無い", "プロフィールリンク経由", "Instagram への誘導", "企業案件"],
+    metrics: [["フォロワー", "人"], ["1投稿の平均閲覧", "回"]],
+    pageTypes: ["投稿", "プロフィール文"] },
+  { id: "tiktok", name: "TikTok", tag: "フォロワーが少なくても、おすすめに載れば一気に見られる。冒頭2秒が勝負。",
+    facts: ["若い層が中心だが、利用者の年齢層は広がっている", "顔なし（手元・画面録画・テロップ）でも伸ばせる", "商品紹介は PR 表記と、誇張しない言い回しを"],
+    formats: ["顔出し", "顔なし（手元・テロップ）", "画像スライド", "ライブ"],
+    money: ["まだ無い", "TikTok Shop のアフィリエイト", "プロフィールリンク経由", "企業案件", "ライブのギフト"],
+    metrics: [["フォロワー", "人"], ["平均再生数", "回"], ["投稿本数", "本"]],
+    pageTypes: ["動画台本", "キャプション", "プロフィール文"] },
+  { id: "instagram", name: "Instagram", tag: "保存されるカルーセルと、新しい人に届くリール。美容・暮らし・グルメ・旅行と相性が良い。",
+    facts: ["保存数が多い投稿はおすすめに載りやすい", "ストーリーズのリンクやハイライトで案件へ誘導できる", "PR 投稿はタイアップ投稿ラベルや #PR を"],
+    formats: ["カルーセル（画像）", "リール", "ストーリーズ", "ライブ"],
+    money: ["まだ無い", "ストーリーズ・プロフィールのリンク", "企業案件", "楽天ROOM などへの誘導", "自分の商品"],
+    metrics: [["フォロワー", "人"], ["平均保存数", "件"], ["リールの平均再生", "回"]],
+    pageTypes: ["カルーセル原稿", "リール台本", "キャプション", "プロフィール文"] },
+  { id: "note", name: "note", tag: "文章で信頼を作り、有料記事やメンバーシップで直接売ることもできる。検索にも出やすい。",
+    facts: ["X との組み合わせで読まれることが多い", "無料記事で信頼を作り、有料記事・メンバーシップへ", "紹介リンクを入れる記事は PR 表記を"],
+    formats: ["無料記事", "有料記事", "メンバーシップ", "マガジン"],
+    money: ["まだ無い", "有料記事", "メンバーシップ", "Amazon アソシエイト", "ブログ・LINE への誘導"],
+    metrics: [["記事数", "記事"], ["フォロワー", "人"], ["月間ビュー", "回"]],
+    pageTypes: ["記事", "有料記事の無料部分", "プロフィール文"] }
+];
+const COMMON = {
   role: ["アフィリエイター（他社の商品を紹介）", "自分の商品・サービスを販売", "両方", "まだ決めていない"],
   ai: ["Claude（Claude Code 含む）", "ChatGPT（Codex 含む）", "Gemini", "Microsoft Copilot", "Perplexity", "Genspark / Felo", "Notion AI", "Canva（AI機能）", "画像生成AI", "動画生成AI"],
-  aiStatus: ["使っている", "使う予定", "興味あり"],
+  aiStatus: ["使っている", "使う予定", "興味あり", "まだ何もしていない"],
   asp: ["A8.net", "もしもアフィリエイト", "バリューコマース", "afb（アフィb）", "アクセストレード", "felmat", "TCSアフィリエイト", "レントラックス", "JANet", "Amazonアソシエイト", "楽天アフィリエイト"],
-  aspStatus: ["成果あり", "登録済み", "登録予定"],
-  genre: [["金融（クレカ・証券・保険）", 1], ["転職・副業", 1], ["美容・コスメ", 1], ["脱毛・美容医療", 1], ["健康食品・ダイエット", 1], ["恋愛・婚活・マッチング"], ["教育・資格・スクール"], ["通信（格安SIM・光回線）"], ["動画配信・エンタメ"], ["ガジェット・家電"], ["ゲーム・アプリ"], ["旅行・ホテル"], ["不動産・引越し", 1], ["子育て"], ["ペット"], ["食品・宅配"], ["AI・ITツール・サーバー"], ["物販（Amazon・楽天）"], ["情報商材・オンライン講座", 1], ["まだ決めていない"]],
-  media: ["ブログ（WordPress）", "無料ブログ", "note", "X", "Instagram", "Threads", "TikTok", "YouTube（長尺）", "YouTube ショート", "LINE公式アカウント", "メルマガ", "Pinterest", "有料広告", "まだ無い"],
-  career: ["これから", "半年未満", "半年〜1年", "1〜3年", "3年以上"],
+  aspStatus: ["成果あり", "登録済み", "登録予定", "まだ何もしていない"],
+  career: ["まだ何もしていない", "事前マーケティング中", "半年未満", "半年〜1年", "1〜3年", "3年以上"],
   earned: ["0円", "〜1万円", "〜10万円", "〜100万円", "100万円以上"],
   time: ["〜3時間", "3〜7時間", "7〜15時間", "15時間以上"],
   budget: ["0円", "〜5千円", "〜3万円", "3万円以上"],
   face: ["できる", "顔なしならOK", "声もNG"],
   skill: ["文章", "話す", "写真・デザイン", "動画編集", "調べもの", "数字の分析"],
-  used: ["ある", "一部ある", "ない"],
-  pageType: ["ブログ記事", "LP", "プロフィール", "SNS投稿", "YouTube台本", "メール・LINE", "その他"]
+  used: ["ある", "一部ある", "ない"]
 };
-const KEY = "gunshi-profile-v1";
-const SAMPLE = { "st_asp_0": "登録済み", asp_other: "A8.net はチャレンジランク", n_period: "今月", n_imp: "4", n_click: "219", n_cv: "0", n_ok: "0", n_yen: "0" };
-const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-function buildChips() {
-  document.querySelectorAll(".chips[data-group]").forEach(box => {
-    const g = box.dataset.group, type = box.dataset.type === "radio" ? "radio" : "checkbox";
-    box.innerHTML = OPT[g].map((o, i) => {
-      const [label, warn] = Array.isArray(o) ? o : [o];
-      return `<label class="chip"><input type="${type}" name="${g}" id="${g}_${i}" value="${esc(label)}"><span>${esc(label)}${warn ? '<span class="w">⚠</span>' : ""}</span></label>`;
-    }).join("");
-  });
-  document.querySelectorAll(".rows[data-status]").forEach(box => {
-    const g = box.dataset.status, st = OPT[g + "Status"];
-    box.innerHTML = OPT[g].map((o, i) => `<div class="row"><label class="name" for="st_${g}_${i}">${esc(o)}</label><select id="st_${g}_${i}"><option value="">―</option>${st.map(s => `<option>${s}</option>`).join("")}</select></div>`).join("");
-  });
-}
-
-let deals = [], pages = [];
-function dealHTML(d, i) {
-  return `<div class="sub"><div class="sub-head">案件 ${i + 1}<button type="button" class="ghost small" data-del-deal="${i}">削除</button></div>
-  <div class="grid2">
-    <div class="field"><span class="label">案件名</span><input type="text" id="deal_${i}_name" value="${esc(d.name || "")}"></div>
-    <div class="field"><span class="label">ASP</span><input type="text" id="deal_${i}_asp" value="${esc(d.asp || "")}"></div>
-    <div class="field"><span class="label">報酬単価</span><input type="text" id="deal_${i}_pay" value="${esc(d.pay || "")}" placeholder="例：1,500円"></div>
-    <div class="field"><span class="label">成果条件</span><input type="text" id="deal_${i}_cond" value="${esc(d.cond || "")}" placeholder="例：本人確認完了"></div>
-  </div>
-  <div class="field"><span class="label">掲載しているページ</span><input type="text" id="deal_${i}_where" value="${esc(d.where || "")}"></div></div>`;
-}
-function pageHTML(p, i) {
-  return `<div class="sub"><div class="sub-head">ページ ${i + 1}<button type="button" class="ghost small" data-del-page="${i}">削除</button></div>
-  <div class="grid2">
-    <div class="field"><span class="label">ページ名（ファイル名になります）</span><input type="text" id="page_${i}_title" value="${esc(p.title || "")}" placeholder="例：格安SIM比較記事"></div>
-    <div class="field"><span class="label">種類</span><select id="page_${i}_type"><option value="">―</option>${OPT.pageType.map(t => `<option${p.type === t ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-  </div>
-  <div class="field"><span class="label">URL</span><input type="url" id="page_${i}_url" value="${esc(p.url || "")}"></div>
-  <div class="grid2">
-    <div class="field"><span class="label">狙っているキーワード</span><input type="text" id="page_${i}_kw" value="${esc(p.kw || "")}"></div>
-    <div class="field"><span class="label">紹介している案件</span><input type="text" id="page_${i}_deal" value="${esc(p.deal || "")}"></div>
-    <div class="field"><span class="label">読者にしてほしい行動</span><input type="text" id="page_${i}_goal" value="${esc(p.goal || "")}" placeholder="例：公式サイトをクリック"></div>
-    <div class="field"><span class="label">数字（PV・クリック・成果）</span><input type="text" id="page_${i}_num" value="${esc(p.num || "")}"></div>
-  </div>
-  <div class="field"><span class="label">本文（まるごと貼り付け）</span><textarea class="big" id="page_${i}_body" placeholder="ページの文章をここに貼り付けてください">${esc(p.body || "")}</textarea></div></div>`;
-}
-function readList(prefix, n, fields) {
-  return Array.from({ length: n }, (_, i) => Object.fromEntries(fields.map(f => [f, ($(`#${prefix}_${i}_${f}`) || {}).value || ""])));
-}
+const KEY = "gunshi-profile-v2";
+const SAMPLE = { "c.asp.0": "登録済み", "c.asp_other": "A8.net はチャレンジランク", "c.n_period": "今月", "c.n_imp": "4", "c.n_click": "219", "c.n_cv": "0", "c.n_ok": "0", "c.n_yen": "0" };
 const DEAL_F = ["name", "asp", "pay", "cond", "where"], PAGE_F = ["title", "type", "url", "kw", "deal", "goal", "num", "body"];
-function renderLists() {
-  $("#deals").innerHTML = deals.map(dealHTML).join("");
-  $("#pages").innerHTML = pages.map(pageHTML).join("");
+
+let S = {};
+try { S = JSON.parse(localStorage.getItem(KEY) || "null") || { ...SAMPLE }; } catch (e) { S = { ...SAMPLE }; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fid = k => "f-" + k.replace(/[^\w]/g, "-");
+const arr = k => Array.isArray(S[k]) ? S[k] : [];
+const v = k => (S[k] ?? "").toString().trim();
+
+// ---------- field builders ----------
+function chips(k, opts, multi, cls = "") {
+  return `<div class="chips ${cls}">${opts.map((o, i) => {
+    const [label, warn] = Array.isArray(o) ? o : [o];
+    const on = multi ? arr(k).includes(label) : S[k] === label;
+    return `<label class="chip"><input type="${multi ? "checkbox" : "radio"}" name="${k}" id="${fid(k)}-${i}" data-k="${k}" data-multi="${multi ? 1 : ""}" value="${esc(label)}"${on ? " checked" : ""}><span>${esc(label)}${warn ? '<span class="w">⚠</span>' : ""}</span></label>`;
+  }).join("")}</div>`;
+}
+const field = (label, inner) => `<div class="field"><span class="label">${label}</span>${inner}</div>`;
+const text = (k, ph = "", type = "text") => `<input type="${type}" id="${fid(k)}" data-k="${k}" value="${esc(S[k])}" placeholder="${esc(ph)}"${type === "number" ? ' inputmode="numeric" min="0"' : ""}>`;
+const area = (k, ph = "", big) => `<textarea id="${fid(k)}" data-k="${k}" class="${big ? "big" : ""}" placeholder="${esc(ph)}">${esc(S[k])}</textarea>`;
+function statusRows(base, names, states) {
+  return `<div class="rows">${names.map((n, i) => {
+    const k = `${base}.${i}`;
+    return `<div class="row"><label for="${fid(k)}">${esc(n)}</label><select id="${fid(k)}" data-k="${k}"><option value="">―</option>${states.map(s => `<option${S[k] === s ? " selected" : ""}>${s}</option>`).join("")}</select></div>`;
+  }).join("")}</div>`;
+}
+function list(k, f) {
+  const items = arr(k).length ? arr(k) : [{}];
+  return `<div class="rows">${items.map((it, i) => f(it, i, `${k}|${i}|`)).join("")}</div><div><button type="button" data-add="${k}">＋ 追加</button></div>`;
+}
+const li = (p, f, it, ph = "", type = "text") => `<input type="${type}" id="${fid(p + f)}" data-k="${p}${f}" value="${esc(it[f])}" placeholder="${esc(ph)}">`;
+
+// ---------- views ----------
+function stageOf(id) { return S[`${id}.stage`]; }
+function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && (Array.isArray(S[k]) ? S[k].length : S[k])).length; }
+
+function homeView() {
+  return `<header><div class="eyebrow">軍師 GUNSHI</div><h1>どの媒体で戦いますか</h1>
+    <p class="lead">まず主戦場を選びます。媒体をタップすると、その媒体専用のページに進みます。いくつ選んでも大丈夫です。まだ何もしていなくても、事前マーケティングの段階から記録できます。</p></header>
+    <div class="tiles">${PLATFORMS.map(p => {
+      const st = stageOf(p.id), n = filled(p.id);
+      return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span></button>`;
+    }).join("")}</div>
+    <div class="tiles">
+      <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・使っているAI・ASP・自分のこと・目標・ASPの数字・紹介している案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
+      <button type="button" class="tile sub" data-go="out"><span class="nm">できあがり</span><span class="tg">軍師（Claude Code）に渡す profile.md と、貼り付けたページをコピーする</span></button>
+    </div>
+    <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ一時保存されます。</div>`;
 }
 
-function collect() {
-  const st = {};
-  document.querySelectorAll("input, textarea, select").forEach(el => {
-    if (!el.id || el.id.startsWith("deal_") || el.id.startsWith("page_")) return;
-    if (el.type === "checkbox" || el.type === "radio") { if (el.checked) st[el.id] = 1; }
-    else if (el.value) st[el.id] = el.value;
-  });
-  st.deals = readList("deal", deals.length, DEAL_F);
-  st.pages = readList("page", pages.length, PAGE_F);
-  return st;
+function platformView(p) {
+  const k = s => `${p.id}.${s}`;
+  return `<header><div class="eyebrow">媒体別ページ</div><h1>${p.name}</h1><p class="lead">${p.tag}</p></header>
+  <section class="card"><h2>${p.name} の基本</h2><ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></section>
+  <section class="card"><h2>いまの段階</h2><p class="hint">まだ何もしていない・事前マーケティング中でも大丈夫です。今の段階に合わせて軍師の提案が変わります。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
+  <section class="card"><h2>テーマ（ジャンル）</h2><p class="hint">複数選べます。<span style="color:var(--gold)">⚠</span> は広告の規制が強いテーマです。</p>
+    ${chips(k("theme"), GENRES, true)}${field("詳しく（大まかでもOK）", text(k("theme_detail"), "例：30代向けの格安SIM乗り換え"))}</section>
+  <section class="card"><h2>発信のしかた</h2>
+    ${field("形式", chips(k("format"), p.formats, true))}
+    ${field("投稿の頻度", chips(k("freq"), FREQ, false))}
+    ${field("URL・アカウント名", text(k("url"), "まだ無ければ空欄でOK"))}</section>
+  <section class="card"><h2>収益化の方法</h2>${chips(k("money"), p.money, true)}</section>
+  <section class="card"><h2>${p.name} の数字</h2><p class="hint">分かる分だけで大丈夫です。</p>
+    <div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"))).join("")}</div></section>
+  <section class="card"><h2>困っていること・やりたいこと</h2>${area(k("trouble"), "例：何を投稿すればいいか分からない／フォロワーは増えたけど売れない")}</section>
+  <section class="card"><h2>ページの貼り付け</h2><p class="hint">${p.pageTypes.join("・")} などをまるごと貼ると、軍師の <code>/page</code> で診断と書き直しができます。</p>
+    ${list(k("pages"), (it, i, pre) => `<div class="sub"><div class="sub-head">ページ ${i + 1}<button type="button" class="ghost small" data-del="${k("pages")}" data-i="${i}">削除</button></div>
+      <div class="grid2">${field("ページ名", li(pre, "title", it, "例：格安SIM比較"))}
+      ${field("種類", `<select id="${fid(pre + "type")}" data-k="${pre}type"><option value="">―</option>${p.pageTypes.map(t => `<option${it.type === t ? " selected" : ""}>${t}</option>`).join("")}</select>`)}</div>
+      ${field("URL", li(pre, "url", it, "", "url"))}
+      <div class="grid2">${field("狙っているキーワード", li(pre, "kw", it))}${field("紹介している案件", li(pre, "deal", it))}
+      ${field("読者にしてほしい行動", li(pre, "goal", it, "例：公式サイトをクリック"))}${field("数字（再生・PV・クリック）", li(pre, "num", it))}</div>
+      ${field("本文（まるごと貼り付け）", `<textarea class="big" id="${fid(pre + "body")}" data-k="${pre}body" placeholder="ここに貼り付け">${esc(it.body)}</textarea>`)}</div>`)}</section>`;
 }
-function apply(st) {
-  Object.entries(st).forEach(([k, v]) => {
-    if (k === "deals" || k === "pages") return;
-    const el = document.getElementById(k); if (!el) return;
-    if (el.type === "checkbox" || el.type === "radio") el.checked = !!v; else el.value = v;
-  });
-  deals = st.deals && st.deals.length ? st.deals : [{}];
-  pages = st.pages && st.pages.length ? st.pages : [{}];
-  renderLists();
-}
-const picked = g => [...document.querySelectorAll(`input[name="${g}"]:checked`)].map(e => e.value);
-const val = id => ($("#" + id).value || "").trim();
 
+function commonView() {
+  return `<header><div class="eyebrow">すべての媒体に共通</div><h1>共通プロフィール</h1></header>
+  <section class="card"><h2>立場</h2>${chips("c.role", COMMON.role, false)}</section>
+  <section class="card"><h2>使っているAI</h2><p class="hint">使っていないものは「―」のままで大丈夫です。</p>${statusRows("c.ai", COMMON.ai, COMMON.aiStatus)}${field("その他のAI", text("c.ai_other", "例：Dify、Manus"))}</section>
+  <section class="card"><h2>使っているASP</h2>${statusRows("c.asp", COMMON.asp, COMMON.aspStatus)}${field("その他のASP・メディアランクなどのメモ", text("c.asp_other"))}</section>
+  <section class="card"><h2>自分のこと</h2>
+    ${field("アフィリエイト歴", chips("c.career", COMMON.career, false, "stage"))}
+    ${field("これまでの累計報酬", chips("c.earned", COMMON.earned, false))}
+    ${field("1週間に使える時間", chips("c.time", COMMON.time, false))}
+    ${field("月の予算（ツール・広告）", chips("c.budget", COMMON.budget, false))}
+    ${field("顔出し", chips("c.face", COMMON.face, false))}
+    ${field("得意なこと", chips("c.skill", COMMON.skill, true))}
+    ${field("紹介する商品を実際に使ったことがある？", chips("c.used", COMMON.used, false))}
+    ${field("自分の経験で語れること", area("c.story", "仕事・趣味・失敗談・資格など。ここが一番の武器になります"))}</section>
+  <section class="card"><h2>目標</h2>${field("3か月後", text("c.goal3", "例：初報酬を出す"))}${field("1年後", text("c.goal12", "例：月3万円"))}</section>
+  <section class="card"><h2>ASP の数字</h2><p class="hint">最初はスクリーンショットの「今月」の数字を入れてあります。</p>
+    <div class="grid2">${field("期間", text("c.n_period"))}${field("表示回数", text("c.n_imp", "", "number"))}${field("クリック", text("c.n_click", "", "number"))}${field("発生件数", text("c.n_cv", "", "number"))}${field("確定件数", text("c.n_ok", "", "number"))}${field("発生金額（円）", text("c.n_yen", "", "number"))}</div>
+    <div class="calc"><div><small>CVR（発生 ÷ クリック）</small><b id="c_cvr">―</b></div><div><small>CVR 1% の案件なら期待される発生</small><b id="c_exp">―</b></div></div>
+    <p class="reading" id="c_read"></p>
+    ${field("どこからのクリックが多いかなど", area("c.n_memo", "例：たぶん X のプロフィールから"))}</section>
+  <section class="card"><h2>紹介している案件</h2>
+    ${list("c.deals", (it, i, pre) => `<div class="sub"><div class="sub-head">案件 ${i + 1}<button type="button" class="ghost small" data-del="c.deals" data-i="${i}">削除</button></div>
+      <div class="grid2">${field("案件名", li(pre, "name", it))}${field("ASP", li(pre, "asp", it))}${field("報酬単価", li(pre, "pay", it, "例：1,500円"))}${field("成果条件", li(pre, "cond", it, "例：本人確認完了"))}</div>
+      ${field("掲載している媒体・ページ", li(pre, "where", it))}</div>`)}</section>`;
+}
+
+function outView() {
+  const pages = PLATFORMS.flatMap(p => arr(`${p.id}.pages`).map((pg, i) => ({ p, pg, i }))).filter(x => (x.pg.body || "").trim());
+  return `<header><div class="eyebrow">仕上げ</div><h1>できあがり</h1>
+    <p class="lead">下の文章をコピーして gunshi フォルダの <code>profile.md</code> に保存するか、Claude Code に「これを profile.md に保存して」と貼り付けてください。</p></header>
+  <section class="card"><h2>profile.md</h2><pre class="out" id="out">${esc(profileMd())}</pre><div><button type="button" class="primary" data-copy="profile">profile.md をコピー</button></div></section>
+  <section class="card"><h2>貼り付けたページ</h2>${pages.length ? `<div class="chips">${pages.map(x => `<button type="button" data-copy="page" data-p="${x.p.id}" data-i="${x.i}">${x.p.name}：${esc(x.pg.title || "ページ" + (x.i + 1))}</button>`).join("")}</div><p class="hint">コピーした文章は <code>pages/〇〇.md</code> に保存し、<code>/page pages/〇〇.md</code> で診断できます。</p>` : `<p class="hint">まだありません。各媒体のページの「ページの貼り付け」から追加できます。</p>`}</section>
+  <section class="card"><div class="confirm" id="resetBox"><button type="button" class="ghost small" id="reset">入力をすべて消す</button></div></section>`;
+}
+
+// ---------- markdown ----------
 function profileMd() {
   const L = ["# 私のプロフィール（profile.md）", "", "> 軍師プロフィール帳で作成。ASP のID・パスワードは含めないこと。", ""];
-  const one = (g) => picked(g)[0] || "";
-  L.push("## 1. 立場", "- " + (one("role") || "（未記入）"), "");
-  const status = (g, otherId) => {
-    const rows = OPT[g].map((o, i) => [o, $(`#st_${g}_${i}`).value]).filter(r => r[1]);
-    const out = rows.map(r => `| ${r[0]} | ${r[1]} |`);
-    if (val(otherId)) out.push(`| その他・メモ | ${val(otherId)} |`);
-    return out.length ? ["| 名前 | 状態 |", "|---|---|", ...out] : ["（未記入）"];
+  const chosen = PLATFORMS.filter(p => filled(p.id));
+  L.push("## 主戦場（媒体と段階）");
+  L.push(...(chosen.length ? chosen.map(p => `- ${p.name}：${stageOf(p.id) || "段階未選択"}`) : ["（未選択）"]), "");
+  L.push("## 共通", `- 立場：${v("c.role")}`);
+  const st = (base, names, other) => {
+    const r = names.map((n, i) => [n, v(`${base}.${i}`)]).filter(x => x[1]).map(x => `${x[0]}（${x[1]}）`);
+    if (v(other)) r.push(v(other));
+    return r.join("、");
   };
-  L.push("## 2. 使っているAI", ...status("ai", "ai_other"), "");
-  L.push("## 3. 使っているASP", ...status("asp", "asp_other"), "");
-  const gs = picked("genre").map(g => { const w = OPT.genre.find(o => o[0] === g)[1]; return "- " + g + (w ? " ⚠️規制強" : ""); });
-  L.push("## 4. ジャンル", ...(gs.length ? gs : ["（未記入）"]));
-  if (val("genre_detail")) L.push("- 詳しく：" + val("genre_detail"));
-  L.push("", "## 5. 媒体", ...(picked("media").map(m => "- " + m)));
-  if (!picked("media").length) L.push("（未記入）");
-  if (val("media_url")) L.push("- URL・アカウント：" + val("media_url"));
-  L.push("", "## 6. 自分のこと",
-    "- アフィリエイト歴：" + (one("career") || ""),
-    "- 累計報酬：" + (one("earned") || ""),
-    "- 1週間に使える時間：" + (one("time") || ""),
-    "- 月の予算：" + (one("budget") || ""),
-    "- 顔出し：" + (one("face") || ""),
-    "- 得意なこと：" + picked("skill").join("、"),
-    "- 紹介商品の使用経験：" + (one("used") || ""),
-    "- 自分の経験で語れること：" + val("story").replace(/\n/g, " / "), "");
-  L.push("## 7. 目標", "- 3か月後：" + val("goal3"), "- 1年後：" + val("goal12"), "- いちばん困っていること：" + val("trouble").replace(/\n/g, " / "), "");
-  L.push("## 8. 今の数字", "| 期間 | 表示回数 | クリック | 発生件数 | 確定件数 | 発生金額 |", "|---|---|---|---|---|---|",
-    `| ${val("n_period")} | ${val("n_imp")} | ${val("n_click")} | ${val("n_cv")} | ${val("n_ok")} | ${val("n_yen") ? val("n_yen") + "円" : ""} |`);
-  if (val("n_memo")) L.push("- メモ：" + val("n_memo").replace(/\n/g, " / "));
-  L.push("", "## 9. 紹介している案件", "| 案件名 | ASP | 報酬単価 | 成果条件 | 掲載ページ |", "|---|---|---|---|---|");
-  readList("deal", deals.length, DEAL_F).filter(d => DEAL_F.some(f => d[f])).forEach(d => L.push(`| ${d.name} | ${d.asp} | ${d.pay} | ${d.cond} | ${d.where} |`));
+  L.push(`- AI：${st("c.ai", COMMON.ai, "c.ai_other")}`, `- ASP：${st("c.asp", COMMON.asp, "c.asp_other")}`,
+    `- アフィリエイト歴：${v("c.career")}`, `- 累計報酬：${v("c.earned")}`, `- 1週間に使える時間：${v("c.time")}`, `- 月の予算：${v("c.budget")}`,
+    `- 顔出し：${v("c.face")}`, `- 得意なこと：${arr("c.skill").join("、")}`, `- 紹介商品の使用経験：${v("c.used")}`,
+    `- 自分の経験で語れること：${v("c.story").replace(/\n/g, " / ")}`, `- 目標：3か月後 ${v("c.goal3")}／1年後 ${v("c.goal12")}`, "");
+  L.push("### ASP の数字", "| 期間 | 表示回数 | クリック | 発生件数 | 確定件数 | 発生金額 |", "|---|---|---|---|---|---|",
+    `| ${v("c.n_period")} | ${v("c.n_imp")} | ${v("c.n_click")} | ${v("c.n_cv")} | ${v("c.n_ok")} | ${v("c.n_yen") ? v("c.n_yen") + "円" : ""} |`);
+  if (v("c.n_memo")) L.push("- メモ：" + v("c.n_memo").replace(/\n/g, " / "));
+  const deals = arr("c.deals").filter(d => DEAL_F.some(f => d[f]));
+  if (deals.length) L.push("", "### 紹介している案件", "| 案件名 | ASP | 報酬単価 | 成果条件 | 掲載先 |", "|---|---|---|---|---|", ...deals.map(d => `| ${d.name || ""} | ${d.asp || ""} | ${d.pay || ""} | ${d.cond || ""} | ${d.where || ""} |`));
+  chosen.forEach(p => {
+    const k = s => `${p.id}.${s}`;
+    const themes = arr(k("theme")).map(t => (GENRES.find(g => g[0] === t) || [])[1] ? t + "⚠️" : t);
+    L.push("", `## ${p.name}`, `- 段階：${v(k("stage"))}`, `- テーマ：${themes.join("、")}${v(k("theme_detail")) ? "（" + v(k("theme_detail")) + "）" : ""}`,
+      `- 形式：${arr(k("format")).join("、")}`, `- 投稿頻度：${v(k("freq"))}`, `- URL：${v(k("url"))}`, `- 収益化：${arr(k("money")).join("、")}`,
+      `- 数字：${p.metrics.map((m, i) => v(k("m" + i)) ? `${m[0]} ${v(k("m" + i))}${m[1]}` : "").filter(Boolean).join("／")}`,
+      `- 困っていること：${v(k("trouble")).replace(/\n/g, " / ")}`);
+    const pg = arr(k("pages")).filter(x => (x.body || "").trim());
+    if (pg.length) L.push(`- 貼り付けたページ：${pg.map(x => x.title || "無題").join("、")}（pages/ に保存）`);
+  });
   return L.join("\n");
 }
-function pageMd(p) {
-  return [`# ${p.title || "ページ"}`, "", "## 基本情報", `- URL：${p.url}`, `- ページの種類：${p.type}`, `- 狙っている検索キーワード：${p.kw}`, `- 紹介している案件：${p.deal}`, `- 読者にしてほしい行動：${p.goal}`, "", "## 数字", `- ${p.num}`, "", "## 本文", "", p.body].join("\n");
+function pageMd(p, pg) {
+  return [`# ${pg.title || "ページ"}`, "", "## 基本情報", `- 媒体：${p.name}`, `- URL：${pg.url || ""}`, `- ページの種類：${pg.type || ""}`, `- 狙っているキーワード：${pg.kw || ""}`,
+    `- 紹介している案件：${pg.deal || ""}`, `- 読者にしてほしい行動：${pg.goal || ""}`, "", "## 数字", `- ${pg.num || ""}`, "", "## 本文", "", pg.body || ""].join("\n");
 }
 
+// ---------- behaviour ----------
 function calc() {
-  const c = +val("n_click"), v = +val("n_cv");
-  const has = val("n_click") !== "";
-  $("#c_cvr").textContent = has && c > 0 ? (v / c * 100).toFixed(2) + "%" : "―";
+  if (!$("#c_cvr")) return;
+  const has = v("c.n_click") !== "", c = +v("c.n_click"), cv = +v("c.n_cv");
+  $("#c_cvr").textContent = has && c > 0 ? (cv / c * 100).toFixed(2) + "%" : "―";
   $("#c_exp").textContent = has ? (c * 0.01).toFixed(1) + " 件" : "―";
   let r = "";
-  if (has && c >= 50 && v === 0) r = `${c} クリックは「読者を動かす力がある」という良い兆候です。一方で成果 0 件なので、クリックする人と買う人がずれている可能性があります。軍師の /diagnose で原因を絞り込みましょう。`;
-  else if (has && v > 0) r = `成果が出ています。どのページ・どの投稿から出たかを特定すると、同じ型で増やせます。`;
-  else if (has && c < 50) r = `まだ数字が少なく、良し悪しは判断できません。まずはクリック 100 を目指しましょう。`;
+  if (has && c >= 50 && cv === 0) r = `${c} クリックは「読者を動かす力がある」という良い兆候です。一方で成果 0 件なので、クリックする人と買う人がずれている可能性があります。軍師の /diagnose で原因を絞り込みましょう。`;
+  else if (has && cv > 0) r = "成果が出ています。どのページ・どの投稿から出たかを特定すると、同じ型で増やせます。";
+  else if (has && c < 50) r = "まだ数字が少なく、良し悪しは判断できません。まずはクリック 100 を目指しましょう。";
   $("#c_read").textContent = r; $("#c_read").hidden = !r;
 }
-function progress() {
-  const done = [
-    picked("role").length, document.querySelector('[id^="st_ai_"] option:checked:not([value=""])') || val("ai_other"),
-    document.querySelector('[id^="st_asp_"] option:checked:not([value=""])') || val("asp_other"),
-    picked("genre").length || val("genre_detail"), picked("media").length,
-    picked("career").length || picked("earned").length, val("goal3") || val("trouble"), val("n_click"),
-    readList("deal", deals.length, DEAL_F).some(d => d.name), readList("page", pages.length, PAGE_F).some(p => p.body), 1
-  ].filter(Boolean).length;
-  $("#pg").textContent = `${done} / 11 項目`;
-  $("#pgbar").style.width = (done / 11 * 100) + "%";
+let view = "home";
+function go(to, push = true) {
+  view = to;
+  const p = PLATFORMS.find(x => x.id === to);
+  $("#app").innerHTML = to === "common" ? commonView() : to === "out" ? outView() : p ? platformView(p) : homeView();
+  $("#navHome").hidden = view === "home" || !PLATFORMS.concat([{ id: "common" }, { id: "out" }]).some(x => x.id === view);
+  if (push) { try { history.pushState(null, "", to === "home" ? location.pathname + location.search : "#" + to); } catch (e) {} }
+  calc(); window.scrollTo(0, 0);
 }
-function renderOut() {
-  $("#out").textContent = profileMd();
-  const ps = readList("page", pages.length, PAGE_F);
-  $("#pageOuts").innerHTML = ps.map((p, i) => p.body ? `<div class="chips"><button type="button" data-copy-page="${i}">pages/${esc(p.title || "page" + (i + 1))}.md をコピー</button></div>` : "").join("");
-  calc(); progress();
-  try { localStorage.setItem(KEY, JSON.stringify(collect())); } catch (e) {}
+function setKey(k, val, el) {
+  if (k.includes("|")) {
+    const [base, i, f] = k.split("|"); const a = arr(base).length ? arr(base) : [{}];
+    a[+i] = { ...(a[+i] || {}), [f]: val }; S[base] = a;
+  } else if (el && el.dataset.multi) {
+    const a = arr(k).filter(x => x !== el.value); if (el.checked) a.push(el.value); S[k] = a;
+  } else S[k] = val;
+  save(); calc();
 }
+document.addEventListener("input", e => { const el = e.target; if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el); });
+document.addEventListener("change", e => { const el = e.target; if (el.dataset && el.dataset.k && (el.type === "checkbox" || el.type === "radio" || el.tagName === "SELECT")) setKey(el.dataset.k, el.value, el); });
 
 let toastT;
-function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
-function copy(text, label) {
-  const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#out")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("コピーできなかったので文章を選択しました。長押しでコピーしてください"); };
-  try { navigator.clipboard.writeText(text).then(() => toast(label + " をコピーしました"), fallback); } catch (e) { fallback(); }
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2400); }
+function copy(textVal, label) {
+  const fallback = () => { go("out"); const r = document.createRange(); r.selectNodeContents($("#out")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("自動でコピーできませんでした。選択した文章を長押しでコピーしてください"); };
+  try { navigator.clipboard.writeText(textVal).then(() => toast(label + " をコピーしました"), fallback); } catch (e) { fallback(); }
 }
-
-buildChips();
-let saved = null;
-try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
-apply(saved || SAMPLE);
-renderOut();
-
-document.addEventListener("input", renderOut);
-document.addEventListener("change", renderOut);
 document.addEventListener("click", e => {
   const t = e.target.closest("button"); if (!t) return;
-  if (t.id === "addDeal") { deals = readList("deal", deals.length, DEAL_F); deals.push({}); renderLists(); renderOut(); }
-  if (t.id === "addPage") { pages = readList("page", pages.length, PAGE_F); pages.push({}); renderLists(); renderOut(); }
-  if (t.dataset.delDeal) { deals = readList("deal", deals.length, DEAL_F); deals.splice(+t.dataset.delDeal, 1); if (!deals.length) deals = [{}]; renderLists(); renderOut(); }
-  if (t.dataset.delPage) { pages = readList("page", pages.length, PAGE_F); pages.splice(+t.dataset.delPage, 1); if (!pages.length) pages = [{}]; renderLists(); renderOut(); }
-  if (t.id === "copyProfile" || t.id === "copyBar") copy(profileMd(), "profile.md");
-  if (t.dataset.copyPage) { const p = readList("page", pages.length, PAGE_F)[+t.dataset.copyPage]; copy(pageMd(p), "ページ"); }
+  if (t.dataset.go) go(t.dataset.go);
+  if (t.id === "navHome") go("home");
+  if (t.id === "copyBar" || t.dataset.copy === "profile") copy(profileMd(), "profile.md");
+  if (t.dataset.copy === "page") { const p = PLATFORMS.find(x => x.id === t.dataset.p); copy(pageMd(p, arr(`${p.id}.pages`)[+t.dataset.i]), "ページ"); }
+  if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false); }
+  if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false); }
   if (t.id === "reset") $("#resetBox").innerHTML = '本当にすべて消しますか？ <button type="button" class="small" id="resetYes">消す</button><button type="button" class="ghost small" id="resetNo">やめる</button>';
   if (t.id === "resetNo") $("#resetBox").innerHTML = '<button type="button" class="ghost small" id="reset">入力をすべて消す</button>';
-  if (t.id === "resetYes") {
-    try { localStorage.removeItem(KEY); } catch (e) {}
-    document.querySelectorAll("input, textarea, select").forEach(el => { if (el.type === "checkbox" || el.type === "radio") el.checked = false; else el.value = ""; });
-    deals = [{}]; pages = [{}]; renderLists();
-    $("#resetBox").innerHTML = '<button type="button" class="ghost small" id="reset">入力をすべて消す</button>';
-    renderOut(); toast("消しました");
-  }
+  if (t.id === "resetYes") { S = {}; save(); go("home"); toast("消しました"); }
 });
+window.addEventListener("popstate", () => go((location.hash || "#home").slice(1), false));
+go((location.hash || "#home").slice(1), false);
 </script>
