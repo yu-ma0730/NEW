@@ -232,7 +232,17 @@ const COMMON = {
   used: ["ある", "一部ある", "ない"]
 };
 const ASP_METRICS = [["n_period", "期間"], ["n_imp", "表示回数"], ["n_click", "クリック"], ["n_cv", "発生件数"], ["n_ok", "確定件数"], ["n_yen", "発生金額（円）"]];
-const CRITERIA = [["impact", "成果への近さ"], ["feasibility", "あなたの実行しやすさ"], ["speed", "即効性"], ["asset", "積み上がり（資産性）"], ["safety", "安全性（法令・費用・炎上）"]];
+// 評価点：ICE（戦略の見込み・各10点）＋ 4Uの法則（本文の出来・各4点）＝ 46点満点
+const CRITERIA = [
+  ["impact", "影響", 10, "ICE", "この本文で成果（クリック・登録・購入）につながる見込み"],
+  ["confidence", "確信度", 10, "ICE", "根拠の強さ。自分のデータあり＝7〜10、他人の事例だけ＝4〜6、推測だけ＝1〜3"],
+  ["ease", "手軽さ", 10, "ICE", "あなたの時間・スキル・顔出し可否で続けやすいか"],
+  ["useful", "有益", 4, "4U", "読者の得になるか"],
+  ["urgent", "緊急", 4, "4U", "今読む理由があるか（事実に基づくものだけ）"],
+  ["unique", "独自", 4, "4U", "あなたにしか書けない内容か"],
+  ["specific", "具体", 4, "4U", "数字・場面が具体的か"]
+];
+const MAXTOTAL = CRITERIA.reduce((a, c) => a + c[2], 0);
 const MODELS = [["claude-opus-5-5", "Claude Opus 5.5（おすすめ・高品質）"], ["claude-sonnet-5-5", "Claude Sonnet 5.5（速い・安い）"], ["claude-haiku-5-5", "Claude Haiku 5.5（最速・最安）"]];
 const KEY = "gunshi-profile-v3", KEY_API = "gunshi-apikey";
 const SAMPLE = { "c.asp.0": "登録済み", "c.asp_other": "A8.net はチャレンジランク", "c.n_period": "今月", "c.n_imp": "4", "c.n_click": "219", "c.n_cv": "0", "c.n_ok": "0", "c.n_yen": "0" };
@@ -357,7 +367,8 @@ function homeView() {
   ${S.result ? `<section class="card"><h2>前回のマーケティング戦略</h2><div class="actions"><button type="button" data-go="result">5本の戦略を見る</button><span class="status">${esc(S.result.at || "")}</span></div></section>` : ""}
 
   <section class="launch"><h2>③ マーケティング開始</h2>
-    <p>入力した媒体・スクショから読み取った数字・段階のチェックをもとに、AIがあなた専用のマーケティング戦略を5本作り、5つの観点で採点します（各20点・合計100点）。</p>
+    <p>入力した媒体・スクショから読み取った数字・段階のチェックをもとに、違う「型」の戦略を5本作ります。それぞれ、そのままコピーできる本文・評価点・合計点・感想を付け、最後に総合判断を書きます。</p>
+    <div class="field"><span class="label">本文を書く媒体</span><select id="f-bodyplat" data-k="_bodyPlat">${PLATFORMS.map(p => `<option value="${p.id}"${bodyPlat().id === p.id ? " selected" : ""}>${p.name}（${limitOf(p).toLocaleString()}${p.unit === "全角" ? "全角" : "字"}まで）</option>`).join("")}</select></div>
     <div class="actions"><button type="button" class="go" id="startMk"${hasData ? "" : " disabled"}>マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button></div>
     <span class="status" id="mkStatus">${hasData ? "" : "媒体を1つ以上選んで入力すると押せるようになります"}</span>
   </section>
@@ -432,41 +443,54 @@ function commonView() {
       ${field("掲載している媒体・ページ", li(pre, "where", it))}</div>`)}</section>`;
 }
 
+function bodyPlat() {
+  return PLATFORMS.find(p => p.id === S._bodyPlat) || PLATFORMS.find(p => filled(p.id)) || PLATFORMS.find(p => p.id === "x");
+}
+const sc = (s, key) => { const c = CRITERIA.find(x => x[0] === key); return Math.max(0, Math.min(c[2], Math.round(Number(s.scores?.[key]?.score) || 0))); };
+const total = s => CRITERIA.reduce((a, c) => a + sc(s, c[0]), 0);
+const sub = (s, g) => CRITERIA.filter(c => c[3] === g).reduce((a, c) => a + sc(s, c[0]), 0);
+const subMax = g => CRITERIA.filter(c => c[3] === g).reduce((a, c) => a + c[2], 0);
+function gate(s, p) {
+  const issues = [];
+  if (countFor(p, s.body || "") > limitOf(p)) issues.push("文字数の上限を超えています");
+  if (prMissing(s.body || "").length) issues.push("「 PR」が無いリンクがあります");
+  if (s.legal_ok === false) issues.push("法令・規約：" + (s.legal_note || "要確認"));
+  return issues;
+}
 function resultView() {
   const R = S.result;
   if (!R) return `<header><h1>まだ戦略がありません</h1></header><section class="card"><p>メインページの一番下にある「マーケティング開始」を押してください。</p></section>`;
-  const ranked = R.strategies.map((s, i) => ({ s, i, total: total(s) })).sort((a, b) => b.total - a.total);
-  const bestI = ranked[0].i;
-  return `<header><div class="eyebrow">軍師からのご提案 ・ ${esc(R.at || "")}</div><h1>マーケティング戦略 5本</h1>
+  if (!R.strategies.some(s => s.body)) return `<header><h1>前の形式の結果です</h1></header><section class="card"><p>表示の形を新しくしました。「作り直す」を押してください。</p><div class="actions"><button type="button" class="primary" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div></section>`;
+  const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat();
+  const order = R.strategies.map((s, i) => ({ s, i, t: total(s), ok: !gate(s, p).length })).sort((a, b) => (b.ok - a.ok) || (b.t - a.t));
+  const best = R.overall && R.strategies[R.overall.best] ? R.overall.best : order[0].i;
+  return `<header><div class="eyebrow">軍師からのご提案 ・ ${esc(R.at || "")} ・ ${esc(p.name)}用</div><h1>マーケティング戦略 5本</h1>
     <p class="lead">${esc(R.summary || "")}</p></header>
-  <section class="card"><h2>採点のまとめ</h2><p class="hint">各観点20点・合計100点。AIによる目安の採点です。</p>
-    <div class="scorebox"><table class="score"><thead><tr><th>戦略</th>${CRITERIA.map(c => `<th>${c[1]}</th>`).join("")}<th>合計</th></tr></thead>
-    <tbody>${ranked.map(({ s, i, total: t }) => `<tr class="${i === bestI ? "best" : ""}"><td>${i + 1}. ${esc(s.title)}</td>${CRITERIA.map(c => `<td>${sc(s, c[0])}</td>`).join("")}<td class="total">${t}</td></tr>`).join("")}</tbody></table></div>
-    ${R.recommendation ? `<p class="reading">おすすめは「${esc((R.strategies[R.recommendation.index] || ranked[0].s).title)}」。${esc(R.recommendation.reason || "")}</p>` : ""}
-  </section>
-  ${R.strategies.map((s, i) => stratCard(s, i, i === bestI)).join("")}
-  ${R.missing_info && R.missing_info.length ? `<section class="card"><h2>入力すると戦略がもっと良くなる情報</h2><ul class="facts">${R.missing_info.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
-  <section class="card"><h2>この結果を使う</h2><div class="actions"><button type="button" class="primary" id="copyResult">戦略をコピー（軍師に渡す用）</button><button type="button" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div>
-    <p class="hint" style="margin:0">コピーした文章を Claude Code の軍師に貼って「1番の戦略で /research から進めて」のように使えます。</p></section>`;
+  <section class="card"><h2>評価点の見方</h2><p class="hint" style="margin:0">ICE（影響・確信度・手軽さ：各10点）で戦略の見込みを、4Uの法則（有益・緊急・独自・具体：各4点）で本文の出来を評価します。合計${MAXTOTAL}点満点。点数の小さな差はあまり意味がないので、大まかな目安として見てください。文字数・「URL PR」・法令の関門を通らないものは、点数に関係なく使えません。</p></section>
+  ${R.strategies.map((s, i) => stratCard(s, i, i === best, p)).join("")}
+  <section class="strat best"><h3>総合判断</h3>
+    <p style="margin:0">${esc(R.overall?.judgement || "")}</p>
+    <p class="reading">合計点の高い順：${order.map(o => `戦略${o.i + 1}（${o.t}点${o.ok ? "" : "・関門NG"}）`).join(" → ")}</p>
+    <div class="first">まず使うなら：戦略${best + 1}「${esc(R.strategies[best].type || "")}」</div></section>
+  ${R.missing_info && R.missing_info.length ? `<section class="card"><h2>入力すると良くなる情報</h2><ul class="facts">${R.missing_info.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
+  <section class="card"><h2>この結果を使う</h2><div class="actions"><button type="button" class="primary" id="copyResult">全部コピー</button><button type="button" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div>
+    <p class="hint" style="margin:0">本文は各戦略の「本文をコピー」から1つずつコピーできます。投稿は自分で読んで直してから、手で行ってください。</p></section>`;
 }
-const sc = (s, key) => Math.max(0, Math.min(20, Math.round(Number(s.scores?.[key]?.score) || 0)));
-const total = s => CRITERIA.reduce((a, c) => a + sc(s, c[0]), 0);
-function stratCard(s, i, best) {
-  const L = x => Array.isArray(x) ? x : x ? [x] : [];
+function stratCard(s, i, best, p) {
+  const issues = gate(s, p);
+  const row = c => `<div class="bar-row"><span>${c[1]}</span><span class="track"><span class="fill" style="width:${sc(s, c[0]) / c[2] * 100}%"></span></span><span class="v">${sc(s, c[0])}/${c[2]}</span>${s.scores?.[c[0]]?.reason ? `<span class="bar-why">${esc(s.scores[c[0]].reason)}</span>` : ""}</div>`;
   return `<article class="strat${best ? " best" : ""}">
-    <div class="strat-head"><div>${best ? '<span class="pill-best">最高得点</span>' : ""}<div class="no">STRATEGY ${i + 1}</div><h3>${esc(s.title)}</h3><p class="catch">${esc(s.catch)}</p></div>
-      <div class="big-score"><b>${total(s)}</b><small>/ 100点</small></div></div>
-    <div class="bars">${CRITERIA.map(c => `<div class="bar-row"><span>${c[1]}</span><span class="track"><span class="fill" style="width:${sc(s, c[0]) * 5}%"></span></span><span class="v">${sc(s, c[0])}/20</span>${s.scores?.[c[0]]?.reason ? `<span class="bar-why">${esc(s.scores[c[0]].reason)}</span>` : ""}</div>`).join("")}</div>
-    <dl class="kv">
-      <div><dt>誰に（N1）</dt><dd>${esc(s.target)}</dd></div>
-      <div><dt>媒体</dt><dd>${esc(L(s.platforms).join("・"))}</dd></div>
-      <div><dt>なぜあなたに合うか</dt><dd>${esc(s.why)}</dd></div>
-      <div><dt>使う型</dt><dd>${esc(L(s.frameworks).join("、"))}</dd></div>
-      <div><dt>進め方</dt><dd><ol class="steps">${L(s.steps).map(st => `<li><b>${esc(st.when || "")}</b> ${esc(st.do || st)}</li>`).join("")}</ol></dd></div>
-      <div><dt>見る数字（KPI）</dt><dd>${esc(L(s.kpi).join("／"))}</dd></div>
-      <div><dt>注意点・リスク</dt><dd>${esc(L(s.risks).join("／"))}</dd></div>
-    </dl>
-    <div class="first">今日やること：${esc(s.first_action)}</div>
+    <div class="strat-head"><div>${best ? '<span class="pill-best">総合判断のおすすめ</span>' : ""}<div class="no">戦略${i + 1}</div><h3>${esc(s.type || "")}</h3><p class="catch">${esc(s.title || "")}</p></div>
+      <div class="big-score"><b>${total(s)}</b><small>/ ${MAXTOTAL}点</small></div></div>
+    <div class="field"><span class="label">本文</span>
+      <textarea class="big" id="f-body-${i}" data-bodyedit="${i}">${esc(s.body || "")}</textarea>
+      <div class="actions" id="chk-body-${i}">${checkHTML(p, s.body || "")}</div>
+      <div class="actions"><button type="button" class="primary small" data-copybody="${i}">本文をコピー</button><button type="button" class="ghost small" data-fixbody="${i}">リンクに「 PR」を付ける</button></div></div>
+    <div class="field"><span class="label">評価点</span>
+      <div class="bars"><div class="no">ICE（戦略の見込み）${sub(s, "ICE")}/${subMax("ICE")}</div>${CRITERIA.filter(c => c[3] === "ICE").map(row).join("")}
+      <div class="no">4U（本文の出来）${sub(s, "4U")}/${subMax("4U")}</div>${CRITERIA.filter(c => c[3] === "4U").map(row).join("")}</div></div>
+    <div class="first">合計 ${total(s)}点 / ${MAXTOTAL}点　${issues.length ? `<span style="color:var(--bad)">関門NG：${esc(issues.join("・"))}</span>` : '<span style="color:var(--good)">関門クリア（文字数・URL PR・法令）</span>'}</div>
+    <div class="field"><span class="label">感想</span><p style="margin:0">${esc(s.comment || "")}</p></div>
   </article>`;
 }
 
@@ -512,16 +536,18 @@ function profileMd() {
   return L.join("\n");
 }
 function resultMd() {
-  const R = S.result; if (!R) return "";
-  const L = [`# 軍師のマーケティング戦略 5本（${R.at}）`, "", R.summary || "", ""];
+  const R = S.result; if (!R || !R.strategies.some(s => s.body)) return "";
+  const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat();
+  const L = [`# 軍師のマーケティング戦略 5本（${p.name}用・${R.at}）`, "", R.summary || "", ""];
   R.strategies.forEach((s, i) => {
-    L.push(`## 戦略${i + 1}：${s.title}（${total(s)}/100点）`, s.catch || "", "",
-      ...CRITERIA.map(c => `- ${c[1]}：${sc(s, c[0])}/20（${s.scores?.[c[0]]?.reason || ""}）`),
-      `- 誰に：${s.target}`, `- 媒体：${[].concat(s.platforms || []).join("・")}`, `- 使う型：${[].concat(s.frameworks || []).join("、")}`, `- なぜ合うか：${s.why}`,
-      "- 進め方：", ...[].concat(s.steps || []).map(st => `  - ${st.when || ""} ${st.do || st}`),
-      `- KPI：${[].concat(s.kpi || []).join("／")}`, `- リスク：${[].concat(s.risks || []).join("／")}`, `- 今日やること：${s.first_action}`, "");
+    const issues = gate(s, p);
+    L.push(`## 戦略${i + 1}　${s.type || ""}`, s.title ? `（${s.title}）` : "", "", "### 本文", s.body || "", "", "### 評価点",
+      ...CRITERIA.map(c => `- ${c[1]}（${c[3]}）：${sc(s, c[0])}/${c[2]}　${s.scores?.[c[0]]?.reason || ""}`), "",
+      `### 合計 ${total(s)}点 / ${MAXTOTAL}点（ICE ${sub(s, "ICE")}/${subMax("ICE")}・4U ${sub(s, "4U")}/${subMax("4U")}）${issues.length ? "　※関門NG：" + issues.join("・") : ""}`, "",
+      "### 感想", s.comment || "", "");
   });
-  if (R.recommendation) L.push(`おすすめ：戦略${R.recommendation.index + 1}（${R.recommendation.reason}）`);
+  const best = R.overall && R.strategies[R.overall.best] ? R.overall.best : 0;
+  L.push("## 総合判断", R.overall?.judgement || "", "", `まず使うなら：戦略${best + 1}「${R.strategies[best].type || ""}」`);
   return L.join("\n");
 }
 
@@ -614,7 +640,7 @@ async function makeDrafts(pid) {
   const p = PLATFORMS.find(x => x.id === pid), st = $("#draftStatus-" + pid), btn = document.querySelector(`[data-draft="${pid}"]`);
   const data = profileData(), mine = data.platforms.find(x => x.媒体 === p.name) || { 媒体: p.name };
   let strategy = null;
-  if (S.result) { const R = S.result; const i = R.recommendation && R.strategies[R.recommendation.index] ? R.recommendation.index : 0; strategy = R.strategies[i]; }
+  if (S.result) { const R = S.result; const i = R.overall && R.strategies[R.overall.best] ? R.overall.best : 0; strategy = R.strategies[i]; }
   const lim = limitOf(p);
   const prompt = `あなたは日本市場に詳しいマーケティング担当「軍師」です。ユーザー本人が${p.name}で使う${p.draftLabel}の下書きを${p.draftCount}つ作ってください。
 
@@ -628,7 +654,7 @@ ${p.rules.map(r => "- " + r).join("\n")}
 
 # ユーザー情報
 ${JSON.stringify({ common: data.common, platform: mine }, null, 1)}
-${strategy ? `\n# 沿うべき戦略\n${JSON.stringify({ title: strategy.title, catch: strategy.catch, target: strategy.target, frameworks: strategy.frameworks, steps: strategy.steps }, null, 1)}` : ""}
+${strategy ? `\n# 沿うべき戦略\n${JSON.stringify({ type: strategy.type, title: strategy.title, example: strategy.body }, null, 1)}` : ""}
 
 # 返す形式（この JSON だけ）
 { "drafts": [ { "title": "この下書きの切り口（15字以内）", "text": "そのまま投稿・掲載できる本文${pid === "blog" || pid === "note" ? "（見出しは ## で書く。冒頭にPR表記の一文を入れる）" : ""}${pid === "youtube" ? "（1行目にタイトル、空行のあとに概要欄）" : ""}", "note": "使った型と、投稿前に確認すること（1文）" } ] }`;
@@ -648,24 +674,25 @@ let mkCtl = null;
 async function startMarketing() {
   const st = $("#mkStatus"), btn = $("#startMk") || $("#regen"), stop = $("#stopMk");
   const data = profileData();
+  const p = bodyPlat(), lim = limitOf(p);
   const prompt = `あなたは日本市場に精通したマーケティング参謀「軍師」です。以下はユーザー本人が入力した情報と、管理画面のスクリーンショットから読み取った数字です。
-この人のためだけのマーケティング戦略を、方向性の違う5本作り、それぞれを採点してください。
+この人のために、${p.name}で使う戦略を「型」の違う5本作ってください。各戦略には、そのまま${p.name}に貼れる本文を付け、評価点と感想を書き、最後に総合判断をしてください。
 
-# 守ること
-- 入力に無い実績・数字・お客様の声を作らない。分からないことは「要確認」とする
-- 段階が「まだ何もしていない」「これから始める」「事前調査中」の媒体は、リサーチ・ターゲット決め・プロフィール作りなど準備から始める戦略にする
-- 準備のチェックが付いていない項目を踏まえて、抜けている準備を戦略の中に入れる
-- 使える時間・予算・顔出しの可否・得意なことを必ず考慮し、続けられる計画にする
-- 日本の読者向けに、煽らず誠実に。「絶対稼げる」など収益の保証はしない
-- アフィリエイトは PR 表記（ステマ規制）、景品表示法・薬機法・ASP規約を守る前提で書く
-- リンクは必ず「URL PR」（URL の直後に半角スペースと PR）の形で扱う前提にする。自動投稿は使わず、手で投稿する前提にする
-- 各媒体の文字数の上限：${PLATFORMS.map(p => `${p.name} ${limitOf(p)}${p.unit === "全角" ? "全角" : "字"}`).join("、")}
-- 5本は互いに違う方向にする（例：最短で初成果／資産として積み上がる／SNS起点／実体験・ストーリー型／低リスク・小さく検証）
-- 使う型には、新PASONA・顧客の認識度・飢えた群衆・ULSSAS・リーズンホワイ・エピファニーブリッジ・バリューラダー・ポジショニングなどから合うものを選ぶ
-- 採点は甘くしない。各観点 0〜20 の整数で、理由を1文ずつ書く
+# 型の例（この中から、または合うものを5つ選ぶ。全部違う型にする）
+共感型（新PASONA）／比較型（ポジショニング・松竹梅）／体験談ストーリー型（エピファニーブリッジ）／ノウハウ・保存型（返報性）／問いかけ型（脳内会話への参入）／理由づけ型（リーズンホワイ）／失敗回避型（損失回避）
 
-# 採点の観点
-impact=成果への近さ、feasibility=この人の時間・スキルでの実行しやすさ、speed=即効性、asset=積み上がり（資産性）、safety=安全性（法令・費用・炎上リスクの低さ）
+# 本文のルール（必ず守る）
+- 文字数の上限：${p.unit === "全角" ? `全角換算で${lim}字（半角は0.5字、URLは1本で全角12字として数える）` : `${lim}字（改行は数えない）`}。上限より少し短く収める
+${p.id === "blog" || p.id === "note" ? "- ブログ・note は、記事タイトル・見出し構成・導入文までを1,000字以内で書く。冒頭に「本記事はアフィリエイト広告を利用しています」を入れる\n" : ""}- リンクは必ず URL の直後に半角スペースと PR（例：https://example.com PR）。実際の URL が分からなければ「【案件リンク】 PR」と書く
+${p.rules.map(r => "- " + r).join("\n")}
+- 入力に無い実績・数字・体験談・お客様の声を作らない。体験が必要な所は【あなたの体験：〇〇】と空けておく
+- 段階が「まだ何もしていない」「これから始める」「事前調査中」なら、宣伝より信頼づくり・自己紹介・役立つ情報の本文を中心にする
+- 日本の読者向けに、煽らず誠実に。効果や収入を断定しない。自動投稿はせず本人が手で投稿する前提
+
+# 評価点（甘くしない。整数で、理由は1文）
+ICE（各1〜10）：impact=この本文で成果につながる見込み、confidence=根拠の強さ（この人自身のデータで裏付けあり7〜10／他人の事例だけ4〜6／推測だけ1〜3）、ease=この人の時間・スキル・顔出し可否で続けやすいか
+4Uの法則（各1〜4）：useful=有益、urgent=緊急（事実に基づくものだけ。煽りの緊急は1）、unique=独自、specific=具体
+legal_ok=景品表示法・薬機法・ステマ規制・ASP規約の点で問題なければ true
 
 # 入力情報
 ${JSON.stringify(data, null, 1)}
@@ -675,21 +702,17 @@ ${JSON.stringify(data, null, 1)}
   "summary": "現状の見立て（3文以内。良い点と課題の両方）",
   "strategies": [
     {
-      "title": "戦略名（20字以内）",
-      "catch": "一言で言うと（40字以内）",
-      "target": "誰に届けるか（N1：具体的な1人の人物像）",
-      "platforms": ["使う媒体"],
-      "frameworks": ["使う型"],
-      "why": "なぜこの人に合うか（2文以内）",
-      "steps": [ { "when": "1週目", "do": "やること" }, { "when": "2週目", "do": "" }, { "when": "3〜4週目", "do": "" }, { "when": "2〜3か月目", "do": "" } ],
-      "kpi": ["見る数字と目安"],
-      "risks": ["注意点"],
-      "first_action": "今日15分でできる最初の一歩",
-      "scores": { "impact": { "score": 0, "reason": "" }, "feasibility": { "score": 0, "reason": "" }, "speed": { "score": 0, "reason": "" }, "asset": { "score": 0, "reason": "" }, "safety": { "score": 0, "reason": "" } }
+      "type": "〜型",
+      "title": "この戦略を一言で（25字以内）",
+      "body": "そのまま貼れる本文",
+      "scores": { "impact": {"score": 0, "reason": ""}, "confidence": {"score": 0, "reason": ""}, "ease": {"score": 0, "reason": ""}, "useful": {"score": 0, "reason": ""}, "urgent": {"score": 0, "reason": ""}, "unique": {"score": 0, "reason": ""}, "specific": {"score": 0, "reason": ""} },
+      "legal_ok": true,
+      "legal_note": "問題があれば内容（無ければ空文字）",
+      "comment": "感想（良い点と気になる点を2〜3文。直すならどこか）"
     }
   ],
-  "recommendation": { "index": 0, "reason": "最初に選ぶならどれか、その理由（2文以内）。index は0から" },
-  "missing_info": ["入力すると戦略が良くなる情報"]
+  "overall": { "best": 0, "judgement": "5本を比べた総合判断（3〜5文）。点数だけでなく、この人の今の段階・時間・目標に合うかで判断する。best は最初に使う戦略の番号（0から）" },
+  "missing_info": ["入力すると良くなる情報"]
 }`;
   mkCtl = new AbortController();
   if (btn) btn.disabled = true; if (stop) stop.hidden = false;
@@ -697,9 +720,10 @@ ${JSON.stringify(data, null, 1)}
   try {
     const out = await askAI(prompt, { signal: mkCtl.signal, tier: "complex", maxTokens: 20000 });
     if (!out || !Array.isArray(out.strategies) || !out.strategies.length) throw { message: "戦略を受け取れませんでした。もう一度お試しください。" };
-    out.strategies = out.strategies.slice(0, 5);
+    out.strategies = out.strategies.slice(0, 5).map(x => ({ ...x, body: fixPR(String(x.body || "")) }));
+    out.plat = p.id;
     out.at = new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
-    if (out.recommendation && !(out.strategies[out.recommendation.index])) out.recommendation.index = 0;
+    if (!out.overall || !out.strategies[out.overall.best]) out.overall = { ...(out.overall || {}), best: 0 };
     S.result = out; save(); go("result");
   } catch (err) {
     if (st) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; }
@@ -740,7 +764,7 @@ function go(to, push = true, keepScroll = false) {
   $("#app").innerHTML = to === "common" ? commonView() : to === "result" ? resultView() : p ? platformView(p) : homeView();
   if (!p && to !== "common" && to !== "result") view = "home";
   $("#navHome").hidden = view === "home";
-  $("#copyBar").textContent = view === "result" ? "戦略をコピー" : "profile.md をコピー";
+  $("#copyBar").textContent = view === "result" ? "全部コピー" : "profile.md をコピー";
   if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
   calc();
   window.scrollTo(0, keepScroll ? y : 0);
@@ -757,6 +781,7 @@ function setKey(k, val, el) {
 document.addEventListener("input", e => {
   const el = e.target;
   if (el.id === "f-apikey") { apiKey = el.value.trim(); try { if ($("#f-keysave")?.checked) localStorage.setItem(KEY_API, apiKey); } catch (x) {} $("#connStatus").className = "status"; $("#connStatus").textContent = "いまの接続：" + engineLabel(); return; }
+  if (el.dataset && el.dataset.bodyedit !== undefined && S.result) { const i = +el.dataset.bodyedit, R = S.result; if (R.strategies[i]) { R.strategies[i].body = el.value; save(); } const p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat(); const box = $("#chk-body-" + i); if (box) box.innerHTML = checkHTML(p, el.value); return; }
   if (el.dataset && el.dataset.draftedit) { const pid = el.dataset.draftedit, i = +el.dataset.i, a = arr(pid + ".drafts"); if (a[i]) { a[i].text = el.value; save(); } const box = $(`#chk-${pid}-${i}`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === pid), el.value); return; }
   if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
   if (el.dataset && el.dataset.check) { const box = $(`#chk-${el.dataset.check}-my`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === el.dataset.check), el.value); }
@@ -789,6 +814,8 @@ document.addEventListener("click", async e => {
   if (t.id === "navHome") go("home");
   if (t.id === "copyBar") view === "result" ? copy(resultMd(), "戦略") : copy(profileMd(), "profile.md");
   if (t.id === "copyResult") copy(resultMd(), "戦略");
+  if (t.dataset.copybody !== undefined && S.result) { const R = S.result, s = R.strategies[+t.dataset.copybody], p = PLATFORMS.find(x => x.id === R.plat) || bodyPlat(); if (s) { if (prMissing(s.body).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, s.body) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(s.body, "本文"); } }
+  if (t.dataset.fixbody !== undefined && S.result) { const s = S.result.strategies[+t.dataset.fixbody]; if (s) { s.body = fixPR(s.body || ""); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.read) readShots(t.dataset.read);
   if (t.dataset.draft) makeDrafts(t.dataset.draft);
   if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
