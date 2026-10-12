@@ -4,3 +4,9 @@ output/*
 !output/.gitkeep
 pages/*
 !pages/_template.md
+projects/*
+!projects/README.md
+swipe/*
+!swipe/README.md
+memory/*
+!memory/MEMORY.md
