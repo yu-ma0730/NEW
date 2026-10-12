@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* Layout: home = grid of 媒体 cards (the parent choice) → each card opens its own page; sticky bottom bar for back / copy. Indigo ink (藍) on cool paper. */
+/* Layout: home = AI接続 → 媒体カード → マーケティング開始（最下部）. 媒体ページ = スクショ取込 → 項目 → 段階チェック. 結果 = 5本の戦略プレゼン＋採点. Indigo ink (藍) on cool paper. */
 :root {
   --bg: #f3f4f7;
   --surface: #ffffff;
@@ -14,7 +14,10 @@
   --accent-soft: #e3e9f4;
   --accent-ink: #ffffff;
   --gold: #9a6b12;
+  --gold-soft: #f6ecd6;
   --warn-bg: #fbf1dc;
+  --good: #2f6b4f;
+  --bad: #a3362b;
   --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -22,19 +25,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
-    --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020;
+    --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --gold-soft: #3a3020; --warn-bg: #3a3020; --good: #7cc3a0; --bad: #e88c80;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
-  --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020;
+  --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --gold-soft: #3a3020; --warn-bg: #3a3020; --good: #7cc3a0; --bad: #e88c80;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
-.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 120px; display: grid; gap: 18px; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 120px; display: grid; gap: 18px; }
 h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.85rem; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+h3 { margin: 0; font-size: 1rem; }
 .lead { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
 .eyebrow { font-size: .78rem; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
 .note { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; font-size: .88rem; }
@@ -50,7 +54,8 @@ section.card { background: var(--surface); border: 1px solid var(--line); border
 section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; text-wrap: balance; }
 .hint { color: var(--muted); font-size: .85rem; margin: -6px 0 0; }
 .field { display: grid; gap: 6px; min-width: 0; }
-.field > .label { font-weight: 700; font-size: .92rem; }
+.field > .label { font-weight: 700; font-size: .92rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ai-tag { font-size: .7rem; font-weight: 700; padding: 0 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { position: relative; }
 .chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
@@ -60,21 +65,39 @@ section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600;
 .chip .w { color: var(--gold); font-size: .78rem; margin-left: 4px; }
 .chip input:checked + span .w { color: inherit; }
 .chips.stage .chip span { border-style: dashed; }
-input[type=text], input[type=number], input[type=url], textarea, select {
+input[type=text], input[type=number], input[type=url], input[type=password], textarea, select {
   width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
 }
 textarea { min-height: 84px; resize: vertical; }
-textarea.big { min-height: 220px; font-size: .9rem; }
-input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea.big { min-height: 200px; font-size: .9rem; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, label.drop:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rows { display: grid; gap: 8px; }
 .row { display: grid; grid-template-columns: minmax(0,1fr) 10rem; gap: 8px; align-items: center; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .sub { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
 .sub-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; }
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; }
+button:disabled { opacity: .55; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 button.ghost { background: transparent; }
 button.small { padding: 4px 10px; font-size: .85rem; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.status { font-size: .88rem; color: var(--muted); }
+.status.ok { color: var(--good); } .status.ng { color: var(--bad); }
+/* screenshot intake */
+label.drop { display: grid; place-items: center; gap: 4px; text-align: center; border: 2px dashed var(--line); border-radius: 10px; padding: 18px 12px; cursor: pointer; background: var(--bg); color: var(--muted); font-size: .9rem; }
+label.drop b { color: var(--ink); }
+label.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.shot { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); display: grid; min-width: 0; }
+.shot .pic { position: relative; }
+.shot img { display: block; width: 100%; max-height: 260px; object-fit: cover; object-position: top; }
+.shot .stamp { position: absolute; top: 8px; left: 8px; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+.shot .stamp.done { background: var(--good); color: var(--surface); border-color: var(--good); }
+.shot .reads { padding: 10px; display: grid; gap: 4px; font-size: .82rem; }
+.shot .reads div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dotted var(--line); }
+.shot .reads span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.shot .foot { padding: 6px 10px 10px; display: flex; justify-content: flex-end; }
 .calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .calc div { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; }
 .calc b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
@@ -82,68 +105,103 @@ button.small { padding: 4px 10px; font-size: .85rem; }
 .reading { font-size: .92rem; border-left: 3px solid var(--gold); padding-left: 10px; margin: 0; }
 .facts { margin: 0; padding-left: 1.2em; font-size: .9rem; }
 pre.out { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
+/* launch */
+.launch { background: var(--ink); color: var(--bg); border-radius: 12px; padding: 22px 18px; display: grid; gap: 12px; }
+.launch h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 0; }
+.launch p { margin: 0; opacity: .85; font-size: .9rem; }
+.launch button.go { background: var(--gold); border-color: var(--gold); color: #fff; font-weight: 800; font-size: 1.1rem; padding: 14px 18px; }
+.launch .status { color: inherit; opacity: .85; }
+/* results */
+.scorebox { overflow-x: auto; }
+table.score { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .88rem; }
+table.score th, table.score td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: center; font-variant-numeric: tabular-nums; }
+table.score th:first-child, table.score td:first-child { text-align: left; }
+table.score td.total { font-weight: 800; font-size: 1.05rem; color: var(--accent); }
+table.score tr.best td { background: var(--gold-soft); }
+.strat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 16px; display: grid; gap: 14px; min-width: 0; }
+.strat.best { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.strat-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: start; }
+.strat-head .no { font-size: .78rem; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
+.strat-head h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; text-wrap: balance; }
+.strat-head .catch { color: var(--muted); margin: 2px 0 0; }
+.big-score { text-align: right; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.big-score b { font-size: 2.2rem; font-family: var(--font-display); color: var(--accent); }
+.big-score small { display: block; color: var(--muted); font-size: .78rem; }
+.pill-best { display: inline-block; font-size: .72rem; font-weight: 700; background: var(--gold); color: #fff; border-radius: 999px; padding: 1px 10px; margin-bottom: 4px; }
+.bars { display: grid; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 9.5rem minmax(0,1fr) 3rem; gap: 8px; align-items: center; font-size: .85rem; }
+.bar-row .track { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.bar-row .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+.bar-row .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.bar-why { grid-column: 2 / 4; color: var(--muted); font-size: .78rem; margin-top: -4px; }
+.kv { display: grid; gap: 10px; }
+.kv > div { display: grid; gap: 2px; }
+.kv dt { font-size: .78rem; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.kv dd { margin: 0; }
+ol.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.first { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; font-weight: 700; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
-.bar-in { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; }
+.bar-in { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; max-width: calc(100% - 32px); }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .9rem; }
 </style>
 
 <div class="wrap" id="app"></div>
 <div class="bar"><div class="bar-in">
-  <button type="button" class="ghost" id="navHome">← 媒体を選ぶ</button>
+  <button type="button" class="ghost" id="navHome">← メインページ</button>
   <button type="button" class="primary" id="copyBar">profile.md をコピー</button>
 </div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
-// 段階：「まだ何もしていない」から「収益が出ている」まで。すべての媒体で共通。
-const STAGES = ["まだ何もしていない", "事前マーケティング（リサーチ・競合調査中）", "アカウント・サイトだけ作った", "発信を始めた（立ち上げ期）", "継続して発信中", "収益が出ている"];
+// ---------- 選択肢 ----------
+const STAGES = ["まだ何もしていない", "これから始める", "事前調査中（リサーチ・競合調査）", "アカウント・サイトだけ作った", "発信を始めた（立ち上げ期）", "継続して発信中", "収益が出ている"];
+const PREP = ["ターゲット（誰に届けるか）を決めた", "競合アカウント・記事を調べた", "キーワード・ハッシュタグを調べた", "プロフィールを整えた", "ASPに登録した", "紹介する案件を選んだ", "投稿・記事を作り始めた", "数字を記録している"];
 const GENRES = [["金融（クレカ・証券・保険）", 1], ["転職・副業", 1], ["美容・コスメ", 1], ["脱毛・美容医療", 1], ["健康食品・ダイエット", 1], ["恋愛・婚活・マッチング"], ["教育・資格・スクール"], ["通信（格安SIM・光回線）"], ["動画配信・エンタメ"], ["ガジェット・家電"], ["ゲーム・アプリ"], ["旅行・ホテル"], ["不動産・引越し", 1], ["子育て"], ["ペット"], ["食品・宅配"], ["AI・ITツール"], ["物販（Amazon・楽天）"], ["情報商材・オンライン講座", 1], ["テーマはまだ決めていない"]];
 const FREQ = ["まだ投稿していない", "不定期", "週1〜2回", "週3〜5回", "毎日"];
-
 const PLATFORMS = [
   { id: "youtube", name: "YouTube", tag: "検索とおすすめの両方から長く見られる。信頼が積み上がりやすいが、制作の手間は一番大きい。",
     facts: ["広告収益（YPP）には登録者数と視聴時間などの条件がある", "ショートで認知、長尺で信頼、概要欄でブログ・LINEへ誘導が定番", "アフィリエイトリンクを貼る動画は、動画内と概要欄で PR 表記を"],
     formats: ["長尺動画", "ショート", "ライブ配信", "顔出しあり", "顔なし（声・テロップ）"],
     money: ["まだ無い", "広告収益（AdSense）", "概要欄のアフィリエイト", "企業案件", "メンバーシップ", "自分の商品"],
     metrics: [["登録者数", "人"], ["直近28日の再生回数", "回"], ["平均視聴率", "%"], ["動画本数", "本"]],
-    pageTypes: ["タイトル・サムネ文言", "台本", "概要欄", "チャンネル紹介文"] },
+    shotHint: "YouTube Studio のダッシュボード・アナリティクスの画面" },
   { id: "blog", name: "ブログ", tag: "検索から「買う直前の人」が来るので、成果に一番近い。結果が出るまで3〜6か月かかることが多い。",
     facts: ["「〇〇 おすすめ」「〇〇 比較」「〇〇 評判」など購入前のキーワードが成果に近い", "体験の写真・デメリット・向いていない人を書くほど信頼される", "記事の冒頭に「アフィリエイト広告を利用しています」などの PR 表記を"],
     formats: ["WordPress", "はてなブログ", "アメブロ", "その他の無料ブログ"],
     money: ["まだ無い", "ASP のアフィリエイト", "Google AdSense", "Amazon・楽天", "自分の商品"],
     metrics: [["記事数", "記事"], ["月間PV", "PV"], ["検索からの割合", "%"], ["運営期間", "か月"]],
-    pageTypes: ["ブログ記事", "プロフィール", "トップページ"] },
+    shotHint: "Google アナリティクス・Search Console・ブログの管理画面" },
   { id: "x", name: "X", tag: "拡散力が高く、反応がすぐ分かる。プロフィールや固定ポストからブログ・note・LINE へ誘導するのが定番。",
     facts: ["外部リンク付きの投稿は表示が伸びにくいと言われ、リンクはプロフィールや返信に置く人が多い", "毎日の発信で「誰の・何の人か」を覚えてもらうのが先", "案件の紹介ポストには #PR などの表記を"],
     formats: ["短文ポスト", "長文・スレッド", "画像・図解", "動画", "スペース（音声）"],
     money: ["まだ無い", "ブログ・note への誘導", "ASP のアフィリエイト", "note・Brain・Tips の販売", "X の収益配分", "企業案件"],
     metrics: [["フォロワー", "人"], ["月間インプレッション", "回"], ["1日の投稿数", "回"]],
-    pageTypes: ["ポスト", "固定ポスト", "プロフィール文"] },
+    shotHint: "プロフィール画面・アナリティクス（インプレッション）の画面" },
   { id: "threads", name: "Threads", tag: "Instagram とつながる会話中心の SNS。宣伝色が強いと嫌われやすく、共感と日常の投稿から信頼を作る。",
     facts: ["問いかけで終わる投稿にコメントが集まりやすい", "Instagram のフォロワーと相互に行き来できる", "直接の売り込みより、プロフィール経由の誘導が向いている"],
     formats: ["短文", "画像付き", "連投"],
     money: ["まだ無い", "プロフィールリンク経由", "Instagram への誘導", "企業案件"],
     metrics: [["フォロワー", "人"], ["1投稿の平均閲覧", "回"]],
-    pageTypes: ["投稿", "プロフィール文"] },
+    shotHint: "プロフィール画面・インサイトの画面" },
   { id: "tiktok", name: "TikTok", tag: "フォロワーが少なくても、おすすめに載れば一気に見られる。冒頭2秒が勝負。",
     facts: ["若い層が中心だが、利用者の年齢層は広がっている", "顔なし（手元・画面録画・テロップ）でも伸ばせる", "商品紹介は PR 表記と、誇張しない言い回しを"],
     formats: ["顔出し", "顔なし（手元・テロップ）", "画像スライド", "ライブ"],
     money: ["まだ無い", "TikTok Shop のアフィリエイト", "プロフィールリンク経由", "企業案件", "ライブのギフト"],
     metrics: [["フォロワー", "人"], ["平均再生数", "回"], ["投稿本数", "本"]],
-    pageTypes: ["動画台本", "キャプション", "プロフィール文"] },
+    shotHint: "プロフィール画面・アナリティクスの画面" },
   { id: "instagram", name: "Instagram", tag: "保存されるカルーセルと、新しい人に届くリール。美容・暮らし・グルメ・旅行と相性が良い。",
     facts: ["保存数が多い投稿はおすすめに載りやすい", "ストーリーズのリンクやハイライトで案件へ誘導できる", "PR 投稿はタイアップ投稿ラベルや #PR を"],
     formats: ["カルーセル（画像）", "リール", "ストーリーズ", "ライブ"],
     money: ["まだ無い", "ストーリーズ・プロフィールのリンク", "企業案件", "楽天ROOM などへの誘導", "自分の商品"],
     metrics: [["フォロワー", "人"], ["平均保存数", "件"], ["リールの平均再生", "回"]],
-    pageTypes: ["カルーセル原稿", "リール台本", "キャプション", "プロフィール文"] },
+    shotHint: "プロフィール画面・プロフェッショナルダッシュボード・インサイト" },
   { id: "note", name: "note", tag: "文章で信頼を作り、有料記事やメンバーシップで直接売ることもできる。検索にも出やすい。",
     facts: ["X との組み合わせで読まれることが多い", "無料記事で信頼を作り、有料記事・メンバーシップへ", "紹介リンクを入れる記事は PR 表記を"],
     formats: ["無料記事", "有料記事", "メンバーシップ", "マガジン"],
     money: ["まだ無い", "有料記事", "メンバーシップ", "Amazon アソシエイト", "ブログ・LINE への誘導"],
     metrics: [["記事数", "記事"], ["フォロワー", "人"], ["月間ビュー", "回"]],
-    pageTypes: ["記事", "有料記事の無料部分", "プロフィール文"] }
+    shotHint: "ダッシュボード（全体ビュー・スキ）の画面" }
 ];
 const COMMON = {
   role: ["アフィリエイター（他社の商品を紹介）", "自分の商品・サービスを販売", "両方", "まだ決めていない"],
@@ -151,7 +209,7 @@ const COMMON = {
   aiStatus: ["使っている", "使う予定", "興味あり", "まだ何もしていない"],
   asp: ["A8.net", "もしもアフィリエイト", "バリューコマース", "afb（アフィb）", "アクセストレード", "felmat", "TCSアフィリエイト", "レントラックス", "JANet", "Amazonアソシエイト", "楽天アフィリエイト"],
   aspStatus: ["成果あり", "登録済み", "登録予定", "まだ何もしていない"],
-  career: ["まだ何もしていない", "事前マーケティング中", "半年未満", "半年〜1年", "1〜3年", "3年以上"],
+  career: ["まだ何もしていない", "これから始める", "事前調査中", "半年未満", "半年〜1年", "1〜3年", "3年以上"],
   earned: ["0円", "〜1万円", "〜10万円", "〜100万円", "100万円以上"],
   time: ["〜3時間", "3〜7時間", "7〜15時間", "15時間以上"],
   budget: ["0円", "〜5千円", "〜3万円", "3万円以上"],
@@ -159,20 +217,32 @@ const COMMON = {
   skill: ["文章", "話す", "写真・デザイン", "動画編集", "調べもの", "数字の分析"],
   used: ["ある", "一部ある", "ない"]
 };
-const KEY = "gunshi-profile-v2";
+const ASP_METRICS = [["n_period", "期間"], ["n_imp", "表示回数"], ["n_click", "クリック"], ["n_cv", "発生件数"], ["n_ok", "確定件数"], ["n_yen", "発生金額（円）"]];
+const CRITERIA = [["impact", "成果への近さ"], ["feasibility", "あなたの実行しやすさ"], ["speed", "即効性"], ["asset", "積み上がり（資産性）"], ["safety", "安全性（法令・費用・炎上）"]];
+const MODELS = [["claude-opus-5-5", "Claude Opus 5.5（おすすめ・高品質）"], ["claude-sonnet-5-5", "Claude Sonnet 5.5（速い・安い）"], ["claude-haiku-5-5", "Claude Haiku 5.5（最速・最安）"]];
+const KEY = "gunshi-profile-v3", KEY_API = "gunshi-apikey";
 const SAMPLE = { "c.asp.0": "登録済み", "c.asp_other": "A8.net はチャレンジランク", "c.n_period": "今月", "c.n_imp": "4", "c.n_click": "219", "c.n_cv": "0", "c.n_ok": "0", "c.n_yen": "0" };
-const DEAL_F = ["name", "asp", "pay", "cond", "where"], PAGE_F = ["title", "type", "url", "kw", "deal", "goal", "num", "body"];
+const DEAL_F = ["name", "asp", "pay", "cond", "where"];
 
+// ---------- 状態 ----------
 let S = {};
 try { S = JSON.parse(localStorage.getItem(KEY) || "null") || { ...SAMPLE }; } catch (e) { S = { ...SAMPLE }; }
+let SHOTS = {}; // { scope: [{id, url, reads:[{label,value}], done}] } 画像は容量が大きいので別保存
+try { SHOTS = JSON.parse(localStorage.getItem(KEY + "-shots") || "{}"); } catch (e) { SHOTS = {}; }
+let apiKey = "";
+try { apiKey = localStorage.getItem(KEY_API) || ""; } catch (e) {}
+let sampleFn = null, sampleImages = false;
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+let shotsWarned = false;
+const saveShots = () => { try { localStorage.setItem(KEY + "-shots", JSON.stringify(SHOTS)); } catch (e) { if (!shotsWarned) { shotsWarned = true; toast("画像が多いため、この端末に保存できませんでした。ページを閉じると画像は消えます（読み取った数字は残ります）"); } } };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fid = k => "f-" + k.replace(/[^\w]/g, "-");
 const arr = k => Array.isArray(S[k]) ? S[k] : [];
 const v = k => (S[k] ?? "").toString().trim();
+const aiMark = k => S["_ai." + k] ? '<span class="ai-tag">画像から読み取り</span>' : "";
 
-// ---------- field builders ----------
+// ---------- 入力部品 ----------
 function chips(k, opts, multi, cls = "") {
   return `<div class="chips ${cls}">${opts.map((o, i) => {
     const [label, warn] = Array.isArray(o) ? o : [o];
@@ -180,9 +250,9 @@ function chips(k, opts, multi, cls = "") {
     return `<label class="chip"><input type="${multi ? "checkbox" : "radio"}" name="${k}" id="${fid(k)}-${i}" data-k="${k}" data-multi="${multi ? 1 : ""}" value="${esc(label)}"${on ? " checked" : ""}><span>${esc(label)}${warn ? '<span class="w">⚠</span>' : ""}</span></label>`;
   }).join("")}</div>`;
 }
-const field = (label, inner) => `<div class="field"><span class="label">${label}</span>${inner}</div>`;
-const text = (k, ph = "", type = "text") => `<input type="${type}" id="${fid(k)}" data-k="${k}" value="${esc(S[k])}" placeholder="${esc(ph)}"${type === "number" ? ' inputmode="numeric" min="0"' : ""}>`;
-const area = (k, ph = "", big) => `<textarea id="${fid(k)}" data-k="${k}" class="${big ? "big" : ""}" placeholder="${esc(ph)}">${esc(S[k])}</textarea>`;
+const field = (label, inner, k) => `<div class="field"><span class="label">${label}${k ? aiMark(k) : ""}</span>${inner}</div>`;
+const text = (k, ph = "", type = "text") => `<input type="${type}" id="${fid(k)}" data-k="${k}" value="${esc(S[k])}" placeholder="${esc(ph)}"${type === "number" ? ' inputmode="decimal" min="0"' : ""}>`;
+const area = (k, ph = "") => `<textarea id="${fid(k)}" data-k="${k}" placeholder="${esc(ph)}">${esc(S[k])}</textarea>`;
 function statusRows(base, names, states) {
   return `<div class="rows">${names.map((n, i) => {
     const k = `${base}.${i}`;
@@ -193,55 +263,96 @@ function list(k, f) {
   const items = arr(k).length ? arr(k) : [{}];
   return `<div class="rows">${items.map((it, i) => f(it, i, `${k}|${i}|`)).join("")}</div><div><button type="button" data-add="${k}">＋ 追加</button></div>`;
 }
-const li = (p, f, it, ph = "", type = "text") => `<input type="${type}" id="${fid(p + f)}" data-k="${p}${f}" value="${esc(it[f])}" placeholder="${esc(ph)}">`;
+const li = (p, f, it, ph = "") => `<input type="text" id="${fid(p + f)}" data-k="${p}${f}" value="${esc(it[f])}" placeholder="${esc(ph)}">`;
 
-// ---------- views ----------
-function stageOf(id) { return S[`${id}.stage`]; }
-function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && (Array.isArray(S[k]) ? S[k].length : S[k])).length; }
+function shotBlock(scope, hint) {
+  const list = SHOTS[scope] || [];
+  const pending = list.filter(s => !s.done).length;
+  return `<section class="card"><h2>現在の状況をスクショで取り込む</h2>
+    <p class="hint">${esc(hint)}のスクリーンショットを選ぶと、AIが数字を読み取って下の項目に入れます。読み取った値は画像の下にも表示されます。</p>
+    <label class="drop" for="file-${scope}"><b>スクショを選ぶ（複数OK）</b><span>JPEG・PNG・WebP</span><input type="file" id="file-${scope}" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="${scope}"></label>
+    ${list.length ? `<div class="shots">${list.map(s => `<div class="shot"><div class="pic"><img src="${s.url}" alt="取り込んだスクリーンショット"><span class="stamp${s.done ? " done" : ""}">${s.done ? "反映済み" : "未読み取り"}</span></div>
+      ${s.reads && s.reads.length ? `<div class="reads">${s.reads.map(r => `<div><span>${esc(r.label)}</span><span>${esc(r.value)}</span></div>`).join("")}</div>` : s.done ? `<div class="reads"><span class="status">読み取れる数字はありませんでした</span></div>` : ""}
+      <div class="foot"><button type="button" class="ghost small" data-delshot="${scope}" data-id="${s.id}">削除</button></div></div>`).join("")}</div>` : ""}
+    <div class="actions"><button type="button" class="primary" data-read="${scope}"${pending ? "" : " disabled"}>AIで読み取って反映（${pending}枚）</button><span class="status" id="readStatus-${scope}"></span></div>
+  </section>`;
+}
+
+// ---------- 画面 ----------
+function filled(prefix) { return Object.keys(S).filter(k => k.startsWith(prefix + ".") && (Array.isArray(S[k]) ? S[k].length : S[k])).length + (SHOTS[prefix] || []).length; }
+function engine() { return apiKey ? "api" : sampleFn ? "claude" : ""; }
+function engineLabel() {
+  const e = engine();
+  if (e === "api") return `APIキーで接続（${(MODELS.find(m => m[0] === (S._model || MODELS[0][0])) || MODELS[0])[1]}）`;
+  if (e === "claude") return "claude.ai のAIで接続（APIキー不要）";
+  return "未接続";
+}
 
 function homeView() {
-  return `<header><div class="eyebrow">軍師 GUNSHI</div><h1>どの媒体で戦いますか</h1>
-    <p class="lead">まず主戦場を選びます。媒体をタップすると、その媒体専用のページに進みます。いくつ選んでも大丈夫です。まだ何もしていなくても、事前マーケティングの段階から記録できます。</p></header>
-    <div class="tiles">${PLATFORMS.map(p => {
-      const st = stageOf(p.id), n = filled(p.id);
-      return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span></button>`;
-    }).join("")}</div>
-    <div class="tiles">
-      <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・使っているAI・ASP・自分のこと・目標・ASPの数字・紹介している案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
-      <button type="button" class="tile sub" data-go="out"><span class="nm">できあがり</span><span class="tg">軍師（Claude Code）に渡す profile.md と、貼り付けたページをコピーする</span></button>
+  const hasData = PLATFORMS.some(p => filled(p.id)) || filled("c");
+  return `<header><div class="eyebrow">軍師 GUNSHI</div><h1>あなた専用のマーケティング室</h1>
+    <p class="lead">① AIをつなぐ → ② 媒体を選んでスクショを取り込む → ③ 一番下の「マーケティング開始」で、戦略を5本作って採点します。</p></header>
+
+  <section class="card"><h2>① AIの接続</h2>
+    ${field("Anthropic APIキー", `<input type="password" id="f-apikey" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." value="${esc(apiKey)}">`)}
+    <div class="grid2">
+      ${field("使うモデル", `<select id="f-model" data-k="_model">${MODELS.map(m => `<option value="${m[0]}"${(S._model || MODELS[0][0]) === m[0] ? " selected" : ""}>${m[1]}</option>`).join("")}</select>`)}
+      <div class="field"><span class="label">キーの保存</span><label class="chip"><input type="checkbox" id="f-keysave"${(() => { try { return localStorage.getItem(KEY_API) ? " checked" : ""; } catch (e) { return ""; } })()}><span>この端末に保存する</span></label></div>
     </div>
-    <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ一時保存されます。</div>`;
+    <div class="actions"><button type="button" id="testConn">接続テスト</button><span class="status" id="connStatus">いまの接続：${esc(engineLabel())}</span></div>
+    <p class="hint" style="margin:0">APIキーは Anthropic のサーバーに直接送られ、ほかのどこにも送られません。保存しない設定なら、ページを閉じると消えます。
+    claude.ai 上でこのページを開いている場合は、APIキーを空のままにすると、あなたの Claude アカウントで動きます（キー不要）。
+    APIキー方式は、このHTMLファイルをPCのブラウザで開いたときに使えます（claude.ai 上では外部への通信がブロックされるため）。</p>
+  </section>
+
+  <section class="card"><h2>② 使っている媒体・使いたい媒体</h2><p class="hint">当てはまるものをタップして、それぞれのページで現状を入力します。いくつ選んでも大丈夫です。</p>
+    <div class="tiles">${PLATFORMS.map(p => {
+      const st = S[`${p.id}.stage`], n = filled(p.id);
+      return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span></button>`;
+    }).join("")}
+      <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・AI・ASP（管理画面のスクショ取込あり）・自分のこと・目標・案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
+    </div>
+  </section>
+
+  ${S.result ? `<section class="card"><h2>前回のマーケティング戦略</h2><div class="actions"><button type="button" data-go="result">5本の戦略を見る</button><span class="status">${esc(S.result.at || "")}</span></div></section>` : ""}
+
+  <section class="launch"><h2>③ マーケティング開始</h2>
+    <p>入力した媒体・スクショから読み取った数字・段階のチェックをもとに、AIがあなた専用のマーケティング戦略を5本作り、5つの観点で採点します（各20点・合計100点）。</p>
+    <div class="actions"><button type="button" class="go" id="startMk"${hasData ? "" : " disabled"}>マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button></div>
+    <span class="status" id="mkStatus">${hasData ? "" : "媒体を1つ以上選んで入力すると押せるようになります"}</span>
+  </section>
+  <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ保存されます。</div>`;
 }
 
 function platformView(p) {
   const k = s => `${p.id}.${s}`;
   return `<header><div class="eyebrow">媒体別ページ</div><h1>${p.name}</h1><p class="lead">${p.tag}</p></header>
   <section class="card"><h2>${p.name} の基本</h2><ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></section>
-  <section class="card"><h2>いまの段階</h2><p class="hint">まだ何もしていない・事前マーケティング中でも大丈夫です。今の段階に合わせて軍師の提案が変わります。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
+  ${shotBlock(p.id, p.shotHint)}
+  <section class="card"><h2>${p.name} の数字</h2><p class="hint">スクショから読み取った値が入ります。手で直してもOKです。</p>
+    <div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"), k("m" + i))).join("")}</div></section>
   <section class="card"><h2>テーマ（ジャンル）</h2><p class="hint">複数選べます。<span style="color:var(--gold)">⚠</span> は広告の規制が強いテーマです。</p>
-    ${chips(k("theme"), GENRES, true)}${field("詳しく（大まかでもOK）", text(k("theme_detail"), "例：30代向けの格安SIM乗り換え"))}</section>
+    ${chips(k("theme"), GENRES, true)}${field("詳しく（大まかでもOK）", text(k("theme_detail"), "例：30代向けの格安SIM乗り換え"), k("theme_detail"))}</section>
   <section class="card"><h2>発信のしかた</h2>
     ${field("形式", chips(k("format"), p.formats, true))}
     ${field("投稿の頻度", chips(k("freq"), FREQ, false))}
-    ${field("URL・アカウント名", text(k("url"), "まだ無ければ空欄でOK"))}</section>
-  <section class="card"><h2>収益化の方法</h2>${chips(k("money"), p.money, true)}</section>
-  <section class="card"><h2>${p.name} の数字</h2><p class="hint">分かる分だけで大丈夫です。</p>
-    <div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"))).join("")}</div></section>
-  <section class="card"><h2>困っていること・やりたいこと</h2>${area(k("trouble"), "例：何を投稿すればいいか分からない／フォロワーは増えたけど売れない")}</section>
-  <section class="card"><h2>ページの貼り付け</h2><p class="hint">${p.pageTypes.join("・")} などをまるごと貼ると、軍師の <code>/page</code> で診断と書き直しができます。</p>
-    ${list(k("pages"), (it, i, pre) => `<div class="sub"><div class="sub-head">ページ ${i + 1}<button type="button" class="ghost small" data-del="${k("pages")}" data-i="${i}">削除</button></div>
-      <div class="grid2">${field("ページ名", li(pre, "title", it, "例：格安SIM比較"))}
-      ${field("種類", `<select id="${fid(pre + "type")}" data-k="${pre}type"><option value="">―</option>${p.pageTypes.map(t => `<option${it.type === t ? " selected" : ""}>${t}</option>`).join("")}</select>`)}</div>
-      ${field("URL", li(pre, "url", it, "", "url"))}
-      <div class="grid2">${field("狙っているキーワード", li(pre, "kw", it))}${field("紹介している案件", li(pre, "deal", it))}
-      ${field("読者にしてほしい行動", li(pre, "goal", it, "例：公式サイトをクリック"))}${field("数字（再生・PV・クリック）", li(pre, "num", it))}</div>
-      ${field("本文（まるごと貼り付け）", `<textarea class="big" id="${fid(pre + "body")}" data-k="${pre}body" placeholder="ここに貼り付け">${esc(it.body)}</textarea>`)}</div>`)}</section>`;
+    ${field("収益化の方法", chips(k("money"), p.money, true))}
+    ${field("URL・アカウント名", text(k("url"), "まだ無ければ空欄でOK"))}
+    ${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
+  <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
+  <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>`;
 }
 
 function commonView() {
   return `<header><div class="eyebrow">すべての媒体に共通</div><h1>共通プロフィール</h1></header>
   <section class="card"><h2>立場</h2>${chips("c.role", COMMON.role, false)}</section>
-  <section class="card"><h2>使っているAI</h2><p class="hint">使っていないものは「―」のままで大丈夫です。</p>${statusRows("c.ai", COMMON.ai, COMMON.aiStatus)}${field("その他のAI", text("c.ai_other", "例：Dify、Manus"))}</section>
+  ${shotBlock("c", "ASP（A8.net など）の簡易レポート・成果レポート")}
+  <section class="card"><h2>ASP の数字</h2>
+    <div class="grid2">${ASP_METRICS.map(([key, label]) => field(label, text("c." + key, "", key === "n_period" ? "text" : "number"), "c." + key)).join("")}</div>
+    <div class="calc"><div><small>CVR（発生 ÷ クリック）</small><b id="c_cvr">―</b></div><div><small>CVR 1% の案件なら期待される発生</small><b id="c_exp">―</b></div></div>
+    <p class="reading" id="c_read"></p>
+    ${field("どこからのクリックが多いかなど", area("c.n_memo", "例：たぶん X のプロフィールから"))}</section>
+  <section class="card"><h2>使っているAI</h2>${statusRows("c.ai", COMMON.ai, COMMON.aiStatus)}</section>
   <section class="card"><h2>使っているASP</h2>${statusRows("c.asp", COMMON.asp, COMMON.aspStatus)}${field("その他のASP・メディアランクなどのメモ", text("c.asp_other"))}</section>
   <section class="card"><h2>自分のこと</h2>
     ${field("アフィリエイト歴", chips("c.career", COMMON.career, false, "stage"))}
@@ -253,84 +364,288 @@ function commonView() {
     ${field("紹介する商品を実際に使ったことがある？", chips("c.used", COMMON.used, false))}
     ${field("自分の経験で語れること", area("c.story", "仕事・趣味・失敗談・資格など。ここが一番の武器になります"))}</section>
   <section class="card"><h2>目標</h2>${field("3か月後", text("c.goal3", "例：初報酬を出す"))}${field("1年後", text("c.goal12", "例：月3万円"))}</section>
-  <section class="card"><h2>ASP の数字</h2><p class="hint">最初はスクリーンショットの「今月」の数字を入れてあります。</p>
-    <div class="grid2">${field("期間", text("c.n_period"))}${field("表示回数", text("c.n_imp", "", "number"))}${field("クリック", text("c.n_click", "", "number"))}${field("発生件数", text("c.n_cv", "", "number"))}${field("確定件数", text("c.n_ok", "", "number"))}${field("発生金額（円）", text("c.n_yen", "", "number"))}</div>
-    <div class="calc"><div><small>CVR（発生 ÷ クリック）</small><b id="c_cvr">―</b></div><div><small>CVR 1% の案件なら期待される発生</small><b id="c_exp">―</b></div></div>
-    <p class="reading" id="c_read"></p>
-    ${field("どこからのクリックが多いかなど", area("c.n_memo", "例：たぶん X のプロフィールから"))}</section>
   <section class="card"><h2>紹介している案件</h2>
     ${list("c.deals", (it, i, pre) => `<div class="sub"><div class="sub-head">案件 ${i + 1}<button type="button" class="ghost small" data-del="c.deals" data-i="${i}">削除</button></div>
       <div class="grid2">${field("案件名", li(pre, "name", it))}${field("ASP", li(pre, "asp", it))}${field("報酬単価", li(pre, "pay", it, "例：1,500円"))}${field("成果条件", li(pre, "cond", it, "例：本人確認完了"))}</div>
       ${field("掲載している媒体・ページ", li(pre, "where", it))}</div>`)}</section>`;
 }
 
-function outView() {
-  const pages = PLATFORMS.flatMap(p => arr(`${p.id}.pages`).map((pg, i) => ({ p, pg, i }))).filter(x => (x.pg.body || "").trim());
-  return `<header><div class="eyebrow">仕上げ</div><h1>できあがり</h1>
-    <p class="lead">下の文章をコピーして gunshi フォルダの <code>profile.md</code> に保存するか、Claude Code に「これを profile.md に保存して」と貼り付けてください。</p></header>
-  <section class="card"><h2>profile.md</h2><pre class="out" id="out">${esc(profileMd())}</pre><div><button type="button" class="primary" data-copy="profile">profile.md をコピー</button></div></section>
-  <section class="card"><h2>貼り付けたページ</h2>${pages.length ? `<div class="chips">${pages.map(x => `<button type="button" data-copy="page" data-p="${x.p.id}" data-i="${x.i}">${x.p.name}：${esc(x.pg.title || "ページ" + (x.i + 1))}</button>`).join("")}</div><p class="hint">コピーした文章は <code>pages/〇〇.md</code> に保存し、<code>/page pages/〇〇.md</code> で診断できます。</p>` : `<p class="hint">まだありません。各媒体のページの「ページの貼り付け」から追加できます。</p>`}</section>
-  <section class="card"><div class="confirm" id="resetBox"><button type="button" class="ghost small" id="reset">入力をすべて消す</button></div></section>`;
+function resultView() {
+  const R = S.result;
+  if (!R) return `<header><h1>まだ戦略がありません</h1></header><section class="card"><p>メインページの一番下にある「マーケティング開始」を押してください。</p></section>`;
+  const ranked = R.strategies.map((s, i) => ({ s, i, total: total(s) })).sort((a, b) => b.total - a.total);
+  const bestI = ranked[0].i;
+  return `<header><div class="eyebrow">軍師からのご提案 ・ ${esc(R.at || "")}</div><h1>マーケティング戦略 5本</h1>
+    <p class="lead">${esc(R.summary || "")}</p></header>
+  <section class="card"><h2>採点のまとめ</h2><p class="hint">各観点20点・合計100点。AIによる目安の採点です。</p>
+    <div class="scorebox"><table class="score"><thead><tr><th>戦略</th>${CRITERIA.map(c => `<th>${c[1]}</th>`).join("")}<th>合計</th></tr></thead>
+    <tbody>${ranked.map(({ s, i, total: t }) => `<tr class="${i === bestI ? "best" : ""}"><td>${i + 1}. ${esc(s.title)}</td>${CRITERIA.map(c => `<td>${sc(s, c[0])}</td>`).join("")}<td class="total">${t}</td></tr>`).join("")}</tbody></table></div>
+    ${R.recommendation ? `<p class="reading">おすすめは「${esc((R.strategies[R.recommendation.index] || ranked[0].s).title)}」。${esc(R.recommendation.reason || "")}</p>` : ""}
+  </section>
+  ${R.strategies.map((s, i) => stratCard(s, i, i === bestI)).join("")}
+  ${R.missing_info && R.missing_info.length ? `<section class="card"><h2>入力すると戦略がもっと良くなる情報</h2><ul class="facts">${R.missing_info.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
+  <section class="card"><h2>この結果を使う</h2><div class="actions"><button type="button" class="primary" id="copyResult">戦略をコピー（軍師に渡す用）</button><button type="button" id="regen">作り直す</button><span class="status" id="mkStatus"></span></div>
+    <p class="hint" style="margin:0">コピーした文章を Claude Code の軍師に貼って「1番の戦略で /research から進めて」のように使えます。</p></section>`;
+}
+const sc = (s, key) => Math.max(0, Math.min(20, Math.round(Number(s.scores?.[key]?.score) || 0)));
+const total = s => CRITERIA.reduce((a, c) => a + sc(s, c[0]), 0);
+function stratCard(s, i, best) {
+  const L = x => Array.isArray(x) ? x : x ? [x] : [];
+  return `<article class="strat${best ? " best" : ""}">
+    <div class="strat-head"><div>${best ? '<span class="pill-best">最高得点</span>' : ""}<div class="no">STRATEGY ${i + 1}</div><h3>${esc(s.title)}</h3><p class="catch">${esc(s.catch)}</p></div>
+      <div class="big-score"><b>${total(s)}</b><small>/ 100点</small></div></div>
+    <div class="bars">${CRITERIA.map(c => `<div class="bar-row"><span>${c[1]}</span><span class="track"><span class="fill" style="width:${sc(s, c[0]) * 5}%"></span></span><span class="v">${sc(s, c[0])}/20</span>${s.scores?.[c[0]]?.reason ? `<span class="bar-why">${esc(s.scores[c[0]].reason)}</span>` : ""}</div>`).join("")}</div>
+    <dl class="kv">
+      <div><dt>誰に（N1）</dt><dd>${esc(s.target)}</dd></div>
+      <div><dt>媒体</dt><dd>${esc(L(s.platforms).join("・"))}</dd></div>
+      <div><dt>なぜあなたに合うか</dt><dd>${esc(s.why)}</dd></div>
+      <div><dt>使う型</dt><dd>${esc(L(s.frameworks).join("、"))}</dd></div>
+      <div><dt>進め方</dt><dd><ol class="steps">${L(s.steps).map(st => `<li><b>${esc(st.when || "")}</b> ${esc(st.do || st)}</li>`).join("")}</ol></dd></div>
+      <div><dt>見る数字（KPI）</dt><dd>${esc(L(s.kpi).join("／"))}</dd></div>
+      <div><dt>注意点・リスク</dt><dd>${esc(L(s.risks).join("／"))}</dd></div>
+    </dl>
+    <div class="first">今日やること：${esc(s.first_action)}</div>
+  </article>`;
 }
 
 // ---------- markdown ----------
-function profileMd() {
-  const L = ["# 私のプロフィール（profile.md）", "", "> 軍師プロフィール帳で作成。ASP のID・パスワードは含めないこと。", ""];
+function profileData() {
   const chosen = PLATFORMS.filter(p => filled(p.id));
-  L.push("## 主戦場（媒体と段階）");
-  L.push(...(chosen.length ? chosen.map(p => `- ${p.name}：${stageOf(p.id) || "段階未選択"}`) : ["（未選択）"]), "");
-  L.push("## 共通", `- 立場：${v("c.role")}`);
   const st = (base, names, other) => {
     const r = names.map((n, i) => [n, v(`${base}.${i}`)]).filter(x => x[1]).map(x => `${x[0]}（${x[1]}）`);
-    if (v(other)) r.push(v(other));
+    if (other && v(other)) r.push(v(other));
     return r.join("、");
   };
-  L.push(`- AI：${st("c.ai", COMMON.ai, "c.ai_other")}`, `- ASP：${st("c.asp", COMMON.asp, "c.asp_other")}`,
-    `- アフィリエイト歴：${v("c.career")}`, `- 累計報酬：${v("c.earned")}`, `- 1週間に使える時間：${v("c.time")}`, `- 月の予算：${v("c.budget")}`,
-    `- 顔出し：${v("c.face")}`, `- 得意なこと：${arr("c.skill").join("、")}`, `- 紹介商品の使用経験：${v("c.used")}`,
-    `- 自分の経験で語れること：${v("c.story").replace(/\n/g, " / ")}`, `- 目標：3か月後 ${v("c.goal3")}／1年後 ${v("c.goal12")}`, "");
-  L.push("### ASP の数字", "| 期間 | 表示回数 | クリック | 発生件数 | 確定件数 | 発生金額 |", "|---|---|---|---|---|---|",
-    `| ${v("c.n_period")} | ${v("c.n_imp")} | ${v("c.n_click")} | ${v("c.n_cv")} | ${v("c.n_ok")} | ${v("c.n_yen") ? v("c.n_yen") + "円" : ""} |`);
-  if (v("c.n_memo")) L.push("- メモ：" + v("c.n_memo").replace(/\n/g, " / "));
-  const deals = arr("c.deals").filter(d => DEAL_F.some(f => d[f]));
-  if (deals.length) L.push("", "### 紹介している案件", "| 案件名 | ASP | 報酬単価 | 成果条件 | 掲載先 |", "|---|---|---|---|---|", ...deals.map(d => `| ${d.name || ""} | ${d.asp || ""} | ${d.pay || ""} | ${d.cond || ""} | ${d.where || ""} |`));
-  chosen.forEach(p => {
-    const k = s => `${p.id}.${s}`;
-    const themes = arr(k("theme")).map(t => (GENRES.find(g => g[0] === t) || [])[1] ? t + "⚠️" : t);
-    L.push("", `## ${p.name}`, `- 段階：${v(k("stage"))}`, `- テーマ：${themes.join("、")}${v(k("theme_detail")) ? "（" + v(k("theme_detail")) + "）" : ""}`,
-      `- 形式：${arr(k("format")).join("、")}`, `- 投稿頻度：${v(k("freq"))}`, `- URL：${v(k("url"))}`, `- 収益化：${arr(k("money")).join("、")}`,
-      `- 数字：${p.metrics.map((m, i) => v(k("m" + i)) ? `${m[0]} ${v(k("m" + i))}${m[1]}` : "").filter(Boolean).join("／")}`,
-      `- 困っていること：${v(k("trouble")).replace(/\n/g, " / ")}`);
-    const pg = arr(k("pages")).filter(x => (x.body || "").trim());
-    if (pg.length) L.push(`- 貼り付けたページ：${pg.map(x => x.title || "無題").join("、")}（pages/ に保存）`);
+  return {
+    common: {
+      立場: v("c.role"), AI: st("c.ai", COMMON.ai), ASP: st("c.asp", COMMON.asp, "c.asp_other"),
+      アフィリエイト歴: v("c.career"), 累計報酬: v("c.earned"), 週の時間: v("c.time"), 月の予算: v("c.budget"), 顔出し: v("c.face"),
+      得意: arr("c.skill").join("、"), 紹介商品の使用経験: v("c.used"), 語れる経験: v("c.story"), 目標3か月: v("c.goal3"), 目標1年: v("c.goal12"),
+      ASPの数字: Object.fromEntries(ASP_METRICS.map(([k, l]) => [l, v("c." + k)])), クリック元メモ: v("c.n_memo"),
+      案件: arr("c.deals").filter(d => DEAL_F.some(f => d[f]))
+    },
+    platforms: chosen.map(p => {
+      const k = s => `${p.id}.${s}`;
+      return {
+        媒体: p.name, 段階: v(k("stage")), 準備済み: arr(k("prep")), 未着手の準備: PREP.filter(x => !arr(k("prep")).includes(x)),
+        テーマ: arr(k("theme")), テーマ詳細: v(k("theme_detail")), 形式: arr(k("format")), 頻度: v(k("freq")), 収益化: arr(k("money")), URL: v(k("url")),
+        数字: Object.fromEntries(p.metrics.map((m, i) => [`${m[0]}（${m[1]}）`, v(k("m" + i))]).filter(x => x[1])),
+        スクショから読み取った値: (SHOTS[p.id] || []).flatMap(s => s.reads || []), 困っていること: v(k("trouble"))
+      };
+    })
+  };
+}
+function profileMd() {
+  const d = profileData(), c = d.common;
+  const L = ["# 私のプロフィール（profile.md）", "", "> 軍師プロフィール帳で作成。ASP のID・パスワードは含めないこと。", "", "## 主戦場（媒体と段階）"];
+  L.push(...(d.platforms.length ? d.platforms.map(p => `- ${p.媒体}：${p.段階 || "段階未選択"}`) : ["（未選択）"]), "", "## 共通");
+  Object.entries(c).forEach(([k, val]) => { if (k === "ASPの数字" || k === "案件") return; L.push(`- ${k}：${String(val).replace(/\n/g, " / ")}`); });
+  L.push("", "### ASP の数字", "| " + ASP_METRICS.map(m => m[1]).join(" | ") + " |", "|" + ASP_METRICS.map(() => "---|").join(""), "| " + ASP_METRICS.map(m => v("c." + m[0])).join(" | ") + " |");
+  if (c.案件.length) L.push("", "### 紹介している案件", "| 案件名 | ASP | 報酬単価 | 成果条件 | 掲載先 |", "|---|---|---|---|---|", ...c.案件.map(d => `| ${d.name || ""} | ${d.asp || ""} | ${d.pay || ""} | ${d.cond || ""} | ${d.where || ""} |`));
+  d.platforms.forEach(p => {
+    L.push("", `## ${p.媒体}`, `- 段階：${p.段階}`, `- 準備済み：${p.準備済み.join("、")}`, `- テーマ：${p.テーマ.join("、")}${p.テーマ詳細 ? "（" + p.テーマ詳細 + "）" : ""}`,
+      `- 形式：${p.形式.join("、")}`, `- 頻度：${p.頻度}`, `- 収益化：${p.収益化.join("、")}`, `- URL：${p.URL}`,
+      `- 数字：${Object.entries(p.数字).map(([a, b]) => a + " " + b).join("／")}`, `- 困っていること：${p.困っていること.replace(/\n/g, " / ")}`);
   });
   return L.join("\n");
 }
-function pageMd(p, pg) {
-  return [`# ${pg.title || "ページ"}`, "", "## 基本情報", `- 媒体：${p.name}`, `- URL：${pg.url || ""}`, `- ページの種類：${pg.type || ""}`, `- 狙っているキーワード：${pg.kw || ""}`,
-    `- 紹介している案件：${pg.deal || ""}`, `- 読者にしてほしい行動：${pg.goal || ""}`, "", "## 数字", `- ${pg.num || ""}`, "", "## 本文", "", pg.body || ""].join("\n");
+function resultMd() {
+  const R = S.result; if (!R) return "";
+  const L = [`# 軍師のマーケティング戦略 5本（${R.at}）`, "", R.summary || "", ""];
+  R.strategies.forEach((s, i) => {
+    L.push(`## 戦略${i + 1}：${s.title}（${total(s)}/100点）`, s.catch || "", "",
+      ...CRITERIA.map(c => `- ${c[1]}：${sc(s, c[0])}/20（${s.scores?.[c[0]]?.reason || ""}）`),
+      `- 誰に：${s.target}`, `- 媒体：${[].concat(s.platforms || []).join("・")}`, `- 使う型：${[].concat(s.frameworks || []).join("、")}`, `- なぜ合うか：${s.why}`,
+      "- 進め方：", ...[].concat(s.steps || []).map(st => `  - ${st.when || ""} ${st.do || st}`),
+      `- KPI：${[].concat(s.kpi || []).join("／")}`, `- リスク：${[].concat(s.risks || []).join("／")}`, `- 今日やること：${s.first_action}`, "");
+  });
+  if (R.recommendation) L.push(`おすすめ：戦略${R.recommendation.index + 1}（${R.recommendation.reason}）`);
+  return L.join("\n");
 }
 
-// ---------- behaviour ----------
+// ---------- AI ----------
+function parseJSON(t) {
+  try { return JSON.parse(t); } catch (e) {}
+  const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) { try { return JSON.parse(f[1]); } catch (e) {} }
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  throw { code: "invalid_json", message: "AIの返答を読み取れませんでした。もう一度お試しください。" };
+}
+async function blobToB64(blob) { const u = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); return u.split(",")[1]; }
+function dataUrlToBlob(u) { const [h, b] = u.split(","); const bin = atob(b); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: h.match(/:(.*?);/)[1] }); }
+
+async function askAI(prompt, { images = [], signal, tier = "default", maxTokens = 16000 } = {}) {
+  const e = engine();
+  if (!e) throw { code: "no_engine", message: "AIが接続されていません。メインページでAPIキーを入れるか、claude.ai 上で開いてください。" };
+  if (e === "claude") {
+    const opts = { signal, modelTier: tier, cache: false };
+    if (images.length) { if (!sampleImages) throw { code: "images_unavailable", message: "この表示では画像を送れません。数字を手で入力してください。" }; opts.images = images; }
+    try { return await sampleFn.json(prompt, opts); }
+    catch (err) { throw { code: err.code, message: claudeErr(err) }; }
+  }
+  const model = S._model || MODELS[0][0];
+  const content = [];
+  for (const b of images) content.push({ type: "image", source: { type: "base64", media_type: b.type || "image/jpeg", data: await blobToB64(b) } });
+  content.push({ type: "text", text: prompt });
+  const body = { model, max_tokens: maxTokens, messages: [{ role: "user", content }], output_config: { effort: tier === "quick" ? "low" : "medium" } };
+  const headers = { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
+  if (model !== "claude-haiku-5-5") { body.fallbacks = "default"; headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; }
+  let res;
+  try { res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify(body), signal }); }
+  catch (err) {
+    if (err.name === "AbortError") throw { code: "cancelled", message: "止めました。" };
+    throw { code: "network", message: "Anthropic API に接続できませんでした。claude.ai 上のページからは外部への通信がブロックされます。APIキーを空にして claude.ai のAIを使うか、このHTMLをPCのブラウザで開いてください。" };
+  }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const m = { 401: "APIキーが正しくありません。キーを確認してください。", 403: "このAPIキーでは使えないモデルか、権限がありません。", 429: "混み合っているか、利用上限に達しました。少し待ってからもう一度お試しください。", 529: "Anthropic のサーバーが混み合っています。少し待ってからお試しください。" }[res.status];
+    throw { code: "http_" + res.status, message: m || `エラーが起きました（${res.status}）：${json.error?.message || ""}` };
+  }
+  if (json.stop_reason === "refusal") throw { code: "refused", message: "AIがこの内容への回答を控えました。入力内容を見直してください。" };
+  const textOut = (json.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+  return parseJSON(textOut);
+}
+function claudeErr(err) {
+  return ({ not_granted: "このページでの Claude の利用が許可されていません。", rate_limited: "利用が混み合っているか上限です。少し待ってからお試しください。", cancelled: "止めました。", image_rejected: "この画像は読み込めませんでした。別の画像でお試しください。", invalid_json: "AIの返答を読み取れませんでした。もう一度お試しください。", refused: "AIがこの内容への回答を控えました。", session_expired: "claude.ai にもう一度ログインしてください。" })[err.code] || "うまくいきませんでした。もう一度お試しください。";
+}
+
+// スクショ読み取り
+async function readShots(scope) {
+  const pending = (SHOTS[scope] || []).filter(s => !s.done);
+  if (!pending.length) return;
+  const st = $("#readStatus-" + scope), btn = document.querySelector(`[data-read="${scope}"]`);
+  const p = PLATFORMS.find(x => x.id === scope);
+  const keys = p ? p.metrics.map((m, i) => [`m${i}`, `${m[0]}（${m[1]}）`]) : ASP_METRICS.map(([k, l]) => [k, l]);
+  const prompt = `あなたは日本の${p ? p.name : "アフィリエイトASP（A8.net など）"}の管理画面を読み取るアシスタントです。
+添付の${pending.length}枚の画像は、ユーザー本人の${p ? p.name + "（" + p.shotHint + "）" : "ASP のレポート画面"}のスクリーンショットです。
+画面に「はっきり表示されている」数字と状態だけを読み取ってください。推測・計算・補完はしないでください。
+
+次の JSON だけを返してください（説明文は不要）：
+{
+  "metrics": { ${keys.map(([k, l]) => `"${k}": ${k === "n_period" ? "文字列" : "数値"}または null  // ${l}`).join(",\n    ")} },
+  "readings": [ { "image": 画像の番号(1から), "label": "画面上の項目名", "value": "表示されている値" } ],
+  "theme_guess": "投稿やプロフィールから分かる発信テーマ（分からなければ空文字）",
+  "notes": "読み取りで気づいたこと（1文、無ければ空文字）"
+}
+数値はカンマや単位を取り、「1.2万」は 12000 のように数値にしてください。`;
+  btn.disabled = true; st.className = "status"; st.textContent = "読み取り中…（10〜40秒ほど）";
+  try {
+    const out = await askAI(prompt, { images: pending.map(s => dataUrlToBlob(s.url)), tier: "default", maxTokens: 8000 });
+    let n = 0;
+    Object.entries(out.metrics || {}).forEach(([k, val]) => {
+      if (val === null || val === undefined || val === "") return;
+      const key = (p ? p.id : "c") + "." + k;
+      if (!keys.some(x => x[0] === k)) return;
+      S[key] = String(val); S["_ai." + key] = 1; n++;
+    });
+    if (p && out.theme_guess && !v(`${p.id}.theme_detail`)) { S[`${p.id}.theme_detail`] = out.theme_guess; S[`_ai.${p.id}.theme_detail`] = 1; }
+    pending.forEach((s, idx) => { s.done = true; s.reads = (out.readings || []).filter(r => Number(r.image) === idx + 1 || (pending.length === 1 && !r.image)).map(r => ({ label: String(r.label || ""), value: String(r.value ?? "") })); });
+    save(); saveShots(); go(view, false, true);
+    toast(n ? `${n}項目を反映しました。値を確認してください` : "反映できる数字は見つかりませんでした" + (out.notes ? "：" + out.notes : ""));
+  } catch (err) {
+    st.className = "status ng"; st.textContent = err.message || "読み取れませんでした"; btn.disabled = false;
+  }
+}
+
+// マーケティング開始
+let mkCtl = null;
+async function startMarketing() {
+  const st = $("#mkStatus"), btn = $("#startMk") || $("#regen"), stop = $("#stopMk");
+  const data = profileData();
+  const prompt = `あなたは日本市場に精通したマーケティング参謀「軍師」です。以下はユーザー本人が入力した情報と、管理画面のスクリーンショットから読み取った数字です。
+この人のためだけのマーケティング戦略を、方向性の違う5本作り、それぞれを採点してください。
+
+# 守ること
+- 入力に無い実績・数字・お客様の声を作らない。分からないことは「要確認」とする
+- 段階が「まだ何もしていない」「これから始める」「事前調査中」の媒体は、リサーチ・ターゲット決め・プロフィール作りなど準備から始める戦略にする
+- 準備のチェックが付いていない項目を踏まえて、抜けている準備を戦略の中に入れる
+- 使える時間・予算・顔出しの可否・得意なことを必ず考慮し、続けられる計画にする
+- 日本の読者向けに、煽らず誠実に。「絶対稼げる」など収益の保証はしない
+- アフィリエイトは PR 表記（ステマ規制）、景品表示法・薬機法・ASP規約を守る前提で書く
+- 5本は互いに違う方向にする（例：最短で初成果／資産として積み上がる／SNS起点／実体験・ストーリー型／低リスク・小さく検証）
+- 使う型には、新PASONA・顧客の認識度・飢えた群衆・ULSSAS・リーズンホワイ・エピファニーブリッジ・バリューラダー・ポジショニングなどから合うものを選ぶ
+- 採点は甘くしない。各観点 0〜20 の整数で、理由を1文ずつ書く
+
+# 採点の観点
+impact=成果への近さ、feasibility=この人の時間・スキルでの実行しやすさ、speed=即効性、asset=積み上がり（資産性）、safety=安全性（法令・費用・炎上リスクの低さ）
+
+# 入力情報
+${JSON.stringify(data, null, 1)}
+
+# 返す形式（この JSON だけ。説明文は不要）
+{
+  "summary": "現状の見立て（3文以内。良い点と課題の両方）",
+  "strategies": [
+    {
+      "title": "戦略名（20字以内）",
+      "catch": "一言で言うと（40字以内）",
+      "target": "誰に届けるか（N1：具体的な1人の人物像）",
+      "platforms": ["使う媒体"],
+      "frameworks": ["使う型"],
+      "why": "なぜこの人に合うか（2文以内）",
+      "steps": [ { "when": "1週目", "do": "やること" }, { "when": "2週目", "do": "" }, { "when": "3〜4週目", "do": "" }, { "when": "2〜3か月目", "do": "" } ],
+      "kpi": ["見る数字と目安"],
+      "risks": ["注意点"],
+      "first_action": "今日15分でできる最初の一歩",
+      "scores": { "impact": { "score": 0, "reason": "" }, "feasibility": { "score": 0, "reason": "" }, "speed": { "score": 0, "reason": "" }, "asset": { "score": 0, "reason": "" }, "safety": { "score": 0, "reason": "" } }
+    }
+  ],
+  "recommendation": { "index": 0, "reason": "最初に選ぶならどれか、その理由（2文以内）。index は0から" },
+  "missing_info": ["入力すると戦略が良くなる情報"]
+}`;
+  mkCtl = new AbortController();
+  if (btn) btn.disabled = true; if (stop) stop.hidden = false;
+  if (st) { st.className = "status"; st.textContent = "軍師が考えています…（30秒〜2分ほど）"; }
+  try {
+    const out = await askAI(prompt, { signal: mkCtl.signal, tier: "complex", maxTokens: 20000 });
+    if (!out || !Array.isArray(out.strategies) || !out.strategies.length) throw { message: "戦略を受け取れませんでした。もう一度お試しください。" };
+    out.strategies = out.strategies.slice(0, 5);
+    out.at = new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
+    if (out.recommendation && !(out.strategies[out.recommendation.index])) out.recommendation.index = 0;
+    S.result = out; save(); go("result");
+  } catch (err) {
+    if (st) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; }
+  } finally {
+    if (btn) btn.disabled = false; if (stop) stop.hidden = true; mkCtl = null;
+  }
+}
+
+// ---------- 画像の取り込み ----------
+async function shrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = url; });
+    const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.82);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// ---------- 画面遷移と入力 ----------
 function calc() {
   if (!$("#c_cvr")) return;
   const has = v("c.n_click") !== "", c = +v("c.n_click"), cv = +v("c.n_cv");
   $("#c_cvr").textContent = has && c > 0 ? (cv / c * 100).toFixed(2) + "%" : "―";
   $("#c_exp").textContent = has ? (c * 0.01).toFixed(1) + " 件" : "―";
   let r = "";
-  if (has && c >= 50 && cv === 0) r = `${c} クリックは「読者を動かす力がある」という良い兆候です。一方で成果 0 件なので、クリックする人と買う人がずれている可能性があります。軍師の /diagnose で原因を絞り込みましょう。`;
+  if (has && c >= 50 && cv === 0) r = `${c} クリックは「読者を動かす力がある」という良い兆候です。一方で成果 0 件なので、クリックする人と買う人がずれている可能性があります。`;
   else if (has && cv > 0) r = "成果が出ています。どのページ・どの投稿から出たかを特定すると、同じ型で増やせます。";
   else if (has && c < 50) r = "まだ数字が少なく、良し悪しは判断できません。まずはクリック 100 を目指しましょう。";
   $("#c_read").textContent = r; $("#c_read").hidden = !r;
 }
 let view = "home";
-function go(to, push = true) {
+function go(to, push = true, keepScroll = false) {
   view = to;
   const p = PLATFORMS.find(x => x.id === to);
-  $("#app").innerHTML = to === "common" ? commonView() : to === "out" ? outView() : p ? platformView(p) : homeView();
-  $("#navHome").hidden = view === "home" || !PLATFORMS.concat([{ id: "common" }, { id: "out" }]).some(x => x.id === view);
-  if (push) { try { history.pushState(null, "", to === "home" ? location.pathname + location.search : "#" + to); } catch (e) {} }
-  calc(); window.scrollTo(0, 0);
+  const y = window.scrollY;
+  $("#app").innerHTML = to === "common" ? commonView() : to === "result" ? resultView() : p ? platformView(p) : homeView();
+  if (!p && to !== "common" && to !== "result") view = "home";
+  $("#navHome").hidden = view === "home";
+  $("#copyBar").textContent = view === "result" ? "戦略をコピー" : "profile.md をコピー";
+  if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
+  calc();
+  window.scrollTo(0, keepScroll ? y : 0);
 }
 function setKey(k, val, el) {
   if (k.includes("|")) {
@@ -338,30 +653,68 @@ function setKey(k, val, el) {
     a[+i] = { ...(a[+i] || {}), [f]: val }; S[base] = a;
   } else if (el && el.dataset.multi) {
     const a = arr(k).filter(x => x !== el.value); if (el.checked) a.push(el.value); S[k] = a;
-  } else S[k] = val;
+  } else { S[k] = val; delete S["_ai." + k]; }
   save(); calc();
 }
-document.addEventListener("input", e => { const el = e.target; if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el); });
-document.addEventListener("change", e => { const el = e.target; if (el.dataset && el.dataset.k && (el.type === "checkbox" || el.type === "radio" || el.tagName === "SELECT")) setKey(el.dataset.k, el.value, el); });
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.id === "f-apikey") { apiKey = el.value.trim(); try { if ($("#f-keysave")?.checked) localStorage.setItem(KEY_API, apiKey); } catch (x) {} $("#connStatus").className = "status"; $("#connStatus").textContent = "いまの接続：" + engineLabel(); return; }
+  if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
+});
+document.addEventListener("change", async e => {
+  const el = e.target;
+  if (el.id === "f-keysave") { try { if (el.checked) localStorage.setItem(KEY_API, apiKey); else localStorage.removeItem(KEY_API); } catch (x) {} toast(el.checked ? "この端末にキーを保存しました" : "保存したキーを消しました"); return; }
+  if (el.dataset && el.dataset.shots) {
+    const scope = el.dataset.shots, files = [...el.files];
+    SHOTS[scope] = SHOTS[scope] || [];
+    for (const f of files.slice(0, 6)) { try { SHOTS[scope].push({ id: Date.now() + Math.random().toString(36).slice(2, 6), url: await shrink(f), reads: [], done: false }); } catch (x) { toast("読み込めない画像がありました"); } }
+    if (files.length > 6) toast("一度に取り込めるのは6枚までです");
+    saveShots(); go(view, false, true); return;
+  }
+  if (el.dataset && el.dataset.k && (el.type === "checkbox" || el.type === "radio" || el.tagName === "SELECT")) {
+    setKey(el.dataset.k, el.value, el);
+    if (el.id === "f-model") { const s = $("#connStatus"); if (s) s.textContent = "いまの接続：" + engineLabel(); }
+  }
+});
 
 let toastT;
-function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2400); }
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
 function copy(textVal, label) {
-  const fallback = () => { go("out"); const r = document.createRange(); r.selectNodeContents($("#out")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("自動でコピーできませんでした。選択した文章を長押しでコピーしてください"); };
+  const fallback = () => { const pre = document.createElement("pre"); pre.className = "out"; pre.textContent = textVal; $("#app").append(pre); const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); pre.scrollIntoView(); toast("自動でコピーできませんでした。選択した文章を長押しでコピーしてください"); };
   try { navigator.clipboard.writeText(textVal).then(() => toast(label + " をコピーしました"), fallback); } catch (e) { fallback(); }
 }
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.go) go(t.dataset.go);
   if (t.id === "navHome") go("home");
-  if (t.id === "copyBar" || t.dataset.copy === "profile") copy(profileMd(), "profile.md");
-  if (t.dataset.copy === "page") { const p = PLATFORMS.find(x => x.id === t.dataset.p); copy(pageMd(p, arr(`${p.id}.pages`)[+t.dataset.i]), "ページ"); }
-  if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false); }
-  if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false); }
-  if (t.id === "reset") $("#resetBox").innerHTML = '本当にすべて消しますか？ <button type="button" class="small" id="resetYes">消す</button><button type="button" class="ghost small" id="resetNo">やめる</button>';
-  if (t.id === "resetNo") $("#resetBox").innerHTML = '<button type="button" class="ghost small" id="reset">入力をすべて消す</button>';
-  if (t.id === "resetYes") { S = {}; save(); go("home"); toast("消しました"); }
+  if (t.id === "copyBar") view === "result" ? copy(resultMd(), "戦略") : copy(profileMd(), "profile.md");
+  if (t.id === "copyResult") copy(resultMd(), "戦略");
+  if (t.dataset.read) readShots(t.dataset.read);
+  if (t.dataset.delshot) { SHOTS[t.dataset.delshot] = (SHOTS[t.dataset.delshot] || []).filter(s => s.id !== t.dataset.id); saveShots(); go(view, false, true); }
+  if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
+  if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
+  if (t.id === "startMk" || t.id === "regen") startMarketing();
+  if (t.id === "stopMk") mkCtl?.abort();
+  if (t.id === "testConn") {
+    const s = $("#connStatus"); s.className = "status"; s.textContent = "テスト中…"; t.disabled = true;
+    try { const out = await askAI('{"ok": true} という JSON だけを返してください。', { tier: "quick", maxTokens: 2000 }); s.className = "status ok"; s.textContent = out && out.ok ? "接続できました：" + engineLabel() : "応答はありましたが形式が違いました"; }
+    catch (err) { s.className = "status ng"; s.textContent = err.message; }
+    finally { t.disabled = false; }
+  }
 });
 window.addEventListener("popstate", () => go((location.hash || "#home").slice(1), false));
 go((location.hash || "#home").slice(1), false);
+
+// claude.ai 上で開いたときは、APIキーなしでも Claude を使える
+(async () => {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const s = await window.claude.use("sample");
+    if (!s) return;
+    sampleFn = s;
+    const lim = await s.limits().catch(() => null);
+    sampleImages = !!(lim && lim.images);
+    const cs = $("#connStatus"); if (cs) cs.textContent = "いまの接続：" + engineLabel();
+  } catch (e) {}
+})();
 </script>
