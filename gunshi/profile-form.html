@@ -1,0 +1,379 @@
+<title>軍師プロフィール帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column of numbered "帳" sections, sticky bottom bar with progress + copy. Indigo ink (藍) on cool paper. */
+:root {
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --ink: #1d2433;
+  --muted: #5d6576;
+  --line: #d9dde6;
+  --accent: #2b4c7e;
+  --accent-soft: #e3e9f4;
+  --accent-ink: #ffffff;
+  --gold: #9a6b12;
+  --warn-bg: #fbf1dc;
+  --good: #2f6b4f;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
+    --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020; --good: #7cc3a0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161f; --surface: #1a2030; --ink: #e6e9f0; --muted: #9aa3b5; --line: #2c3447;
+  --accent: #8fb0e3; --accent-soft: #24304a; --accent-ink: #0f1420; --gold: #e0b45e; --warn-bg: #3a3020; --good: #7cc3a0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 120px; display: grid; gap: 20px; }
+header h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.note { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; font-size: .9rem; }
+section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 16px; display: grid; gap: 14px; min-width: 0; }
+section.card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; display: flex; gap: 10px; align-items: baseline; text-wrap: balance; }
+section.card h2 .no { color: var(--accent); font-variant-numeric: tabular-nums; font-size: .95rem; letter-spacing: .08em; }
+.hint { color: var(--muted); font-size: .85rem; margin: -6px 0 0; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > .label { font-weight: 700; font-size: .92rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: .9rem; background: var(--bg); user-select: none; }
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip .w { color: var(--gold); font-size: .78rem; margin-left: 4px; }
+.chip input:checked + span .w { color: inherit; }
+input[type=text], input[type=number], input[type=url], textarea, select {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+textarea { min-height: 84px; resize: vertical; }
+textarea.big { min-height: 220px; font-size: .9rem; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: minmax(0,1fr) 9.5rem; gap: 8px; align-items: center; }
+.row .name { font-size: .92rem; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.sub { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
+.sub-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; }
+button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+button.ghost { background: transparent; }
+button.small { padding: 4px 10px; font-size: .85rem; }
+.calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.calc div { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; }
+.calc b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.calc small { color: var(--muted); }
+.reading { font-size: .92rem; border-left: 3px solid var(--gold); padding-left: 10px; }
+pre.out { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.bar-in { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.progress { flex: 1 1 140px; min-width: 0; font-size: .85rem; color: var(--muted); }
+.meter { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.meter i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>軍師プロフィール帳</h1>
+    <p>タップと短い入力だけで、軍師（Claude Code）に渡す <code>profile.md</code> と <code>pages/</code> 用の文章を作ります。分からない項目は空欄のままで大丈夫です。</p>
+  </header>
+  <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ一時保存されます。</div>
+
+  <section class="card" id="s1"><h2><span class="no">一</span>立場</h2>
+    <div class="chips" data-group="role" data-type="radio"></div>
+  </section>
+
+  <section class="card" id="s2"><h2><span class="no">二</span>使っているAI</h2>
+    <p class="hint">右の欄で状態を選びます。使っていないものは「―」のままで大丈夫です。</p>
+    <div class="rows" data-status="ai"></div>
+    <div class="field"><span class="label">その他のAI</span><input type="text" id="ai_other" placeholder="例：Dify、Manus"></div>
+  </section>
+
+  <section class="card" id="s3"><h2><span class="no">三</span>使っているASP</h2>
+    <div class="rows" data-status="asp"></div>
+    <div class="field"><span class="label">その他のASP・メディアランクなどのメモ</span><input type="text" id="asp_other" placeholder="例：A8 はチャレンジランク"></div>
+  </section>
+
+  <section class="card" id="s4"><h2><span class="no">四</span>ジャンル</h2>
+    <p class="hint">複数選べます。<span style="color:var(--gold)">⚠</span> は広告の規制が強いジャンルです。</p>
+    <div class="chips" data-group="genre" data-type="check"></div>
+    <div class="field"><span class="label">詳しく（大まかでもOK）</span><input type="text" id="genre_detail" placeholder="例：30代向けの格安SIM乗り換え"></div>
+  </section>
+
+  <section class="card" id="s5"><h2><span class="no">五</span>媒体</h2>
+    <div class="chips" data-group="media" data-type="check"></div>
+    <div class="field"><span class="label">URL・アカウント名</span><input type="text" id="media_url" placeholder="例：https://〇〇.com / X @〇〇"></div>
+  </section>
+
+  <section class="card" id="s6"><h2><span class="no">六</span>自分のこと</h2>
+    <div class="field"><span class="label">アフィリエイト歴</span><div class="chips" data-group="career" data-type="radio"></div></div>
+    <div class="field"><span class="label">これまでの累計報酬</span><div class="chips" data-group="earned" data-type="radio"></div></div>
+    <div class="field"><span class="label">1週間に使える時間</span><div class="chips" data-group="time" data-type="radio"></div></div>
+    <div class="field"><span class="label">月の予算（ツール・広告）</span><div class="chips" data-group="budget" data-type="radio"></div></div>
+    <div class="field"><span class="label">顔出し</span><div class="chips" data-group="face" data-type="radio"></div></div>
+    <div class="field"><span class="label">得意なこと</span><div class="chips" data-group="skill" data-type="check"></div></div>
+    <div class="field"><span class="label">紹介する商品を実際に使ったことがある？</span><div class="chips" data-group="used" data-type="radio"></div></div>
+    <div class="field"><span class="label">自分の経験で語れること</span><textarea id="story" placeholder="仕事・趣味・失敗談・資格など。ここが一番の武器になります"></textarea></div>
+  </section>
+
+  <section class="card" id="s7"><h2><span class="no">七</span>目標</h2>
+    <div class="field"><span class="label">3か月後</span><input type="text" id="goal3" placeholder="例：初報酬を出す"></div>
+    <div class="field"><span class="label">1年後</span><input type="text" id="goal12" placeholder="例：月3万円"></div>
+    <div class="field"><span class="label">いちばん困っていること</span><textarea id="trouble" placeholder="例：クリックはされるのに成果が出ない"></textarea></div>
+  </section>
+
+  <section class="card" id="s8"><h2><span class="no">八</span>今の数字</h2>
+    <p class="hint">ASP の簡易レポートの数字です。最初はスクリーンショットの「今月」の数字を入れてあります。</p>
+    <div class="grid2">
+      <div class="field"><span class="label">期間</span><input type="text" id="n_period"></div>
+      <div class="field"><span class="label">表示回数</span><input type="number" inputmode="numeric" id="n_imp" min="0"></div>
+      <div class="field"><span class="label">クリック</span><input type="number" inputmode="numeric" id="n_click" min="0"></div>
+      <div class="field"><span class="label">発生件数</span><input type="number" inputmode="numeric" id="n_cv" min="0"></div>
+      <div class="field"><span class="label">確定件数</span><input type="number" inputmode="numeric" id="n_ok" min="0"></div>
+      <div class="field"><span class="label">発生金額（円）</span><input type="number" inputmode="numeric" id="n_yen" min="0"></div>
+    </div>
+    <div class="calc">
+      <div><small>CVR（発生 ÷ クリック）</small><b id="c_cvr">―</b></div>
+      <div><small>CVR 1% の案件なら期待される発生</small><b id="c_exp">―</b></div>
+    </div>
+    <p class="reading" id="c_read"></p>
+    <div class="field"><span class="label">PV・フォロワー数・クリックの多い場所など</span><textarea id="n_memo" placeholder="例：Xのフォロワー300人。クリックはたぶんXのプロフィールから"></textarea></div>
+  </section>
+
+  <section class="card" id="s9"><h2><span class="no">九</span>紹介している案件</h2>
+    <div id="deals" class="rows"></div>
+    <div><button type="button" id="addDeal">＋ 案件を追加</button></div>
+  </section>
+
+  <section class="card" id="s10"><h2><span class="no">十</span>ページの貼り付け</h2>
+    <p class="hint">ブログ記事・LP・SNS投稿・プロフィール文をまるごと貼ると、軍師の <code>/page</code> で診断と書き直しができます。1ページずつ追加してください。</p>
+    <div id="pages" class="rows"></div>
+    <div><button type="button" id="addPage">＋ ページを追加</button></div>
+  </section>
+
+  <section class="card" id="s11"><h2><span class="no">十一</span>できあがり</h2>
+    <p class="hint">下の文章をコピーして、gunshi フォルダの <code>profile.md</code> に保存するか、Claude Code に「これを profile.md に保存して」と貼り付けてください。</p>
+    <pre class="out" id="out"></pre>
+    <div class="chips"><button type="button" class="primary" id="copyProfile">profile.md をコピー</button></div>
+    <div id="pageOuts" class="rows"></div>
+    <div class="confirm" id="resetBox"><button type="button" class="ghost small" id="reset">入力をすべて消す</button></div>
+  </section>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <div class="progress"><span id="pg">0 / 11 項目</span><div class="meter"><i id="pgbar"></i></div></div>
+  <button type="button" class="primary" id="copyBar">profile.md をコピー</button>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const OPT = {
+  role: ["アフィリエイター（他社の商品を紹介）", "自分の商品・サービスを販売", "両方", "まだ決めていない"],
+  ai: ["Claude（Claude Code 含む）", "ChatGPT（Codex 含む）", "Gemini", "Microsoft Copilot", "Perplexity", "Genspark / Felo", "Notion AI", "Canva（AI機能）", "画像生成AI", "動画生成AI"],
+  aiStatus: ["使っている", "使う予定", "興味あり"],
+  asp: ["A8.net", "もしもアフィリエイト", "バリューコマース", "afb（アフィb）", "アクセストレード", "felmat", "TCSアフィリエイト", "レントラックス", "JANet", "Amazonアソシエイト", "楽天アフィリエイト"],
+  aspStatus: ["成果あり", "登録済み", "登録予定"],
+  genre: [["金融（クレカ・証券・保険）", 1], ["転職・副業", 1], ["美容・コスメ", 1], ["脱毛・美容医療", 1], ["健康食品・ダイエット", 1], ["恋愛・婚活・マッチング"], ["教育・資格・スクール"], ["通信（格安SIM・光回線）"], ["動画配信・エンタメ"], ["ガジェット・家電"], ["ゲーム・アプリ"], ["旅行・ホテル"], ["不動産・引越し", 1], ["子育て"], ["ペット"], ["食品・宅配"], ["AI・ITツール・サーバー"], ["物販（Amazon・楽天）"], ["情報商材・オンライン講座", 1], ["まだ決めていない"]],
+  media: ["ブログ（WordPress）", "無料ブログ", "note", "X", "Instagram", "Threads", "TikTok", "YouTube（長尺）", "YouTube ショート", "LINE公式アカウント", "メルマガ", "Pinterest", "有料広告", "まだ無い"],
+  career: ["これから", "半年未満", "半年〜1年", "1〜3年", "3年以上"],
+  earned: ["0円", "〜1万円", "〜10万円", "〜100万円", "100万円以上"],
+  time: ["〜3時間", "3〜7時間", "7〜15時間", "15時間以上"],
+  budget: ["0円", "〜5千円", "〜3万円", "3万円以上"],
+  face: ["できる", "顔なしならOK", "声もNG"],
+  skill: ["文章", "話す", "写真・デザイン", "動画編集", "調べもの", "数字の分析"],
+  used: ["ある", "一部ある", "ない"],
+  pageType: ["ブログ記事", "LP", "プロフィール", "SNS投稿", "YouTube台本", "メール・LINE", "その他"]
+};
+const KEY = "gunshi-profile-v1";
+const SAMPLE = { "st_asp_0": "登録済み", asp_other: "A8.net はチャレンジランク", n_period: "今月", n_imp: "4", n_click: "219", n_cv: "0", n_ok: "0", n_yen: "0" };
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function buildChips() {
+  document.querySelectorAll(".chips[data-group]").forEach(box => {
+    const g = box.dataset.group, type = box.dataset.type === "radio" ? "radio" : "checkbox";
+    box.innerHTML = OPT[g].map((o, i) => {
+      const [label, warn] = Array.isArray(o) ? o : [o];
+      return `<label class="chip"><input type="${type}" name="${g}" id="${g}_${i}" value="${esc(label)}"><span>${esc(label)}${warn ? '<span class="w">⚠</span>' : ""}</span></label>`;
+    }).join("");
+  });
+  document.querySelectorAll(".rows[data-status]").forEach(box => {
+    const g = box.dataset.status, st = OPT[g + "Status"];
+    box.innerHTML = OPT[g].map((o, i) => `<div class="row"><label class="name" for="st_${g}_${i}">${esc(o)}</label><select id="st_${g}_${i}"><option value="">―</option>${st.map(s => `<option>${s}</option>`).join("")}</select></div>`).join("");
+  });
+}
+
+let deals = [], pages = [];
+function dealHTML(d, i) {
+  return `<div class="sub"><div class="sub-head">案件 ${i + 1}<button type="button" class="ghost small" data-del-deal="${i}">削除</button></div>
+  <div class="grid2">
+    <div class="field"><span class="label">案件名</span><input type="text" id="deal_${i}_name" value="${esc(d.name || "")}"></div>
+    <div class="field"><span class="label">ASP</span><input type="text" id="deal_${i}_asp" value="${esc(d.asp || "")}"></div>
+    <div class="field"><span class="label">報酬単価</span><input type="text" id="deal_${i}_pay" value="${esc(d.pay || "")}" placeholder="例：1,500円"></div>
+    <div class="field"><span class="label">成果条件</span><input type="text" id="deal_${i}_cond" value="${esc(d.cond || "")}" placeholder="例：本人確認完了"></div>
+  </div>
+  <div class="field"><span class="label">掲載しているページ</span><input type="text" id="deal_${i}_where" value="${esc(d.where || "")}"></div></div>`;
+}
+function pageHTML(p, i) {
+  return `<div class="sub"><div class="sub-head">ページ ${i + 1}<button type="button" class="ghost small" data-del-page="${i}">削除</button></div>
+  <div class="grid2">
+    <div class="field"><span class="label">ページ名（ファイル名になります）</span><input type="text" id="page_${i}_title" value="${esc(p.title || "")}" placeholder="例：格安SIM比較記事"></div>
+    <div class="field"><span class="label">種類</span><select id="page_${i}_type"><option value="">―</option>${OPT.pageType.map(t => `<option${p.type === t ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+  </div>
+  <div class="field"><span class="label">URL</span><input type="url" id="page_${i}_url" value="${esc(p.url || "")}"></div>
+  <div class="grid2">
+    <div class="field"><span class="label">狙っているキーワード</span><input type="text" id="page_${i}_kw" value="${esc(p.kw || "")}"></div>
+    <div class="field"><span class="label">紹介している案件</span><input type="text" id="page_${i}_deal" value="${esc(p.deal || "")}"></div>
+    <div class="field"><span class="label">読者にしてほしい行動</span><input type="text" id="page_${i}_goal" value="${esc(p.goal || "")}" placeholder="例：公式サイトをクリック"></div>
+    <div class="field"><span class="label">数字（PV・クリック・成果）</span><input type="text" id="page_${i}_num" value="${esc(p.num || "")}"></div>
+  </div>
+  <div class="field"><span class="label">本文（まるごと貼り付け）</span><textarea class="big" id="page_${i}_body" placeholder="ページの文章をここに貼り付けてください">${esc(p.body || "")}</textarea></div></div>`;
+}
+function readList(prefix, n, fields) {
+  return Array.from({ length: n }, (_, i) => Object.fromEntries(fields.map(f => [f, ($(`#${prefix}_${i}_${f}`) || {}).value || ""])));
+}
+const DEAL_F = ["name", "asp", "pay", "cond", "where"], PAGE_F = ["title", "type", "url", "kw", "deal", "goal", "num", "body"];
+function renderLists() {
+  $("#deals").innerHTML = deals.map(dealHTML).join("");
+  $("#pages").innerHTML = pages.map(pageHTML).join("");
+}
+
+function collect() {
+  const st = {};
+  document.querySelectorAll("input, textarea, select").forEach(el => {
+    if (!el.id || el.id.startsWith("deal_") || el.id.startsWith("page_")) return;
+    if (el.type === "checkbox" || el.type === "radio") { if (el.checked) st[el.id] = 1; }
+    else if (el.value) st[el.id] = el.value;
+  });
+  st.deals = readList("deal", deals.length, DEAL_F);
+  st.pages = readList("page", pages.length, PAGE_F);
+  return st;
+}
+function apply(st) {
+  Object.entries(st).forEach(([k, v]) => {
+    if (k === "deals" || k === "pages") return;
+    const el = document.getElementById(k); if (!el) return;
+    if (el.type === "checkbox" || el.type === "radio") el.checked = !!v; else el.value = v;
+  });
+  deals = st.deals && st.deals.length ? st.deals : [{}];
+  pages = st.pages && st.pages.length ? st.pages : [{}];
+  renderLists();
+}
+const picked = g => [...document.querySelectorAll(`input[name="${g}"]:checked`)].map(e => e.value);
+const val = id => ($("#" + id).value || "").trim();
+
+function profileMd() {
+  const L = ["# 私のプロフィール（profile.md）", "", "> 軍師プロフィール帳で作成。ASP のID・パスワードは含めないこと。", ""];
+  const one = (g) => picked(g)[0] || "";
+  L.push("## 1. 立場", "- " + (one("role") || "（未記入）"), "");
+  const status = (g, otherId) => {
+    const rows = OPT[g].map((o, i) => [o, $(`#st_${g}_${i}`).value]).filter(r => r[1]);
+    const out = rows.map(r => `| ${r[0]} | ${r[1]} |`);
+    if (val(otherId)) out.push(`| その他・メモ | ${val(otherId)} |`);
+    return out.length ? ["| 名前 | 状態 |", "|---|---|", ...out] : ["（未記入）"];
+  };
+  L.push("## 2. 使っているAI", ...status("ai", "ai_other"), "");
+  L.push("## 3. 使っているASP", ...status("asp", "asp_other"), "");
+  const gs = picked("genre").map(g => { const w = OPT.genre.find(o => o[0] === g)[1]; return "- " + g + (w ? " ⚠️規制強" : ""); });
+  L.push("## 4. ジャンル", ...(gs.length ? gs : ["（未記入）"]));
+  if (val("genre_detail")) L.push("- 詳しく：" + val("genre_detail"));
+  L.push("", "## 5. 媒体", ...(picked("media").map(m => "- " + m)));
+  if (!picked("media").length) L.push("（未記入）");
+  if (val("media_url")) L.push("- URL・アカウント：" + val("media_url"));
+  L.push("", "## 6. 自分のこと",
+    "- アフィリエイト歴：" + (one("career") || ""),
+    "- 累計報酬：" + (one("earned") || ""),
+    "- 1週間に使える時間：" + (one("time") || ""),
+    "- 月の予算：" + (one("budget") || ""),
+    "- 顔出し：" + (one("face") || ""),
+    "- 得意なこと：" + picked("skill").join("、"),
+    "- 紹介商品の使用経験：" + (one("used") || ""),
+    "- 自分の経験で語れること：" + val("story").replace(/\n/g, " / "), "");
+  L.push("## 7. 目標", "- 3か月後：" + val("goal3"), "- 1年後：" + val("goal12"), "- いちばん困っていること：" + val("trouble").replace(/\n/g, " / "), "");
+  L.push("## 8. 今の数字", "| 期間 | 表示回数 | クリック | 発生件数 | 確定件数 | 発生金額 |", "|---|---|---|---|---|---|",
+    `| ${val("n_period")} | ${val("n_imp")} | ${val("n_click")} | ${val("n_cv")} | ${val("n_ok")} | ${val("n_yen") ? val("n_yen") + "円" : ""} |`);
+  if (val("n_memo")) L.push("- メモ：" + val("n_memo").replace(/\n/g, " / "));
+  L.push("", "## 9. 紹介している案件", "| 案件名 | ASP | 報酬単価 | 成果条件 | 掲載ページ |", "|---|---|---|---|---|");
+  readList("deal", deals.length, DEAL_F).filter(d => DEAL_F.some(f => d[f])).forEach(d => L.push(`| ${d.name} | ${d.asp} | ${d.pay} | ${d.cond} | ${d.where} |`));
+  return L.join("\n");
+}
+function pageMd(p) {
+  return [`# ${p.title || "ページ"}`, "", "## 基本情報", `- URL：${p.url}`, `- ページの種類：${p.type}`, `- 狙っている検索キーワード：${p.kw}`, `- 紹介している案件：${p.deal}`, `- 読者にしてほしい行動：${p.goal}`, "", "## 数字", `- ${p.num}`, "", "## 本文", "", p.body].join("\n");
+}
+
+function calc() {
+  const c = +val("n_click"), v = +val("n_cv");
+  const has = val("n_click") !== "";
+  $("#c_cvr").textContent = has && c > 0 ? (v / c * 100).toFixed(2) + "%" : "―";
+  $("#c_exp").textContent = has ? (c * 0.01).toFixed(1) + " 件" : "―";
+  let r = "";
+  if (has && c >= 50 && v === 0) r = `${c} クリックは「読者を動かす力がある」という良い兆候です。一方で成果 0 件なので、クリックする人と買う人がずれている可能性があります。軍師の /diagnose で原因を絞り込みましょう。`;
+  else if (has && v > 0) r = `成果が出ています。どのページ・どの投稿から出たかを特定すると、同じ型で増やせます。`;
+  else if (has && c < 50) r = `まだ数字が少なく、良し悪しは判断できません。まずはクリック 100 を目指しましょう。`;
+  $("#c_read").textContent = r; $("#c_read").hidden = !r;
+}
+function progress() {
+  const done = [
+    picked("role").length, document.querySelector('[id^="st_ai_"] option:checked:not([value=""])') || val("ai_other"),
+    document.querySelector('[id^="st_asp_"] option:checked:not([value=""])') || val("asp_other"),
+    picked("genre").length || val("genre_detail"), picked("media").length,
+    picked("career").length || picked("earned").length, val("goal3") || val("trouble"), val("n_click"),
+    readList("deal", deals.length, DEAL_F).some(d => d.name), readList("page", pages.length, PAGE_F).some(p => p.body), 1
+  ].filter(Boolean).length;
+  $("#pg").textContent = `${done} / 11 項目`;
+  $("#pgbar").style.width = (done / 11 * 100) + "%";
+}
+function renderOut() {
+  $("#out").textContent = profileMd();
+  const ps = readList("page", pages.length, PAGE_F);
+  $("#pageOuts").innerHTML = ps.map((p, i) => p.body ? `<div class="chips"><button type="button" data-copy-page="${i}">pages/${esc(p.title || "page" + (i + 1))}.md をコピー</button></div>` : "").join("");
+  calc(); progress();
+  try { localStorage.setItem(KEY, JSON.stringify(collect())); } catch (e) {}
+}
+
+let toastT;
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
+function copy(text, label) {
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#out")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("コピーできなかったので文章を選択しました。長押しでコピーしてください"); };
+  try { navigator.clipboard.writeText(text).then(() => toast(label + " をコピーしました"), fallback); } catch (e) { fallback(); }
+}
+
+buildChips();
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+apply(saved || SAMPLE);
+renderOut();
+
+document.addEventListener("input", renderOut);
+document.addEventListener("change", renderOut);
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.id === "addDeal") { deals = readList("deal", deals.length, DEAL_F); deals.push({}); renderLists(); renderOut(); }
+  if (t.id === "addPage") { pages = readList("page", pages.length, PAGE_F); pages.push({}); renderLists(); renderOut(); }
+  if (t.dataset.delDeal) { deals = readList("deal", deals.length, DEAL_F); deals.splice(+t.dataset.delDeal, 1); if (!deals.length) deals = [{}]; renderLists(); renderOut(); }
+  if (t.dataset.delPage) { pages = readList("page", pages.length, PAGE_F); pages.splice(+t.dataset.delPage, 1); if (!pages.length) pages = [{}]; renderLists(); renderOut(); }
+  if (t.id === "copyProfile" || t.id === "copyBar") copy(profileMd(), "profile.md");
+  if (t.dataset.copyPage) { const p = readList("page", pages.length, PAGE_F)[+t.dataset.copyPage]; copy(pageMd(p), "ページ"); }
+  if (t.id === "reset") $("#resetBox").innerHTML = '本当にすべて消しますか？ <button type="button" class="small" id="resetYes">消す</button><button type="button" class="ghost small" id="resetNo">やめる</button>';
+  if (t.id === "resetNo") $("#resetBox").innerHTML = '<button type="button" class="ghost small" id="reset">入力をすべて消す</button>';
+  if (t.id === "resetYes") {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    document.querySelectorAll("input, textarea, select").forEach(el => { if (el.type === "checkbox" || el.type === "radio") el.checked = false; else el.value = ""; });
+    deals = [{}]; pages = [{}]; renderLists();
+    $("#resetBox").innerHTML = '<button type="button" class="ghost small" id="reset">入力をすべて消す</button>';
+    renderOut(); toast("消しました");
+  }
+});
+</script>
