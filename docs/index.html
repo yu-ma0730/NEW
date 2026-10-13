@@ -441,76 +441,46 @@ function draftBlock(p) {
   </section>`;
 }
 
-// ---------- 手法・プロンプト集（合言葉で暗号化して、このブラウザにだけ保存） ----------
-// 中身は AES-GCM で暗号化して保存する。鍵は合言葉から PBKDF2 で作り、合言葉そのものはどこにも保存しない。
-let vaultKey = null, vaultPlain = {}, vaultEdit = null;
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-const cryptoOK = () => !!(window.crypto && crypto.subtle);
-async function deriveKey(pass, salt) {
+// ---------- 手法・プロンプト集（このブラウザにだけ保存。1つずつコピーできる） ----------
+let promptEdit = null;
+const plist = pid => { S._prompts = S._prompts || {}; return (S._prompts[pid] = S._prompts[pid] || []); };
+// 以前の合言葉付き（暗号化）の保存から、一度だけ移すための読み出し
+async function legacyUnlock(pass) {
+  const V = S._vault, unb64 = x => Uint8Array.from(atob(x), c => c.charCodeAt(0));
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 210000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: unb64(V.salt), iterations: 210000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const dec = async box => JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.ct))));
+  try { if ((await dec(V.check)).ok !== "gunshi") throw 0; } catch (e) { throw { message: "合言葉が違います" }; }
+  for (const [pid, list] of Object.entries(V.items || {})) for (const box of list) { try { plist(pid).push({ id: box.id, ...(await dec(box)) }); } catch (e) {} }
+  delete S._vault; save();
 }
-async function enc(key, obj) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(obj))); return { iv: b64(iv), ct: b64(ct) }; }
-async function dec(key, box) { const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
-async function vaultCreate(pass) {
-  const salt = crypto.getRandomValues(new Uint8Array(16)), key = await deriveKey(pass, salt);
-  S._vault = { v: 1, salt: b64(salt), check: await enc(key, { ok: "gunshi" }), items: {} }; save();
-  vaultKey = key; vaultPlain = {};
-}
-async function vaultUnlock(pass) {
-  const V = S._vault, key = await deriveKey(pass, unb64(V.salt));
-  try { const c = await dec(key, V.check); if (c.ok !== "gunshi") throw 0; } catch (e) { throw { message: "合言葉が違います" }; }
-  const plain = {};
-  for (const [pid, list] of Object.entries(V.items || {})) { plain[pid] = []; for (const box of list) { try { plain[pid].push({ id: box.id, ...(await dec(key, box)) }); } catch (e) {} } }
-  vaultKey = key; vaultPlain = plain;
-}
-function vaultLock() { vaultKey = null; vaultPlain = {}; vaultEdit = null; }
-async function vaultSave(pid, item) {
-  const V = S._vault, list = (V.items[pid] = V.items[pid] || []), box = { id: item.id, ...(await enc(vaultKey, { title: item.title, body: item.body })) };
-  const i = list.findIndex(x => x.id === item.id); if (i >= 0) list[i] = box; else list.push(box);
-  const pl = (vaultPlain[pid] = vaultPlain[pid] || []), j = pl.findIndex(x => x.id === item.id); if (j >= 0) pl[j] = item; else pl.push(item);
-  save();
-}
-function vaultDelete(pid, id) { const V = S._vault; V.items[pid] = (V.items[pid] || []).filter(x => x.id !== id); vaultPlain[pid] = (vaultPlain[pid] || []).filter(x => x.id !== id); save(); }
 function vaultBlock(p) {
-  const pid = p.id, n = (S._vault?.items?.[pid] || []).length;
+  const pid = p.id, list = plist(pid), ed = promptEdit && promptEdit.pid === pid ? (list.find(x => x.id === promptEdit.id) || {}) : {};
   const head = `<section class="card" id="vault-${pid}"><h2>${p.name} の手法・プロンプト集</h2>
-    <p class="hint">自分の手法やプロンプトを保存して、1つずつコピーできます。中身は合言葉で暗号化して、このブラウザにだけ保存されます（どこにも送信されず、GitHub にも入りません）。</p>`;
-  if (!cryptoOK()) return head + `<p class="status ng" style="margin:0">このブラウザでは暗号化が使えないため、プロンプト集は使えません。</p></section>`;
-  if (!S._vault) return head + `<div class="sub"><div class="sub-head">はじめに合言葉を決める（全媒体で共通）</div>
-      <div class="grid2">${field("合言葉（8文字以上）", `<input type="password" id="f-vpass1" autocomplete="new-password">`)}${field("もう一度", `<input type="password" id="f-vpass2" autocomplete="new-password">`)}</div>
-      <p class="hint" style="margin:0">合言葉を忘れると、保存したプロンプトは二度と開けません（誰にも戻せません）。APIキーとは別の言葉にしてください。</p>
-      <div class="actions"><button type="button" class="primary small" data-vcreate="${pid}">合言葉を決める</button><span class="status" id="vStatus-${pid}"></span></div></div></section>`;
-  if (!vaultKey) return head + `<div class="sub"><div class="sub-head">🔒 鍵がかかっています（${p.name}：${n}件）</div>
-      ${field("合言葉", `<input type="password" id="f-vpass-${pid}" autocomplete="current-password">`)}
-      <div class="actions"><button type="button" class="primary small" data-vunlock="${pid}">開く</button><span class="status" id="vStatus-${pid}"></span></div></div></section>`;
-  const list = vaultPlain[pid] || [], ed = vaultEdit && vaultEdit.pid === pid ? (list.find(x => x.id === vaultEdit.id) || {}) : {};
+    <p class="hint">自分の手法やプロンプトを保存して、1つずつコピーできます。このブラウザにだけ保存され、どこにも送信されず、GitHub にも入りません。</p>`;
+  if (S._vault) return head + `<div class="sub"><div class="sub-head">以前の合言葉付きの保存を移します（一度だけ）</div>
+      ${field("以前決めた合言葉", `<input type="password" id="f-vpass-${pid}" autocomplete="current-password">`)}
+      <div class="actions"><button type="button" class="primary small" data-vmigrate="${pid}">移す</button><span class="status" id="vStatus-${pid}"></span></div></div></section>`;
   return head + `${list.length ? `<div class="rows">${list.map(it => `<div class="sub"><div class="sub-head"><span>${esc(it.title || "無題")}</span><span class="actions"><button type="button" class="primary small" data-vcopy="${pid}" data-id="${it.id}">コピー</button><button type="button" class="ghost small" data-vedit="${pid}" data-id="${it.id}">直す</button><button type="button" class="ghost small" data-vdel="${pid}" data-id="${it.id}">削除</button></span></div>
       <p class="hint" style="margin:0;white-space:pre-wrap">${esc((it.body || "").slice(0, 120))}${(it.body || "").length > 120 ? "…" : ""}</p></div>`).join("")}</div>` : `<p class="hint" style="margin:0">まだ保存されていません。</p>`}
     <div class="sub"><div class="sub-head">${ed.id ? "プロンプトを直す" : "プロンプトを追加する"}</div>
       ${field("名前（例：問いかけで会話を生む型）", `<input type="text" id="f-vtitle-${pid}" value="${esc(ed.title || "")}">`)}
       ${field("プロンプト・手法の本文", `<textarea class="big" id="f-vbody-${pid}">${esc(ed.body || "")}</textarea>`)}
       <div class="actions"><button type="button" class="primary small" data-vsave="${pid}">${ed.id ? "上書き保存" : "保存する"}</button>${ed.id ? `<button type="button" class="ghost small" data-vcancel="${pid}">やめる</button>` : ""}</div></div>
-    <div class="actions"><button type="button" class="ghost small" data-vlock="${pid}">🔒 鍵をかける</button><button type="button" class="ghost small" data-vbackup="${pid}">バックアップをコピー（暗号化のまま）</button></div>
-    <details><summary class="hint">バックアップから戻す</summary><div class="sub">${field("バックアップの文章を貼り付け", `<textarea id="f-vrestore-${pid}"></textarea>`)}<p class="hint" style="margin:0">今あるプロンプトは置き換わります。戻したあとは、バックアップを作ったときの合言葉で開きます。</p><div class="actions"><button type="button" class="small" data-vrestore="${pid}">戻す</button></div></div></details>
+    <div class="actions"><button type="button" class="ghost small" data-vbackup="${pid}">全媒体のプロンプトをバックアップ（コピー）</button></div>
+    <details><summary class="hint">バックアップから戻す</summary><div class="sub">${field("バックアップの文章を貼り付け", `<textarea id="f-vrestore-${pid}"></textarea>`)}<p class="hint" style="margin:0">今あるプロンプトは、バックアップの内容に置き換わります。</p><div class="actions"><button type="button" class="small" data-vrestore="${pid}">戻す</button></div></div></details>
   </section>`;
 }
 async function vaultClick(t) {
-  const pid = t.dataset.vcreate || t.dataset.vunlock || t.dataset.vsave || t.dataset.vcopy || t.dataset.vedit || t.dataset.vdel || t.dataset.vcancel || t.dataset.vlock || t.dataset.vbackup || t.dataset.vrestore;
-  const st = $("#vStatus-" + pid), say = (m, ng) => { if (st) { st.className = "status" + (ng ? " ng" : ""); st.textContent = m; } else toast(m); };
-  try {
-    if (t.dataset.vcreate) { const a = $("#f-vpass1").value, b = $("#f-vpass2").value; if (a.length < 8) return say("8文字以上にしてください", 1); if (a !== b) return say("2回の入力が一致しません", 1); if (apiKey && a === apiKey) return say("APIキーとは別の言葉にしてください", 1); t.disabled = true; say("準備しています…"); await vaultCreate(a); go(view, false, true); toast("合言葉を決めました。忘れないようにしてください"); }
-    if (t.dataset.vunlock) { t.disabled = true; say("開いています…"); await vaultUnlock($("#f-vpass-" + pid).value); go(view, false, true); }
-    if (t.dataset.vsave) { const title = $("#f-vtitle-" + pid).value.trim(), body = $("#f-vbody-" + pid).value; if (!body.trim()) return toast("本文を入れてください"); await vaultSave(pid, { id: vaultEdit?.pid === pid ? vaultEdit.id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, body }); vaultEdit = null; go(view, false, true); toast("暗号化して保存しました"); }
-    if (t.dataset.vcopy) { const it = (vaultPlain[pid] || []).find(x => x.id === t.dataset.id); if (it) copy(it.body, "「" + (it.title || "無題") + "」"); }
-    if (t.dataset.vedit) { vaultEdit = { pid, id: t.dataset.id }; go(view, false, true); $("#f-vtitle-" + pid)?.scrollIntoView({ block: "center" }); }
-    if (t.dataset.vcancel) { vaultEdit = null; go(view, false, true); }
-    if (t.dataset.vdel) { if (t.dataset.sure) { vaultDelete(pid, t.dataset.id); go(view, false, true); toast("削除しました"); } else { t.dataset.sure = "1"; t.textContent = "本当に削除"; } }
-    if (t.dataset.vlock) { vaultLock(); go(view, false, true); toast("鍵をかけました"); }
-    if (t.dataset.vbackup) copy(JSON.stringify(S._vault), "バックアップ");
-    if (t.dataset.vrestore) { let V; try { V = JSON.parse($("#f-vrestore-" + pid).value); } catch (e) { return toast("バックアップの形が正しくありません"); } if (!V || !V.salt || !V.check || !V.items) return toast("バックアップの形が正しくありません"); if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "今のプロンプトを置き換えて戻す"; return; } S._vault = V; save(); vaultLock(); go(view, false, true); toast("戻しました。バックアップを作ったときの合言葉で開いてください"); }
-  } catch (err) { say(err.message || "うまくいきませんでした", 1); t.disabled = false; }
+  const pid = t.dataset.vmigrate || t.dataset.vsave || t.dataset.vcopy || t.dataset.vedit || t.dataset.vdel || t.dataset.vcancel || t.dataset.vbackup || t.dataset.vrestore;
+  if (t.dataset.vcopy) { const it = plist(pid).find(x => x.id === t.dataset.id); if (it) copy(it.body, "「" + (it.title || "無題") + "」"); return; }
+  if (t.dataset.vbackup) { copy(JSON.stringify({ gunshiPrompts: 1, data: S._prompts || {} }), "バックアップ"); return; }
+  if (t.dataset.vsave) { const title = $("#f-vtitle-" + pid).value.trim(), body = $("#f-vbody-" + pid).value; if (!body.trim()) return toast("本文を入れてください"); const L = plist(pid), id = promptEdit?.pid === pid ? promptEdit.id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6), k = L.findIndex(x => x.id === id); if (k >= 0) L[k] = { id, title, body }; else L.push({ id, title, body }); promptEdit = null; save(); go(view, false, true); toast("保存しました"); }
+  if (t.dataset.vedit) { promptEdit = { pid, id: t.dataset.id }; go(view, false, true); $("#f-vtitle-" + pid)?.scrollIntoView({ block: "center" }); }
+  if (t.dataset.vcancel) { promptEdit = null; go(view, false, true); }
+  if (t.dataset.vdel) { if (t.dataset.sure) { S._prompts[pid] = plist(pid).filter(x => x.id !== t.dataset.id); save(); go(view, false, true); toast("削除しました"); } else { t.dataset.sure = "1"; t.textContent = "本当に削除"; } }
+  if (t.dataset.vrestore) { let B; try { B = JSON.parse($("#f-vrestore-" + pid).value); } catch (e) { return toast("バックアップの形が正しくありません"); } if (!B || !B.gunshiPrompts || typeof B.data !== "object") return toast("バックアップの形が正しくありません"); if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "今のプロンプトを置き換えて戻す"; return; } S._prompts = B.data; save(); go(view, false, true); toast("戻しました"); }
+  if (t.dataset.vmigrate) { const st = $("#vStatus-" + pid); t.disabled = true; st.className = "status"; st.textContent = "移しています…"; try { await legacyUnlock($("#f-vpass-" + pid).value); go(view, false, true); toast("移しました。これからは合言葉なしで使えます"); } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; t.disabled = false; } }
 }
 
 // ---------- 投稿の記録と振り返り ----------
@@ -996,7 +966,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.logfrom !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.logfrom]; if (s) { addLog(p.id, { type: LOG_TYPES.includes(s.type) ? s.type : (LOG_TYPES.find(x => (s.type || "").includes(x.replace("型", ""))) || "その他"), body: s.body || "" }); toast(`${p.name}の記録に追加しました。数日後に数字を入れてください`); } }
   if (t.dataset.logdraft) { const pid = t.dataset.logdraft, d = arr(pid + ".drafts")[+t.dataset.i]; if (d) { addLog(pid, { type: LOG_TYPES.find(x => (d.title || "").includes(x.replace("型", ""))) || "その他", body: d.text || "" }); go(view, false, true); toast("記録に追加しました"); } }
   if (t.dataset.logai) reviewLog(t.dataset.logai);
-  if (["vcreate", "vunlock", "vsave", "vcopy", "vedit", "vdel", "vcancel", "vlock", "vbackup", "vrestore"].some(k => t.dataset[k] !== undefined)) vaultClick(t);
+  if (["vmigrate", "vsave", "vcopy", "vedit", "vdel", "vcancel", "vbackup", "vrestore"].some(k => t.dataset[k] !== undefined)) vaultClick(t);
   if (t.dataset.logcopy) copy(logMd(PLATFORMS.find(x => x.id === t.dataset.logcopy)), "記録");
   if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
   if (t.dataset.fixpr) { const pid = t.dataset.fixpr, a = arr(pid + ".drafts"), d = a[+t.dataset.i]; if (d) { d.text = fixPR(d.text); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
