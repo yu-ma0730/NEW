@@ -82,6 +82,21 @@ textarea.big { min-height: 320px; font-size: 13px; line-height: 1.6; font-family
 .note { font-size: 0.85rem; color: var(--muted); margin: 8px 0 0; }
 .badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); }
 
+.load { margin-top: 20px; }
+.load textarea { min-height: 120px; }
+.drop { display: grid; place-items: center; gap: 4px; min-height: 120px; padding: 12px; border: 2px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 0.88rem; text-align: center; cursor: pointer; background: var(--bg); }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.thumb { position: relative; width: 72px; height: 72px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button { position: absolute; top: 2px; right: 2px; padding: 0 6px; font-size: 0.75rem; line-height: 1.4; }
+.loadmsg { font-size: 0.88rem; margin: 8px 0 0; overflow-wrap: anywhere; }
+.loadmsg.err { color: var(--ng); }
+.loadmsg.ok { color: var(--ok); }
+.outputs { display: grid; gap: 12px; }
+.outputs textarea.big { min-height: 200px; }
+.outhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.outhead b { font-size: 0.9rem; }
 .check { margin-top: 20px; }
 .check textarea { min-height: 200px; line-height: 1.8; }
 .range { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9rem; }
@@ -114,12 +129,39 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
 <main class="wrap">
   <header>
     <h1>Threads 投稿メーカー</h1>
-    <p>欄を埋めてクオリティを選ぶと、AIに貼るプロンプトができます。できた投稿は下の「仕上げチェック」で直します。</p>
+    <p>商品の画像や説明文を貼って読み込み → 手で直す → クオリティを選ぶ → プロンプトをコピー。できた投稿は「仕上げチェック」で直します。</p>
   </header>
+
+  <section class="card load" aria-labelledby="s0">
+    <h2 class="step" id="s0"><span class="no">STEP 1</span>商品を貼って読み込む</h2>
+    <div class="grid" style="margin-top:0">
+      <div class="field">
+        <label for="srcText">商品・サービスのテキスト<span class="hint">ASPのプログラム詳細やAmazonの商品説明をそのまま貼る</span></label>
+        <textarea id="srcText" placeholder="例：商品名、価格、特徴、広告主の注意事項などをコピーして貼り付け"></textarea>
+        <div class="cnt"></div>
+      </div>
+      <div id="imgArea">
+        <label class="note" style="margin:0;font-weight:700;color:var(--fg)" for="imgInput">商品の画像</label>
+        <label class="drop" id="drop" for="imgInput">
+          <span>画像をここにドロップ、タップして選ぶ、または貼り付け</span>
+          <span id="imgLimit"></span>
+        </label>
+        <input id="imgInput" type="file" accept="image/*" multiple hidden>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="note" style="margin:0" id="loadHint"></span>
+      <span class="spacer"></span>
+      <button type="button" id="stopLoad" hidden>止める</button>
+      <button type="button" class="primary" id="loadBtn">読み込んで欄に入れる</button>
+    </div>
+    <p class="loadmsg" id="loadMsg" role="status"></p>
+  </section>
 
   <div class="grid">
     <section class="card stack" aria-labelledby="s1">
-      <h2 class="step" id="s1"><span class="no">STEP 1</span>変数を書く <span class="badge" id="exampleBadge" hidden>例が入っています</span></h2>
+      <h2 class="step" id="s1"><span class="no">STEP 2</span>確認して手で直す <span class="badge" id="exampleBadge" hidden>例が入っています</span></h2>
 
       <div class="two">
         <div class="field">
@@ -167,11 +209,18 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
           </select>
         </div>
         <div class="field">
-          <label for="f-a8">A8提携状況</label>
-          <select id="f-a8" data-key="a8">
-            <option>承認済み</option><option>申請中</option><option>未申請</option>
+          <label for="f-asp">ASP</label>
+          <select id="f-asp" data-key="asp">
+            <option>A8.net</option><option>Amazonアソシエイト</option><option>もしもアフィリエイト</option><option>楽天アフィリエイト</option><option>その他</option>
           </select>
         </div>
+      </div>
+
+      <div class="field">
+        <label for="f-a8">提携状況</label>
+        <select id="f-a8" data-key="a8">
+          <option>承認済み</option><option>申請中</option><option>未申請</option>
+        </select>
       </div>
 
       <div class="field" id="expDetailWrap">
@@ -193,7 +242,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
         </div>
       </div>
 
-      <h2 class="step" id="s2"><span class="no">STEP 2</span>クオリティを選ぶ</h2>
+      <h2 class="step" id="s2"><span class="no">STEP 3</span>クオリティを選ぶ</h2>
       <div class="personas" id="personas" role="group" aria-labelledby="s2"></div>
       <p class="count-note" id="countNote"></p>
 
@@ -205,20 +254,30 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
     </section>
 
     <section class="card sticky" aria-labelledby="s3">
-      <h2 class="step" id="s3"><span class="no">STEP 3</span>プロンプトをコピー</h2>
-      <label for="prompt" class="note" style="margin:0">AIに貼るプロンプト（画像があれば一緒に貼る）</label>
-      <textarea id="prompt" class="big" readonly></textarea>
-      <div class="cnt" id="promptCnt"></div>
+      <h2 class="step" id="s3"><span class="no">STEP 4</span>プロンプトをコピー</h2>
+      <div class="outputs">
+        <div>
+          <div class="outhead"><b>全体のプロンプト</b><span class="note" style="margin:0">ルール・4人の設定・出力形式</span><span class="spacer"></span><button type="button" id="copyRules">コピー</button></div>
+          <textarea id="rulesOut" class="big" readonly aria-label="全体のプロンプト"></textarea>
+          <div class="cnt" id="rulesCnt"></div>
+        </div>
+        <div>
+          <div class="outhead"><b>変数のプロンプト</b><span class="note" style="margin:0">STEP 2の内容</span><span class="spacer"></span><button type="button" id="copyVars">コピー</button></div>
+          <textarea id="varsOut" class="big" readonly aria-label="変数のプロンプト" style="min-height:160px"></textarea>
+          <div class="cnt" id="varsCnt"></div>
+        </div>
+      </div>
       <div class="row">
         <span class="note" id="warnA8" style="margin:0"></span>
         <span class="spacer"></span>
-        <button type="button" class="primary" id="copyPrompt">プロンプトをコピー</button>
+        <button type="button" class="primary" id="copyPrompt">まとめてコピー</button>
       </div>
+      <p class="note">同じAIのチャットで続けて別の商品を書くときは、2回目から「変数のプロンプト」だけ貼ればOKです。</p>
     </section>
   </div>
 
   <section class="card check" aria-labelledby="s4">
-    <h2 class="step" id="s4"><span class="no">STEP 4</span>仕上げチェック</h2>
+    <h2 class="step" id="s4"><span class="no">STEP 5</span>仕上げチェック</h2>
     <div class="grid" style="margin-top:0">
       <div>
         <label for="post" class="note" style="margin:0">AIが書いた投稿から1つ選んで貼り、手で直す</label>
@@ -268,7 +327,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
   function len(s) { return graphemes(s).length; }
   function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
-  /* ---------- STEP 1-3: prompt builder ---------- */
+  /* ---------- STEP 1-4: load, edit, pick quality, copy ---------- */
   var PERSONAS = [
     { lv: 1, name: "おしゃべり上手な主婦「さとみさん」", short: "主婦「さとみさん」",
       tone: "近所のママ友に話すようなやわらかいタメ口（「〜なのよ」「〜じゃない？」）",
@@ -287,16 +346,16 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       skill: "1文目を最短にし、全文のリズムと語尾を磨き込む。4つの文それぞれの役割を最大まで強める。",
       card: "歯切れのいいタメ口。言葉とリズムを磨き込む" }
   ];
-  var FIELDS = ["genre", "tone", "target", "product", "info", "exp", "expdetail", "a8", "pr", "ng"];
+  var FIELDS = ["genre", "tone", "target", "product", "info", "exp", "expdetail", "asp", "a8", "pr", "ng"];
   var EXAMPLE = {
     genre: "家電・キッチン", tone: "ペルソナに任せる", target: "毎朝のコーヒー代がかさむ30代の共働き",
     product: "全自動コーヒーメーカー（例）", info: "価格12,800円（税込）。ボタン1つで豆挽きから抽出まで。（例：ここに公式サイトの記載を貼る）",
-    exp: "不明", expdetail: "", a8: "承認済み", pr: "【PR】", ng: "特になし"
+    exp: "不明", expdetail: "", asp: "A8.net", a8: "承認済み", pr: "【PR】", ng: "特になし"
   };
   var PLACEHOLDER = {
     genre: "{ジャンル}", tone: "ペルソナに任せる", target: "{ターゲット（具体的な悩みを抱えた層）}",
     product: "{商品名／なければ「カテゴリのみ」と記載}", info: "{価格・特徴など公式に書かれた事実}",
-    exp: "不明", expdetail: "", a8: "承認済み", pr: "【PR】", ng: "特になし"
+    exp: "不明", expdetail: "", asp: "A8.net", a8: "承認済み", pr: "【PR】", ng: "特になし"
   };
 
   var personaBox = $("personas");
@@ -309,27 +368,47 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
   function val(key) { var v = el(key).value.trim(); return v || PLACEHOLDER[key]; }
   function selected() { return PERSONAS.filter(function (p) { return $("lv" + p.lv).checked; }); }
 
-  function buildPrompt() {
+  var POST_FORMAT = [
+    "伸びる確率（AI自己採点）：〇〇％",
+    "文字数（概算）：〇〇字",
+    "",
+    "（本文）",
+    "",
+    "採点内訳：",
+    "・フック力：〇/20",
+    "・具体性：〇/20",
+    "・逆張り強度：〇/20",
+    "・共感性：〇/20",
+    "・コメント誘発力：〇/20",
+    "コンプラチェック：PR表記 ○／NG表現なし ○／体験談ルール ○",
+    "",
+    "（メンバー名）のプレゼン：",
+    "・（この投稿のおすすめポイント1）",
+    "・（おすすめポイント2）",
+    "・（おすすめポイント3）"
+  ].join("\n");
+
+  function buildRules() {
     var ps = selected();
-    var pr = val("pr");
-    var exp = val("exp") + (val("exp") === "あり" && el("expdetail").value.trim() ? "（内容：" + el("expdetail").value.trim() + "）" : "");
     var team = ps.map(function (p) {
       return "### Lv" + p.lv + "：" + p.name + "\n- 口調：" + p.tone + "\n- 技術：" + p.skill;
     }).join("\n\n");
     var blocks = ps.map(function (p, i) {
-      var first = i === 0;
       return "■ Lv" + p.lv + " " + p.short + "\n\n" +
-        (first
-          ? "【パターンA｜価格ギャップ重視型】\n伸びる確率（AI自己採点）：〇〇％\n文字数（概算）：〇〇字\n\n（本文）\n\n採点内訳：\n・フック力：〇/20\n・具体性：〇/20\n・逆張り強度：〇/20\n・共感性：〇/20\n・コメント誘発力：〇/20\nコンプラチェック：PR表記 ○／NG表現なし ○／体験談ルール ○\n\n【パターンB｜時短・手軽さ重視型】\n（同じ形式）\n\n【パターンC｜逆張り・共感重視型】\n（同じ形式）"
+        (i === 0
+          ? "【パターンA｜価格ギャップ重視型】\n" + POST_FORMAT + "\n\n【パターンB｜時短・手軽さ重視型】\n（同じ形式）\n\n【パターンC｜逆張り・共感重視型】\n（同じ形式）"
           : "（同じ形式でパターンA〜C）");
     }).join("\n━━━━━━━━━━━━━━━\n");
 
     return [
-      "# Threads バズ投稿生成プロンプト（悩み解決・商品紹介型／1行目のみ改行パターン／" + ps.length + "人×3案出し／A8.net・PR表記対応）",
+      "# Threads バズ投稿生成プロンプト（悩み解決・商品紹介型／1行目のみ改行パターン／" + ps.length + "人×3案出し／アフィリエイト・PR表記対応）",
+      "",
+      "このプロンプトの後に「変数」が届きます。変数の内容で投稿を書いてください。",
+      "同じチャットで新しい「変数」だけが届いたら、このルールのまま新しい商品で書き直してください。",
       "",
       "## 役割",
       "あなたはThreadsで30,000表示以上を獲得する投稿を量産するSNSライターチームです。",
-      "下の" + ps.length + "人のメンバーが、同じ商品について、それぞれ3パターンずつ投稿を作ります。",
+      "下の" + ps.length + "人のメンバーが、同じ商品について、それぞれ3パターンずつ投稿を書き、自分の投稿を採点し、おすすめポイントをプレゼンします。",
       "",
       "変数から「ビフォー状態」「アフター状態」「競合の選択肢」「ハードルの低さ（価格・手軽さ）」を考えて投稿を作成してください。",
       "ただし推測してよいのは読み手の状況（悩み・今の選択肢・理想の状態）だけです。",
@@ -348,19 +427,20 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       "- 句点（。）で文を区切るが、改行はしない",
       "",
       "【正しい形式の例】",
-      pr + "1文目（フック）。",
+      "（PR表記）1文目（フック）。",
       "2文目だって、〜🥹3文目〜試して。4文目〜良くない？🥹",
       "",
       "## PR表記ルール（ステマ規制・厳守）",
-      "- アフィリエイト（A8.net）の紹介なので、この投稿は広告です。2023年10月からステマ規制の対象です。",
-      "- 本文の先頭に「" + pr + "」を必ず入れます。この表記も文字数に含めます。",
+      "- アフィリエイトの紹介なので、この投稿は広告です。2023年10月からステマ規制の対象です。",
+      "- 本文の先頭に変数「PR表記」を必ず入れます。この表記も文字数に含めます。",
       "- 「友達がLINEで教えてくれた感」は口調の話です。広告であることを隠す意味ではありません。PR表記を消したり、目立たない位置に移したりしないでください。",
       "- 第三者の中立な口コミのように見せる書き方（「たまたま見つけた」「宣伝じゃないけど」など）は禁止です。",
       "",
-      "## A8.net 利用時のルール",
-      "- 変数「A8提携状況」が「承認済み」でない場合は、投稿の前に「提携承認を先に取ってください」と1行で伝えます。",
+      "## ASP（アフィリエイト）利用時のルール",
+      "- 変数「提携状況」が「承認済み」でない場合は、投稿の前に「提携承認を先に取ってください」と1行で伝えます。",
       "- 変数「広告主の禁止事項」に書かれた表現は絶対に使いません。",
       "- アフィリエイトリンクは本文に入れず、ツリー（自分への返信）投稿用の文を別に作ります。ツリー投稿にもPR表記を入れます。",
+      "- 変数「ASP」がAmazonアソシエイトの場合：ツリー投稿に「Amazonのアソシエイトとして、（アカウント名）は適格販売により収入を得ています。」を入れます。Amazonの商品画像は投稿に転載しません。",
       "",
       "## 表現のNGルール（厳守）",
       "次の表現は、採点がどれだけ上がっても使いません。",
@@ -376,7 +456,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       "合計160〜200文字以内（PR表記・絵文字・改行も含めて1文字ずつ数える）。",
       "",
       "【1文目｜悩み特定フック】※この後だけ改行",
-      "「" + pr + "（ターゲットの悩み）に悩んでる人、（商品/カテゴリ）使った方がいい。」",
+      "「（PR表記）（ターゲットの悩み）に悩んでる人、（商品/カテゴリ）使った方がいい。」",
       "→ 当事者が1秒で「自分のことだ」と気づく断定文。",
       "",
       "【2文目｜ギャップ提示】※改行せず続ける",
@@ -408,8 +488,14 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       "5. コメント誘発力（疑問形・反論したくなる要素があるか）",
       "採点外で「コンプラチェック」も行います。PR表記・NGルール・取扱経験ルールのどれか1つでも×なら、書き直してから出力してください。",
       "",
+      "## プレゼンのルール",
+      "- 各投稿の採点のあとに、書いたメンバー本人がその投稿のおすすめポイントを3つプレゼンします。",
+      "- 1つ40文字以内、そのメンバーの口調で書きます。",
+      "- 中身は「どの1文が誰にどう刺さるか」「なぜこの切り口にしたか」「どんな反応（保存・コメント）を狙っているか」など、投稿の狙いの説明です。",
+      "- プレゼンでも商品の効果を盛らないこと（NGルールはプレゼンにも適用）。",
+      "",
       "## トーン指示",
-      "- 口調は「" + val("tone") + "」を厳守（「ペルソナに任せる」なら各メンバーの口調）",
+      "- 口調は変数「口調」を厳守（「ペルソナに任せる」なら各メンバーの口調）",
       "- 友達がLINEで教えてくれた感を出す（売り込み口調はNG。ただしPR表記は必須）",
       "- 絵文字は🥹を中心に2回まで",
       "- 体言止め・口語OK、専門用語NG",
@@ -423,16 +509,26 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       "━━━━━━━━━━━━━━━",
       "",
       "【リンク用ツリー投稿】（本文への自分の返信として投稿）",
-      pr + "（商品名）はここから見られるよ👇",
-      "（A8.netのリンクを貼る）",
+      "（PR表記）（商品名）はここから見られるよ👇",
+      "（アフィリエイトリンクを貼る）",
+      "",
+      "【総合ランキング】",
+      "1位：Lv〇 パターン〇（〇〇％）理由：（30文字以内）",
+      "2位：Lv〇 パターン〇（〇〇％）理由：（30文字以内）",
+      "3位：Lv〇 パターン〇（〇〇％）理由：（30文字以内）",
       "",
       "【総合おすすめ】",
       "最も伸びる確率が高い案：Lv〇 パターン〇",
       "理由：（30文字以内で簡潔に）",
       "",
       "【要確認リスト】",
-      "・（【要確認：〇〇】にした項目や、出典が必要な表現など。なければ「なし」）",
-      "",
+      "・（【要確認：〇〇】にした項目や、出典が必要な表現など。なければ「なし」）"
+    ].join("\n");
+  }
+
+  function buildVars() {
+    var exp = val("exp") + (val("exp") === "あり" && el("expdetail").value.trim() ? "（内容：" + el("expdetail").value.trim() + "）" : "");
+    return [
       "## 変数",
       "- ジャンル：" + val("genre"),
       "- ターゲット：" + val("target"),
@@ -440,16 +536,16 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       "- 口調：" + val("tone"),
       "- 商品情報：" + val("info"),
       "- 取扱経験：" + exp,
-      "- ASP：A8.net",
-      "- A8提携状況：" + val("a8"),
+      "- ASP：" + val("asp"),
+      "- 提携状況：" + val("a8"),
       "- 広告主の禁止事項：" + val("ng"),
-      "- PR表記：" + pr
+      "- PR表記：" + val("pr")
     ].join("\n");
   }
 
   function updateCounters() {
     document.querySelectorAll(".field").forEach(function (f) {
-      var input = f.querySelector("[data-key]"), cnt = f.querySelector(".cnt");
+      var input = f.querySelector("input:not([type=file]), textarea"), cnt = f.querySelector(".cnt");
       if (!input || !cnt) return;
       var n = len(input.value), soft = parseInt(input.dataset.soft, 10);
       cnt.textContent = n + "字" + (soft ? " ／ 目安" + soft + "字" : "");
@@ -462,14 +558,19 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
     if (!ps.length) { $("lv3").checked = true; ps = selected(); }
     $("expDetailWrap").hidden = el("exp").value !== "あり";
     updateCounters();
-    var p = buildPrompt();
-    $("prompt").value = p;
-    $("promptCnt").textContent = "プロンプト " + len(p) + "字";
+    var r = buildRules(), v = buildVars();
+    $("rulesOut").value = r;
+    $("varsOut").value = v;
+    $("rulesCnt").textContent = len(r) + "字";
+    $("varsCnt").textContent = len(v) + "字";
     $("countNote").textContent = ps.length + "人 × 3案 ＝ " + ps.length * 3 + "案が出ます。" + (ps.length === 4 ? "読むのが大変なら2人くらいに絞るのもおすすめです。" : "");
-    $("warnA8").textContent = el("a8").value !== "承認済み" ? "A8.netの提携承認を先に取ってください" : "";
+    var warn = [];
+    if (el("a8").value !== "承認済み") warn.push("ASPの提携承認を先に取ってください");
+    if (el("asp").value === "Amazonアソシエイト") warn.push("Amazonの商品画像は投稿に転載しないでください");
+    $("warnA8").textContent = warn.join("／");
     var isExample = FIELDS.every(function (k) { return el(k).value === EXAMPLE[k]; });
     $("exampleBadge").hidden = !isExample;
-    var saved = {};
+    var saved = { src: $("srcText").value };
     FIELDS.forEach(function (k) { saved[k] = el(k).value; });
     saved.lv = ps.map(function (x) { return x.lv; });
     store.set("threads-maker-form", JSON.stringify(saved));
@@ -483,14 +584,15 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
   var savedForm = null;
   try { savedForm = JSON.parse(store.get("threads-maker-form") || "null"); } catch (e) {}
   fill(savedForm || EXAMPLE);
+  if (savedForm && savedForm.src) $("srcText").value = savedForm.src;
 
-  document.querySelectorAll("[data-key], .persona input").forEach(function (x) {
+  document.querySelectorAll("[data-key], .persona input, #srcText").forEach(function (x) {
     x.addEventListener("input", renderBuilder);
     x.addEventListener("change", renderBuilder);
   });
   $("exampleBtn").addEventListener("click", function () { fill(EXAMPLE); renderBuilder(); });
   $("resetBtn").addEventListener("click", function () {
-    fill({ exp: "不明", a8: "承認済み", pr: "【PR】", lv: [1, 2, 3, 4] }); renderBuilder(); el("genre").focus();
+    fill({ exp: "不明", asp: el("asp").value, a8: "承認済み", pr: "【PR】", lv: [1, 2, 3, 4] }); renderBuilder(); el("genre").focus();
   });
 
   function copyText(btn, text, label, textarea) {
@@ -499,10 +601,125 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
       navigator.clipboard.writeText(text).then(function () { done("コピーしました"); }, function () { textarea.select(); done("選択しました"); });
     } else { textarea.select(); done("選択しました"); }
   }
-  $("copyPrompt").addEventListener("click", function () { copyText(this, $("prompt").value, "プロンプトをコピー", $("prompt")); });
+  $("copyRules").addEventListener("click", function () { copyText(this, $("rulesOut").value, "コピー", $("rulesOut")); });
+  $("copyVars").addEventListener("click", function () { copyText(this, $("varsOut").value, "コピー", $("varsOut")); });
+  $("copyPrompt").addEventListener("click", function () {
+    copyText(this, $("rulesOut").value + "\n\n" + $("varsOut").value, "まとめてコピー", $("rulesOut"));
+  });
   renderBuilder();
 
-  /* ---------- STEP 4: post check ---------- */
+  /* ---------- STEP 1: read pasted text and images ---------- */
+  var images = [], sampleFn = null, maxImages = 0, loadCtl = null;
+  var loadMsg = $("loadMsg");
+  function say(msg, kind) { loadMsg.textContent = msg; loadMsg.className = "loadmsg" + (kind ? " " + kind : ""); }
+
+  function renderThumbs() {
+    var box = $("thumbs");
+    box.innerHTML = "";
+    images.forEach(function (img, i) {
+      var d = document.createElement("div"); d.className = "thumb";
+      var im = document.createElement("img"); im.src = img.url; im.alt = "商品画像" + (i + 1);
+      var b = document.createElement("button"); b.type = "button"; b.textContent = "×"; b.setAttribute("aria-label", "画像" + (i + 1) + "を外す");
+      b.addEventListener("click", function () { URL.revokeObjectURL(img.url); images.splice(i, 1); renderThumbs(); });
+      d.appendChild(im); d.appendChild(b); box.appendChild(d);
+    });
+  }
+  function addImages(list) {
+    Array.from(list || []).forEach(function (f) {
+      if (!/^image\//.test(f.type)) return;
+      if (images.length >= maxImages) { say("画像は" + maxImages + "枚までです", "err"); return; }
+      images.push({ file: f, url: URL.createObjectURL(f) });
+    });
+    renderThumbs();
+  }
+  $("imgInput").addEventListener("change", function () { addImages(this.files); this.value = ""; });
+  var drop = $("drop");
+  drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+  drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("over"); if (maxImages) addImages(e.dataTransfer.files); });
+  document.addEventListener("paste", function (e) {
+    if (!maxImages || !e.clipboardData) return;
+    var files = Array.from(e.clipboardData.files || []).filter(function (f) { return /^image\//.test(f.type); });
+    if (files.length) { e.preventDefault(); addImages(files); }
+  });
+
+  function setLoadMode() {
+    $("imgArea").hidden = !maxImages;
+    $("loadHint").textContent = sampleFn
+      ? "AIが読み取って STEP 2 の欄に入れます（あなたのClaudeの利用分を使います）"
+      : "このページではAIが使えないので、テキストから商品名と価格だけ拾って欄に入れます";
+    $("imgLimit").textContent = maxImages ? "最大" + maxImages + "枚" : "";
+  }
+  setLoadMode();
+
+  if (window.claude && claude.use) {
+    claude.use("sample").then(function (s) {
+      if (!s) return;
+      sampleFn = s;
+      return s.limits().then(function (lim) {
+        maxImages = lim && lim.images ? lim.images.maxCount : 0;
+        if (lim && lim.images) $("imgInput").accept = lim.images.mediaTypes.join(",");
+      }, function () {});
+    }).then(setLoadMode, function () {});
+  }
+
+  function readLocally(src) {
+    var lines = src.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var price = src.match(/[¥￥]\s?[0-9０-９,，]+|[0-9０-９,，]+\s?円(（税込）|\(税込\)|（税抜）|\(税抜\))?/);
+    if (lines[0]) el("product").value = Array.from(lines[0]).slice(0, 40).join("");
+    el("info").value = (price ? "価格" + price[0] + "。" : "") + Array.from(lines.slice(1).join(" ")).slice(0, 400).join("");
+    renderBuilder();
+    say("商品名と商品情報を入れました。ジャンルとターゲットは手で書いてください。", "ok");
+  }
+
+  var EXTRACT = [
+    "あなたは商品情報の整理係です。下の貼り付けテキストと画像（ASPの広告素材やAmazonなどの商品ページ）から、Threadsのアフィリエイト投稿の材料を抜き出してください。",
+    "ルール：",
+    "- product と info には、書かれている・写っている事実だけを入れる。数字・効果・実績を推測で作らない。",
+    "- 効果効能の表示は「〜と記載」の形にし、断定しない。",
+    "- target だけは推測でよい（この商品で悩みが解決しそうな読み手）。",
+    "- 広告主の注意事項・禁止表現・SNS掲載の条件が書かれていれば ng に入れる。なければ空文字。",
+    "次のJSONだけを返す：",
+    '{"product":"商品名（40字以内）","genre":"ジャンル（20字以内）","target":"具体的な悩みを抱えた層（40字以内）","info":"価格・容量・特徴などの事実を「。」区切りで（400字以内）","ng":"広告主の禁止事項（200字以内）","unclear":["読み取れなかった・確認が必要なこと"]}',
+    "",
+    "貼り付けテキスト：",
+    ""
+  ].join("\n");
+
+  $("loadBtn").addEventListener("click", function () {
+    var src = $("srcText").value.trim();
+    if (!src && !images.length) { say("テキストか画像を入れてください", "err"); return; }
+    if (!sampleFn) { readLocally(src); return; }
+    var btn = this;
+    loadCtl = new AbortController();
+    btn.disabled = true; $("stopLoad").hidden = false;
+    say("読み込み中…（はじめての時は許可の確認が出ます）");
+    var opts = { signal: loadCtl.signal };
+    if (images.length) opts.images = images.map(function (x) { return x.file; });
+    sampleFn.json(EXTRACT + (src ? Array.from(src).slice(0, 8000).join("") : "（なし。画像のみ）"), opts).then(function (d) {
+      ["product", "genre", "target", "info", "ng"].forEach(function (k) {
+        if (d && typeof d[k] === "string" && d[k].trim()) el(k).value = d[k].trim();
+      });
+      renderBuilder();
+      var unclear = d && Array.isArray(d.unclear) ? d.unclear.filter(Boolean) : [];
+      say("STEP 2 の欄に入れました。内容を確認して直してください。" + (unclear.length ? "　要確認：" + unclear.join("／") : ""), "ok");
+    }, function (e) {
+      var code = e && e.code;
+      if (code === "cancelled") say("止めました");
+      else if (code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled" || code === "capability_removed") {
+        sampleFn = null; maxImages = 0; images = []; renderThumbs(); setLoadMode();
+        say("AIが使えないため、テキストから拾う方式に切り替えました。もう一度押してください。", "err");
+      }
+      else if (code === "image_rejected" || code === "images_unavailable") say("この画像は読めませんでした。別の画像（JPEG・PNG）で試してください。", "err");
+      else if (code === "rate_limited") say("混み合っています。少し時間をおいて、もう一度押してください。", "err");
+      else if (code === "invalid_json") say("うまく読み取れませんでした。もう一度押してください。", "err");
+      else if (code === "refused") say("この内容は読み取れませんでした。テキストを短くして試してください。", "err");
+      else say("読み込みに失敗しました。もう一度押してください。", "err");
+    }).then(function () { btn.disabled = false; $("stopLoad").hidden = true; });
+  });
+  $("stopLoad").addEventListener("click", function () { if (loadCtl) loadCtl.abort(); });
+
+  /* ---------- STEP 5: post check ---------- */
   var SAMPLE = "【PR】朝のコーヒー淹れるのが面倒な人、全自動コーヒーメーカー使った方がいい。\nだって、ボタン1つで豆を挽くところから全部やってくれるのに、淹れたての香りで飲めるの🥹毎朝カフェに寄ってて出費が気になってる人、絶対試して。毎朝お店に並ぶより、家でゆっくり淹れたての一杯飲める方が良くない？🥹";
   var LABELS4 = ["フック", "ギャップ", "逆張り", "問いかけ"];
   var END = "。！？!?";
