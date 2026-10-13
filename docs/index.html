@@ -441,6 +441,11 @@ function homeView() {
       return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span>${S[p.id + ".result"] ? '<span class="badge">戦略あり</span>' : ""}</button>`;
     }).join("")}
       <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・AI・ASP（管理画面のスクショ取込あり）・自分のこと・目標・案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
+    </div>
+  </section>
+
+  <section class="card"><h2>③ 体験の証明</h2><p class="hint">紹介する商品を実際に使っているなら、ここで写真・スクショを確認してもらうと、その商品の文章に体験談を入れられます。</p>
+    <div class="tiles">
       <button type="button" class="tile sub" data-go="proof"><span class="nm">体験の証明</span><span class="tg">紹介する商品を実際に使っていることを、写真・スクショでAIに確認してもらう</span><span class="badge${(S._proofs || []).some(x => x.verdict?.ok) ? " on" : ""}">${(S._proofs || []).length ? `${(S._proofs || []).filter(x => x.verdict?.ok).length}/${(S._proofs || []).length}件 確認済み` : "未登録"}</span></button>
     </div>
   </section>
