@@ -437,12 +437,6 @@ function homeView() {
     </div>
   </section>
 
-  <section class="card"><h2>③ 体験の証明</h2><p class="hint">紹介する商品を実際に使っているなら、ここで写真・スクショを確認してもらうと、その商品の文章に体験談を入れられます。</p>
-    <div class="tiles">
-      <button type="button" class="tile sub" data-go="proof"><span class="nm">体験の証明</span><span class="tg">紹介する商品を実際に使っていることを、写真・スクショでAIに確認してもらう</span><span class="badge${(S._proofs || []).some(x => x.verdict?.ok) ? " on" : ""}">${(S._proofs || []).length ? `${(S._proofs || []).filter(x => x.verdict?.ok).length}/${(S._proofs || []).length}件 確認済み` : "未登録"}</span></button>
-    </div>
-  </section>
-
   ${done.length ? `<section class="card"><h2>作った戦略</h2><p class="hint">媒体ごとに保存されています。</p><div class="actions">${done.map(p => `<button type="button" data-go="result-${p.id}">${p.name}の戦略5本</button>`).join("")}</div></section>` : ""}
 
   <div class="note">ASP のログインID・パスワード・口座番号は入力しないでください。入力内容はこの端末のブラウザにだけ保存されます。</div>`;
@@ -458,6 +452,7 @@ function platformView(p) {
     <ul class="facts">${p.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
     ${field("文字数の上限を変える（空欄なら上の値）", text(k("limit"), String(p.limit), "number"))}</section>
   ${vaultBlock(p)}
+  ${caseBlock(p)}
   ${shotBlock(p.id, p.shotHint)}
   <section class="card"><h2>${p.name} の数字</h2><p class="hint">スクショから読み取った値が入ります。手で直してもOKです。</p>
     <div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"), k("m" + i))).join("")}</div></section>
@@ -471,7 +466,6 @@ function platformView(p) {
     ${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
   <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
   <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>
-  ${proofSelect(p)}
   ${draftBlock(p)}
   ${logBlock(p)}
   <section class="launch"><h2>${p.name}でマーケティング開始</h2>
@@ -481,39 +475,47 @@ function platformView(p) {
   </section>`;
 }
 
-function proofSelect(p) {
-  const L = S._proofs || [], pr = proofOf(p.id);
-  return `<section class="card"><h2>この媒体で紹介する商品</h2>
-    <p class="hint">選んだ商品の「体験の証明」ができていれば、下書きや戦略の本文に体験談が入り、チェック項目にも自動でチェックが入ります。</p>
-    ${field("紹介する商品・サービス", `<select id="f-${p.id}-proof" data-k="${p.id}.proof"><option value="">（選ばない／まだ決めていない）</option>${L.map(x => `<option value="${x.id}"${pr && pr.id === x.id ? " selected" : ""}>${esc(x.name)}${x.verdict?.ok ? "（証明あり）" : "（証明なし）"}</option>`).join("")}</select>`)}
-    <div class="actions"><span class="status ${pr?.verdict?.ok ? "ok" : ""}">${pr ? (pr.verdict?.ok ? "✅ 体験の証明あり：体験談を書けます" : "体験の証明がまだです：調べた情報として書きます") : "商品を選ぶと、体験の有無に合わせて文章が変わります"}</span><button type="button" class="ghost small" data-go="proof">体験の証明ページへ</button></div>
+const casePre = pid => pid === "threads" ? TM : pid + ".case.";
+const caseScope = pid => pid === "threads" ? "tm-threads" : "case-" + pid;
+function caseOf(pid) { const pre = casePre(pid); return { 商品: v(pre + "product"), ターゲット: v(pre + "target"), 商品情報: v(pre + "info"), 広告主の禁止事項: v(pre + "ng") }; }
+function caseBlock(p) {
+  const pre = casePre(p.id), scope = caseScope(p.id), shots = SHOTS[scope] || [];
+  const f = (key, label, ph, big) => field(label + aiMark(pre + key), big ? area(pre + key, ph) : text(pre + key, ph));
+  return `<section class="card" id="case-${p.id}"><h2>紹介する案件</h2>
+    <p class="hint">ASPのプログラム詳細や商品ページの説明を貼り、画像も入れて「読み込んで欄に入れる」を押すと、AIが下の欄を埋めます。手で書いても大丈夫です。</p>
+    ${field("案件・商品のテキスト", area(pre + "src", "コピーしてそのまま貼り付け"))}
+    <label class="drop" for="file-${scope}"><b>案件の画像を選ぶ（複数OK）</b><span>広告素材・商品ページ・プログラム詳細のスクショ</span><input type="file" id="file-${scope}" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="${scope}"></label>
+    ${shots.length ? `<div class="shots">${shots.map(x => `<div class="shot"><div class="pic"><img src="${x.url}" alt="案件の画像"><span class="stamp${x.done ? " done" : ""}">${x.done ? "読み込み済み" : "未読み込み"}</span></div><div class="foot"><button type="button" class="ghost small" data-delshot="${scope}" data-id="${x.id}">削除</button></div></div>`).join("")}</div>` : ""}
+    <div class="actions"><button type="button" class="primary" data-tmread="${p.id}">読み込んで欄に入れる</button><span class="status" id="caseRead-${p.id}"></span></div>
+    ${f("product", "紹介する商品・サービス", "例：〇〇モバイル（格安SIM）")}
+    ${f("target", "ターゲット（具体的な悩みを抱えた層）", "例：スマホ代が高いと感じている30代")}
+    ${f("info", "商品情報（公式に書かれた事実だけ）", "例：月額990円（税込）〜。最短即日開通。", true)}
+    ${f("ng", "広告主の禁止事項", "プログラム詳細のNG表現・SNS掲載の条件。なければ空欄", true)}
+    ${proofInline(p)}
   </section>`;
 }
-function proofView() {
-  const L = S._proofs || [];
-  return `<header><div class="eyebrow">投稿の前に</div><h1>体験の証明</h1>
-    <p class="lead">紹介する商品を実際に使っていることを、写真やスクショでAIに確認してもらいます。確認できると、その商品を紹介する文章のチェック項目に自動でチェックが入り、AIが体験談の入った文章を書けるようになります。</p></header>
-  <section class="card"><h2>何をアップすればいい？</h2>
-    <ul class="facts"><li>商品と一緒に写した自分の写真（自分の部屋・手元など）</li><li>契約・購入の完了画面、マイページ、購入履歴のスクショ</li><li>実際に使っている画面（アプリ・管理画面など）</li></ul>
-    <p class="note" style="margin:0">名前・住所・電話番号・メール・注文番号・会員IDは、できるだけ隠してからアップしてください。画像はAIの確認のために送られ、このブラウザに保存されます。記事やSNSに載せるときも、個人情報は必ず隠してください。</p></section>
-  ${L.map(proofCard).join("")}
-  <section class="card"><h2>商品を追加する</h2>${field("商品・サービス名", `<input type="text" id="f-proofname" placeholder="例：〇〇モバイル（格安SIM）">`)}<div class="actions"><button type="button" class="primary small" id="proofAdd">追加する</button></div></section>`;
+function proofInline(p) {
+  const L = S._proofs || [], pr = proofOf(p.id), others = L.filter(x => !pr || x.id !== pr.id);
+  return `<div class="sub" id="proofbox-${p.id}"><div class="sub-head"><span>体験の証明（実際に使っている商品だけ）</span>${pr ? `<button type="button" class="ghost small" data-proofunlink="${p.id}">外す</button>` : ""}</div>
+    <p class="hint" style="margin:0">商品と一緒に写した写真、契約・購入の完了画面、マイページ、使っている画面をアップして「AIで確認する」を押します。確認できると、チェック項目に自動でチェックが入り、下書きや戦略の本文が体験談に変わります。名前・住所・注文番号・会員IDは隠してからアップしてください。</p>
+    ${pr ? proofBody(pr) : `<div class="actions"><button type="button" class="small" data-proofnew="${p.id}">この商品の体験を証明する</button><span class="status">証明がないあいだは、調べた情報として書きます</span></div>`}
+    ${others.length ? field("ほかの媒体で証明した商品を使う", `<select data-proofpick="${p.id}"><option value="">（選ぶ）</option>${others.map(x => `<option value="${x.id}">${esc(x.name)}${x.verdict?.ok ? "（証明あり）" : "（証明なし）"}</option>`).join("")}</select>`) : ""}
+  </div>`;
 }
-function proofCard(pr, i) {
+function proofBody(pr) {
   const scope = "proof-" + pr.id, shots = SHOTS[scope] || [], V = pr.verdict, pending = shots.filter(x => !x.done).length;
-  return `<section class="card" id="proof-${pr.id}"><div class="sub-head"><h2 style="margin:0">${esc(pr.name)}</h2><button type="button" class="ghost small" data-del="_proofs" data-i="${i}">削除</button></div>
+  return `<b>${esc(pr.name)}</b>
     ${V ? `<div class="first" style="color:${V.ok ? "var(--good)" : "var(--bad)"}">${V.ok ? "✅ 実際に使っている証拠を確認できました" : "⚠️ まだ確認できていません"}</div>
       <p class="hint" style="margin:0">${esc(V.reason || "")}（${esc(V.at || "")}）</p>
       ${V.facts?.length ? `<div><b>確認できた事実</b><ul class="facts">${V.facts.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       ${V.privacy?.length ? `<p class="note" style="margin:0">個人情報が写っています：${esc(V.privacy.join("、"))}。記事やSNSに載せるときは必ず隠してください。</p>` : ""}
-      ${pending && V ? `<p class="status">画像が増えました。もう一度確認してください。</p>` : ""}` : `<p class="hint" style="margin:0">まだ確認していません。</p>`}
-    <label class="drop" for="file-${scope}"><b>写真・スクショを選ぶ（複数OK）</b><span>JPEG・PNG・WebP</span><input type="file" id="file-${scope}" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="${scope}"></label>
+      ${pending ? `<p class="status">画像が増えました。もう一度確認してください。</p>` : ""}` : ""}
+    <label class="drop" for="file-${scope}"><b>使っている証拠の写真・スクショを選ぶ（複数OK）</b><span>JPEG・PNG・WebP</span><input type="file" id="file-${scope}" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="${scope}"></label>
     ${shots.length ? `<div class="shots">${shots.map(x => `<div class="shot"><div class="pic"><img src="${x.url}" alt="アップした証拠の画像"><span class="stamp${x.done ? " done" : ""}">${x.done ? "確認済み" : "未確認"}</span></div><div class="foot"><button type="button" class="ghost small" data-delshot="${scope}" data-id="${x.id}">削除</button></div></div>`).join("")}</div>` : ""}
     <div class="grid2">${field("いつから使っている？", text(`_pm.${pr.id}.since`, "例：2026年8月から"))}</div>
     ${field("良かった点（自分の言葉で）", area(`_pm.${pr.id}.good`, "例：月額が3,000円下がった。手続きは30分で終わった"))}
     ${field("不満な点・合わない人", area(`_pm.${pr.id}.bad`, "例：昼休みは通信が遅い"))}
-    <div class="actions"><button type="button" class="primary" data-proofcheck="${pr.id}"${shots.length ? "" : " disabled"}>AIで確認する</button><span class="status" id="proofStatus-${pr.id}"></span></div>
-  </section>`;
+    <div class="actions"><button type="button" class="primary" data-proofcheck="${pr.id}"${shots.length ? "" : " disabled"}>AIで確認する</button><span class="status" id="proofStatus-${pr.id}"></span></div>`;
 }
 async function checkProof(id) {
   const pr = (S._proofs || []).find(x => x.id === id); if (!pr) return;
@@ -681,7 +683,7 @@ function threadsView(p) {
     <div class="field"><span class="label">商品・サービスのテキスト</span>${tmArea("src", "コピーしてそのまま貼り付け")}${tmCnt("src")}</div>
     <label class="drop" for="file-tm-threads"><b>商品の画像を選ぶ（複数OK）</b><span>パッケージ・広告素材・商品ページのスクショ</span><input type="file" id="file-tm-threads" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="tm-threads"></label>
     ${shots.length ? `<div class="shots">${shots.map(s => `<div class="shot"><div class="pic"><img src="${s.url}" alt="商品の画像"><span class="stamp${s.done ? " done" : ""}">${s.done ? "読み込み済み" : "未読み込み"}</span></div><div class="foot"><button type="button" class="ghost small" data-delshot="tm-threads" data-id="${s.id}">削除</button></div></div>`).join("")}</div>` : ""}
-    <div class="actions"><button type="button" class="primary" data-tmread="1">読み込んで欄に入れる</button><span class="status" id="tmReadStatus"></span></div>
+    <div class="actions"><button type="button" class="primary" data-tmread="threads">読み込んで欄に入れる</button><span class="status" id="tmReadStatus"></span></div>
     <div class="grid2">${f("genre", "ジャンル", 20, "例：家電・キッチン")}${f("tone", "口調", 20, "ペルソナに任せる")}</div>
     ${f("target", "ターゲット（具体的な悩みを抱えた層）", 40, "例：毎朝のコーヒー代がかさむ30代の共働き")}
     ${f("product", "紹介したい商品・サービス", 40, "なければ「カテゴリのみ」")}
@@ -693,8 +695,8 @@ function threadsView(p) {
     </div>
     <div class="field"><span class="label">広告主の禁止事項${aiMark(TM + "ng")}</span>${tmArea("ng", "プログラム詳細のNG表現・SNS掲載の条件。なければ空欄", 200)}${tmCnt("ng", 200)}</div>
     <p class="hint" style="margin:0">Amazonの商品画像は読み込みの材料にするだけにして、投稿には転載しないでください。</p>
+    ${proofInline(p)}
   </section>
-  ${proofSelect(p)}
   ${vaultBlock(p)}
   <section class="launch"><h2>4人に5本ずつ書いてもらう</h2>
     <p>使うプロンプト：${esc(tmUsed().map(x => x.title || "無題").join("／") || "（どれも選ばれていません）")}</p>
@@ -779,10 +781,11 @@ function tmReviewView(p) {
   <section class="card"><div class="actions"><button type="button" data-go="tm-write">← 4ページ（本文を直す）</button><button type="button" class="ghost" data-go="threads">3ページ（商品・プロンプト）</button></div></section>`;
 }
 
-async function tmRead() {
-  const st = $("#tmReadStatus"), btn = document.querySelector("[data-tmread]"), shots = (SHOTS["tm-threads"] || []).slice(-6), src = tmv("src");
+async function tmRead(pid) {
+  const pre = casePre(pid), scope = caseScope(pid), P = PLATFORMS.find(x => x.id === pid);
+  const st = pid === "threads" ? $("#tmReadStatus") : $("#caseRead-" + pid), btn = document.querySelector(`[data-tmread="${pid}"]`), shots = (SHOTS[scope] || []).slice(-6), src = v(pre + "src");
   if (!src && !shots.length) { toast("テキストか画像を入れてください"); return; }
-  const prompt = `あなたは商品情報の整理係です。下の貼り付けテキストと添付の画像（ASPの広告素材やAmazonなどの商品ページ）から、Threadsのアフィリエイト投稿の材料を抜き出してください。
+  const prompt = `あなたは商品情報の整理係です。下の貼り付けテキストと添付の画像（ASPの広告素材やAmazonなどの商品ページ）から、${P.name}のアフィリエイト投稿の材料を抜き出してください。
 # ルール
 - product と info には、書かれている・写っている事実だけを入れる。数字・効果・実績を推測で作らない。セール価格と通常価格は区別して書く
 - 効果効能の表示は「〜と記載」の形にし、断定しない
@@ -798,8 +801,8 @@ ${[...src].slice(0, 8000).join("") || "（なし。画像のみ）"}
   try {
     const out = await askAI(prompt, { images: shots.map(x => dataUrlToBlob(x.url)), tier: "default", maxTokens: 8000 });
     let n = 0;
-    ["product", "genre", "target", "info", "ng"].forEach(k => { if (out && typeof out[k] === "string" && out[k].trim()) { S[TM + k] = out[k].trim(); S["_ai." + TM + k] = 1; n++; } });
-    (SHOTS["tm-threads"] || []).forEach(x => x.done = true); save(); saveShots(); go(view, false, true);
+    ["product", "genre", "target", "info", "ng"].forEach(k => { if (out && typeof out[k] === "string" && out[k].trim() && (pid === "threads" || k !== "genre")) { S[pre + k] = out[k].trim(); S["_ai." + pre + k] = 1; n++; } });
+    (SHOTS[scope] || []).forEach(x => x.done = true); save(); saveShots(); go(view, false, true);
     const un = [].concat(out?.unclear || []).filter(Boolean);
     toast(n ? `${n}項目を入れました。内容を確認して直してください${un.length ? "（要確認：" + un.join("／") + "）" : ""}` : "読み取れる情報がありませんでした");
   } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
@@ -1099,7 +1102,7 @@ function profileData() {
         媒体: p.name, 段階: v(k("stage")), 準備済み: arr(k("prep")), 未着手の準備: PREP.filter(x => !arr(k("prep")).includes(x)),
         テーマ: arr(k("theme")), テーマ詳細: v(k("theme_detail")), 形式: arr(k("format")), 頻度: v(k("freq")), 収益化: arr(k("money")), URL: v(k("url")),
         数字: Object.fromEntries(p.metrics.map((m, i) => [`${m[0]}（${m[1]}）`, v(k("m" + i))]).filter(x => x[1])),
-        スクショから読み取った値: (SHOTS[p.id] || []).flatMap(s => s.reads || []), 困っていること: v(k("trouble")),
+        スクショから読み取った値: (SHOTS[p.id] || []).flatMap(s => s.reads || []), 困っていること: v(k("trouble")), 紹介する案件: caseOf(p.id),
         投稿の記録: logDigest(p).map(g => ({ 型: g.type, 本数: g.n, 数字あり: g.measured, [LOGM[p.id].slice(-1)[0] + "率"]: g.measured >= MIN_N ? pct(g.rate) : "まだ判断できない" }))
       };
     })
@@ -1349,8 +1352,8 @@ function go(to, push = true, keepScroll = false) {
   view = to;
   const p = PLATFORMS.find(x => x.id === to), rp = to.startsWith("result-") ? PLATFORMS.find(x => "result-" + x.id === to) : null;
   const y = window.scrollY;
-  $("#app").innerHTML = to === "common" ? commonView() : to === "proof" ? proofView() : to === "tm-write" ? tmWriteView(TP()) : to === "tm-review" ? tmReviewView(TP()) : rp ? resultView(rp) : p ? platformView(p) : homeView();
-  if (!p && !rp && !["common", "proof", "tm-write", "tm-review"].includes(to)) view = "home";
+  $("#app").innerHTML = to === "common" ? commonView() : to === "tm-write" ? tmWriteView(TP()) : to === "tm-review" ? tmReviewView(TP()) : rp ? resultView(rp) : p ? platformView(p) : homeView();
+  if (!p && !rp && !["common", "tm-write", "tm-review"].includes(to)) view = "home";
   $("#navHome").hidden = view === "home";
   $("#copyBar").textContent = view.startsWith("result-") ? "全部コピー" : "profile.md をコピー";
   if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
@@ -1383,6 +1386,7 @@ document.addEventListener("change", async e => {
   const el = e.target;
   if (el.id === "f-keysave") { try { if (el.checked) localStorage.setItem(KEY_API, apiKey); else localStorage.removeItem(KEY_API); } catch (x) {} toast(el.checked ? "この端末にキーを保存しました" : "保存したキーを消しました"); return; }
   if (el.dataset && el.dataset.tmuse) { const ids = new Set(tmUseIds()); el.checked ? ids.add(el.dataset.tmuse) : ids.delete(el.dataset.tmuse); S[TM + "use"] = [...ids]; save(); go(view, false, true); return; }
+  if (el.dataset && el.dataset.proofpick) { if (el.value) { S[el.dataset.proofpick + ".proof"] = el.value; save(); go(view, false, true); toast(proofOK(el.dataset.proofpick) ? "体験の証明あり：チェック項目と文章のルールを切り替えました" : "この商品はまだ証明できていません"); } return; }
   if (el.dataset && el.dataset.bool) { S[el.dataset.bool] = el.checked; save(); return; }
   if (el.dataset && el.dataset.shots) {
     const scope = el.dataset.shots, files = [...el.files];
@@ -1418,7 +1422,6 @@ document.addEventListener("click", async e => {
   if (t.dataset.logfrom !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.logfrom]; if (s) { addLog(p.id, { type: LOG_TYPES.includes(s.type) ? s.type : (LOG_TYPES.find(x => (s.type || "").includes(x.replace("型", ""))) || "その他"), body: s.body || "" }); toast(`${p.name}の記録に追加しました。数日後に数字を入れてください`); } }
   if (t.dataset.logdraft) { const pid = t.dataset.logdraft, d = arr(pid + ".drafts")[+t.dataset.i]; if (d) { addLog(pid, { type: LOG_TYPES.find(x => (d.title || "").includes(x.replace("型", ""))) || "その他", body: d.text || "" }); go(view, false, true); toast("記録に追加しました"); } }
   if (t.dataset.logai) reviewLog(t.dataset.logai);
-  if (t.id === "proofAdd") { const name = $("#f-proofname").value.trim(); if (!name) { toast("商品・サービス名を入れてください"); return; } const L = arr("_proofs"); L.push({ id: Date.now().toString(36), name, verdict: null }); S._proofs = L; save(); go(view, false, true); }
   if (t.dataset.proofcheck) checkProof(t.dataset.proofcheck);
   if (t.dataset.rewrite) rewriteExp(t.dataset.rewrite, t.dataset.p, +t.dataset.i);
   if (["vmigrate", "vsave", "vcopy", "vedit", "vdel", "vcancel", "vbackup", "vrestore"].some(k => t.dataset[k] !== undefined)) vaultClick(t);
@@ -1431,7 +1434,9 @@ document.addEventListener("click", async e => {
   if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
   if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
   if (t.dataset.start) startMarketing(t.dataset.start);
-  if (t.dataset.tmread) tmRead();
+  if (t.dataset.tmread) tmRead(t.dataset.tmread);
+  if (t.dataset.proofnew) { const pid = t.dataset.proofnew, name = v(casePre(pid) + "product").trim(); if (!name) { toast("先に「紹介する商品・サービス」を入れてください"); return; } const L = arr("_proofs"); let pr = L.find(x => x.name === name); if (!pr) { pr = { id: Date.now().toString(36), name, verdict: null }; L.push(pr); S._proofs = L; } S[pid + ".proof"] = pr.id; save(); go(view, false, true); }
+  if (t.dataset.proofunlink) { delete S[t.dataset.proofunlink + ".proof"]; save(); go(view, false, true); toast("体験の証明を外しました。調べた情報として書きます"); }
   if (t.dataset.tmgen) tmGen();
   if (t.id === "tmStop") tmCtl?.abort();
   if (t.dataset.tmreview) tmReview();
