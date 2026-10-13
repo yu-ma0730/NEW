@@ -242,7 +242,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
         </div>
       </div>
 
-      <h2 class="step" id="s2"><span class="no">STEP 3</span>クオリティを選ぶ</h2>
+      <h2 class="step" id="s2"><span class="no">STEP 3</span>書く4人（クオリティ）</h2>
       <div class="personas" id="personas" role="group" aria-labelledby="s2"></div>
       <p class="count-note" id="countNote"></p>
 
@@ -360,13 +360,13 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
 
   var personaBox = $("personas");
   personaBox.innerHTML = PERSONAS.map(function (p) {
-    return '<label class="persona"><input type="checkbox" id="lv' + p.lv + '" value="' + p.lv + '" checked>' +
-      '<span><span class="lv">Lv' + p.lv + '</span><b>' + esc(p.short) + '</b><small>' + esc(p.card) + "</small></span></label>";
+    return '<div class="persona" style="grid-template-columns:minmax(0,1fr);cursor:default">' +
+      '<span><span class="lv">Lv' + p.lv + '</span><b>' + esc(p.short) + '</b><small>' + esc(p.card) + "</small></span></div>";
   }).join("");
 
   function el(key) { return document.querySelector('[data-key="' + key + '"]'); }
   function val(key) { var v = el(key).value.trim(); return v || PLACEHOLDER[key]; }
-  function selected() { return PERSONAS.filter(function (p) { return $("lv" + p.lv).checked; }); }
+  function selected() { return PERSONAS; } // クオリティは常に4人全員
 
   var POST_FORMAT = [
     "伸びる確率（AI自己採点）：〇〇％",
@@ -555,7 +555,6 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
 
   function renderBuilder() {
     var ps = selected();
-    if (!ps.length) { $("lv3").checked = true; ps = selected(); }
     $("expDetailWrap").hidden = el("exp").value !== "あり";
     updateCounters();
     var r = buildRules(), v = buildVars();
@@ -563,7 +562,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
     $("varsOut").value = v;
     $("rulesCnt").textContent = len(r) + "字";
     $("varsCnt").textContent = len(v) + "字";
-    $("countNote").textContent = ps.length + "人 × 3案 ＝ " + ps.length * 3 + "案が出ます。" + (ps.length === 4 ? "読むのが大変なら2人くらいに絞るのもおすすめです。" : "");
+    $("countNote").textContent = ps.length + "人 × 3案 ＝ " + ps.length * 3 + "案が出ます。4人全員が書いて、それぞれ採点とプレゼンをします。";
     var warn = [];
     if (el("a8").value !== "承認済み") warn.push("ASPの提携承認を先に取ってください");
     if (el("asp").value === "Amazonアソシエイト") warn.push("Amazonの商品画像は投稿に転載しないでください");
@@ -578,7 +577,6 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
 
   function fill(obj) {
     FIELDS.forEach(function (k) { el(k).value = obj[k] != null ? obj[k] : (el(k).tagName === "SELECT" ? el(k).options[0].value : ""); });
-    if (obj.lv) PERSONAS.forEach(function (p) { $("lv" + p.lv).checked = obj.lv.indexOf(p.lv) >= 0; });
   }
 
   var savedForm = null;
@@ -586,7 +584,7 @@ ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; dis
   fill(savedForm || EXAMPLE);
   if (savedForm && savedForm.src) $("srcText").value = savedForm.src;
 
-  document.querySelectorAll("[data-key], .persona input, #srcText").forEach(function (x) {
+  document.querySelectorAll("[data-key], #srcText").forEach(function (x) {
     x.addEventListener("input", renderBuilder);
     x.addEventListener("change", renderBuilder);
   });
