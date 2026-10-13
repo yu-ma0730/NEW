@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>軍師プロフィール帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -413,7 +414,7 @@ function engineLabel() {
 function homeView() {
   const done = PLATFORMS.filter(p => S[p.id + ".result"]);
   return `<header><div class="eyebrow">軍師 GUNSHI</div><h1>あなた専用のマーケティング室</h1>
-    <p class="lead">① AIをつなぐ → ② 媒体を選ぶ → 媒体のページでスクショを取り込み、一番下の「マーケティング開始」で、その媒体の戦略を5本作って採点します。</p></header>
+    <p class="lead">① AIをつなぐ → ② 媒体を選ぶ → 媒体のページでスクショを取り込み、一番下の「マーケティング開始」で、その媒体の戦略を5本作って採点します。Threads は、4人が5本ずつ書いて採点し合う投稿づくりができます。</p></header>
 
   <section class="card"><h2>① AIの接続</h2>
     ${field("Anthropic APIキー", `<input type="password" id="f-apikey" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." value="${esc(apiKey)}">`)}
@@ -448,6 +449,7 @@ function homeView() {
 }
 
 function platformView(p) {
+  if (p.id === "threads") return threadsView(p);
   const k = s => `${p.id}.${s}`;
   return `<header><div class="eyebrow">媒体別ページ</div><h1>${p.name}</h1><p class="lead">${p.tag}</p></header>
   <section class="card"><h2>${p.name} の基本</h2><ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></section>
@@ -590,6 +592,297 @@ function draftBlock(p) {
   </section>`;
 }
 
+// ---------- Threads 投稿づくり（3ページ：商品とプロンプトを選ぶ → 4ページ：4人×5本 → 5ページ：ほかの3人が採点） ----------
+const TM = "threads.tm.";
+const TM_PERSONAS = [
+  { lv: 1, label: "Lv1 さとみさん（主婦）", short: "さとみさん", name: "おしゃべり上手な主婦「さとみさん」", tone: "近所のママ友に話すようなやわらかいタメ口（「〜なのよ」「〜じゃない？」）", skill: "生活の一場面で共感を取るのが得意。数字は1つでシンプルに。", eye: "生活感と共感。読んだ人が「わかる」と思えるか" },
+  { lv: 2, label: "Lv2 みゆきさん（店頭スタッフ）", short: "みゆきさん", name: "販売歴10年の店頭スタッフ「みゆきさん」", tone: "親しみのある丁寧語まじり（「〜なんです」「〜ですよ」）", skill: "使う場面を具体的に描き、読み手が気にしそうなこと（手間・値段）を先回りして書く。", eye: "分かりやすさ。使う場面が浮かび、値段や手間の疑問に答えているか" },
+  { lv: 3, label: "Lv3 神崎 誠（トップセールス）", short: "神崎", name: "トップセールス「神崎 誠」", tone: "落ち着いた語りかけ（「〜した方がいい」「〜じゃないですか？」）", skill: "ターゲットの悩みを一番正確な言葉で言い当てる。フックの精度が最も高い。", eye: "1文目の刺さり方。ターゲットの悩みを正確に言い当てているか" },
+  { lv: 4, label: "Lv4 一ノ瀬 玲（コピー監修）", short: "一ノ瀬", name: "セールス×コピーライティング監修「一ノ瀬 玲」", tone: "短く歯切れのいいタメ口", skill: "1文目を最短にし、全文のリズムと語尾を磨き込む。", eye: "言葉とリズム。むだな言葉がなく、最後まで読ませるか" }
+];
+const TM_SCORES = [["hook", "フック力"], ["specific", "具体性"], ["contrarian", "逆張り強度"], ["empathy", "共感性"], ["comment", "コメント誘発力"]];
+const TM_MIN = 160, TM_MAX = 200, TM_N = 5;
+const TM_BUILTIN = { id: "builtin", title: "標準：悩み解決・1行目だけ改行の型", body: [
+  "■ 改行ルール（最重要）：1文目の後にだけ改行を入れる。2文目以降は改行せず1つの段落として続ける。",
+  `■ 文字数：合計${TM_MIN}〜${TM_MAX}字（改行は数えない。PR表記・絵文字は数える）。`,
+  "■ 構成（4文）",
+  "1文目｜悩み特定フック（この後だけ改行）：「（PR表記）（ターゲットの悩み）に悩んでる人、（商品/カテゴリ）使った方がいい。」当事者が1秒で自分のことだと気づく文",
+  "2文目｜ギャップ提示：「だって、（価格や手軽さなどのハードルの低さ）なのに（得られる嬉しい結果）🥹」",
+  "3文目｜逆張りで名指し：「（高価格帯・手間のかかる既存の選択肢）使ってて（悩み状態）な人、一度チェックしてみて。」既存の選択肢そのものは悪く言わない",
+  "4文目｜共感問いかけ（ここで終了）：「（手間のかかる現状）より（この商品で得られる楽な未来）方が良くない？🥹」",
+  "■ 切り口は、価格ギャップ・時短や手軽さ・逆張りや共感などを使い分ける。",
+  "■ 友達がLINEで教えてくれた感（売り込み口調はNG）。絵文字は🥹中心に2回まで。専門用語NG。具体的な数字を1つ以上。"
+].join("\n") };
+const tmv = k => v(TM + k);
+const TP = () => PLATFORMS.find(x => x.id === "threads");
+const tmCnt = (k, soft) => `<span class="status" id="cnt-${fid(TM + k)}">${[...(S[TM + k] || "")].length}字${soft ? ` ／ 目安${soft}字` : ""}</span>`;
+function tmCntUpdate(el) {
+  const c = $("#cnt-" + el.id); if (!c) return;
+  const soft = +el.dataset.soft || 0, n = [...el.value].length;
+  c.textContent = `${n}字${soft ? ` ／ 目安${soft}字` : ""}`; c.className = "status" + (soft && n > soft ? " ng" : "");
+}
+const tmText = (k, ph, soft) => `<input type="text" id="${fid(TM + k)}" data-k="${TM + k}" data-soft="${soft || ""}" value="${esc(S[TM + k])}" placeholder="${esc(ph)}">`;
+const tmArea = (k, ph, soft) => `<textarea id="${fid(TM + k)}" data-k="${TM + k}" data-soft="${soft || ""}" placeholder="${esc(ph)}">${esc(S[TM + k])}</textarea>`;
+const tmSelect = (k, opts) => `<select id="${fid(TM + k)}" data-k="${TM + k}">${opts.map(o => `<option${(S[TM + k] || opts[0]) === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+const tmExp = () => { const pr = proofOf("threads"); return pr && pr.verdict?.ok ? `あり（体験の証明済み：${pr.name}）` : "なし（体験の証明がない）"; };
+const tmPrompts = () => [TM_BUILTIN].concat(plist("threads"));
+const tmUseIds = () => Array.isArray(S[TM + "use"]) ? S[TM + "use"] : ["builtin"];
+const tmUsed = () => tmPrompts().filter(x => tmUseIds().includes(x.id));
+const tmUseBox = id => `<label class="chip" style="margin-right:8px"><input type="checkbox" data-tmuse="${id}"${tmUseIds().includes(id) ? " checked" : ""}><span>使う</span></label>`;
+function tmBuiltinRow() {
+  return `<div class="sub"><div class="sub-head"><span>${tmUseBox("builtin")}${esc(TM_BUILTIN.title)}</span><span class="actions"><button type="button" class="primary small" data-vcopy="threads" data-id="builtin">コピー</button></span></div>
+    <details><summary class="hint">中身を見る（最初から入っている型。消せません）</summary><p class="hint" style="margin:0;white-space:pre-wrap">${esc(TM_BUILTIN.body)}</p></details></div>`;
+}
+function tmBase() {
+  return [
+    "- この投稿は広告です。本文の先頭に変数「PR表記」を必ず入れる。友達っぽい口調はよいが、広告であることを隠さない。「宣伝じゃないけど」「たまたま見つけた」など中立な口コミに見せる書き方は禁止",
+    "- Threadsの1投稿は500字まで。アフィリエイトリンクは本文に入れず、ツリー（自分への返信）投稿に入れる。ツリー投稿は「（PR表記）（商品名）はこちら【案件リンク】 PR」の形（URLの直後に半角スペースとPR）",
+    "- 変数「ASP」がAmazonアソシエイトなら、ツリー投稿に「Amazonのアソシエイトとして、（アカウント名）は適格販売により収入を得ています。」を入れる。Amazonの商品画像は転載しない",
+    "- 変数「提携状況」が「承認済み」でなければ notice で「提携承認を先に取ってください」と伝える。変数「広告主の禁止事項」の表現は使わない",
+    NG_PROMPT,
+    "- 「試してみ」「使ってみ」「愛用」「実際に使った」など体験に読める言葉は、体験の証明がある場合以外は使わない（呼びかけでも使わない）",
+    expRule("threads"),
+    "- 商品の価格・時間・効果・実績などの数字は、変数「商品情報」に書かれたものだけを使う。無いものは【要確認：〇〇】と空けておく。ランキング・お客様の声・「今だけ」を作らない",
+    "- 推測してよいのは読み手の状況（悩み・今の選択肢・理想の状態）だけ",
+    "- 4人の経歴や体験を事実として書かない（4人は書き方の型であり、実在の人物として語らない）"
+  ].join("\n");
+}
+function tmVars() {
+  return ["- ジャンル：" + (tmv("genre") || "（未入力）"), "- ターゲット：" + (tmv("target") || "（未入力）"), "- 紹介したい商品・サービス：" + (tmv("product") || "（未入力）"),
+    "- 口調：" + (tmv("tone") || "ペルソナに任せる"), "- 商品情報：" + (tmv("info") || "（未入力）"), "- 取扱経験：" + tmExp(),
+    "- ASP：" + (tmv("asp") || "A8.net"), "- 提携状況：" + (tmv("status") || "承認済み"), "- 広告主の禁止事項：" + (tmv("ng") || "特になし"), "- PR表記：" + (tmv("pr") || "【PR】")].join("\n");
+}
+function tmCheckHTML(t0) {
+  const t = String(t0 || "").replace(/\r\n?/g, "\n").replace(/\n+$/, ""), n = [...t.replace(/\n/g, "")].length;
+  const nl = (t.match(/\n/g) || []).length, before = t.split("\n")[0].trim();
+  const brOk = nl === 1 && /[。！？!?🥹]$/u.test(before) && !/[。！？!?]/.test(before.slice(0, -1));
+  const emo = [...t].filter(c => /\p{Extended_Pictographic}/u.test(c)).length;
+  const li = (lv, txt) => `<li class="${lv}">${lv === "ok" ? "☑" : lv === "warn" ? "⚠" : "☒"} ${txt}</li>`;
+  return `<ul class="checklist">
+    ${li(n >= TM_MIN && n <= TM_MAX ? "ok" : "ng", `標準の型：${n}字（目標 ${TM_MIN}〜${TM_MAX}字・改行は数えない）${n < TM_MIN ? `　あと${TM_MIN - n}字` : n > TM_MAX ? `　${n - TM_MAX}字オーバー` : ""}`)}
+    ${li(brOk ? "ok" : "ng", brOk ? "改行は1文目の後だけ" : nl === 0 ? "改行がありません（1文目の後に1回）" : nl > 1 ? `改行が${nl}回あります（1文目の後の1回だけに）` : "改行の位置が1文目の後ではありません")}
+    ${li(emo <= 2 ? "ok" : "ng", `絵文字 ${emo}回（2回まで）`)}
+  </ul>`;
+}
+function tmChecks(p, body, builtin) {
+  const t = String(body || "");
+  const pr = /^(【PR】|[#＃]PR|PR|広告)/.test(t.trim());
+  return `${builtin ? tmCheckHTML(t) : ""}<ul class="checklist"><li class="${pr ? "ok" : "ng"}">${pr ? "☑ 先頭にPR表記あり" : "☒ 先頭にPR表記がありません（ステマ規制）"}</li>${/【要確認/.test(t) ? '<li class="ng">☒ 【要確認】が残っています。商品情報で埋めてください</li>' : ""}</ul>${checkHTML(p, t)}`;
+}
+const tmBlocked = (p, body) => guard(p, body || "").block.length > 0 || /【要確認/.test(body || "") || !/^(【PR】|[#＃]PR|PR|広告)/.test(String(body || "").trim());
+
+function threadsView(p) {
+  const k = s => `${p.id}.${s}`, shots = SHOTS["tm-threads"] || [], G = S[TM + "gen"];
+  const f = (key, label, soft, ph) => `<div class="field"><span class="label">${label}${aiMark(TM + key)}</span>${tmText(key, ph, soft)}${tmCnt(key, soft)}</div>`;
+  return `<header><div class="eyebrow">3ページ ・ Threads</div><h1>Threads の投稿づくり</h1>
+    <p class="lead">商品を入れて、使うプロンプトにチェック → 4人が5本ずつ書きます（4ページ）→ ほかの3人が採点して、一番点数の高い1本をコピーできます（5ページ）。</p></header>
+  <section class="card"><h2>紹介する商品</h2>
+    <p class="hint">ASPのプログラム詳細やAmazonの商品説明を貼り、画像も入れて「読み込んで欄に入れる」を押すと、AIが下の欄を埋めます。手で書いても大丈夫です。</p>
+    <div class="field"><span class="label">商品・サービスのテキスト</span>${tmArea("src", "コピーしてそのまま貼り付け")}${tmCnt("src")}</div>
+    <label class="drop" for="file-tm-threads"><b>商品の画像を選ぶ（複数OK）</b><span>パッケージ・広告素材・商品ページのスクショ</span><input type="file" id="file-tm-threads" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="tm-threads"></label>
+    ${shots.length ? `<div class="shots">${shots.map(s => `<div class="shot"><div class="pic"><img src="${s.url}" alt="商品の画像"><span class="stamp${s.done ? " done" : ""}">${s.done ? "読み込み済み" : "未読み込み"}</span></div><div class="foot"><button type="button" class="ghost small" data-delshot="tm-threads" data-id="${s.id}">削除</button></div></div>`).join("")}</div>` : ""}
+    <div class="actions"><button type="button" class="primary" data-tmread="1">読み込んで欄に入れる</button><span class="status" id="tmReadStatus"></span></div>
+    <div class="grid2">${f("genre", "ジャンル", 20, "例：家電・キッチン")}${f("tone", "口調", 20, "ペルソナに任せる")}</div>
+    ${f("target", "ターゲット（具体的な悩みを抱えた層）", 40, "例：毎朝のコーヒー代がかさむ30代の共働き")}
+    ${f("product", "紹介したい商品・サービス", 40, "なければ「カテゴリのみ」")}
+    <div class="field"><span class="label">商品情報（公式に書かれた事実だけ）${aiMark(TM + "info")}</span>${tmArea("info", "例：価格12,800円（税込）。ボタン1つで豆挽きから抽出まで。", 400)}${tmCnt("info", 400)}</div>
+    <div class="grid2">
+      <div class="field"><span class="label">ASP</span>${tmSelect("asp", COMMON.asp.concat(["その他"]))}</div>
+      <div class="field"><span class="label">提携状況</span>${tmSelect("status", ["承認済み", "申請中", "未申請"])}</div>
+      ${f("pr", "PR表記", 8, "【PR】")}
+    </div>
+    <div class="field"><span class="label">広告主の禁止事項${aiMark(TM + "ng")}</span>${tmArea("ng", "プログラム詳細のNG表現・SNS掲載の条件。なければ空欄", 200)}${tmCnt("ng", 200)}</div>
+    <p class="hint" style="margin:0">Amazonの商品画像は読み込みの材料にするだけにして、投稿には転載しないでください。</p>
+  </section>
+  ${proofSelect(p)}
+  ${vaultBlock(p)}
+  <section class="launch"><h2>4人に5本ずつ書いてもらう</h2>
+    <p>使うプロンプト：${esc(tmUsed().map(x => x.title || "無題").join("／") || "（どれも選ばれていません）")}</p>
+    <p>${esc(TM_PERSONAS.map(x => x.label).join("・"))} が、選んだプロンプトで5本ずつ、合計20本書きます（1〜3分ほど）。</p>
+    <div class="actions"><button type="button" class="go" data-tmgen="1">書いてもらう</button><button type="button" class="ghost small" id="tmStop" hidden style="color:inherit;border-color:currentColor">止める</button>${G ? `<button type="button" class="ghost small" data-go="tm-write" style="color:inherit;border-color:currentColor">4ページ：前回の投稿を見る</button>` : ""}${S[TM + "rev"] ? `<button type="button" class="ghost small" data-go="tm-review" style="color:inherit;border-color:currentColor">5ページ：前回の採点を見る</button>` : ""}</div>
+    <span class="status" id="tmGenStatus"></span>
+  </section>
+  <details style="display:block;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px"><summary><b>そのほかの機能</b>（戦略5本・下書き・投稿の記録・数字の取り込み）</summary>
+    <div style="display:grid;gap:18px;margin-top:14px">
+    <section class="card"><h2>${p.name} の基本</h2><ul class="facts">${p.facts.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
+    <section class="card"><h2>${p.name} のルールとやり方</h2><ul class="facts">${p.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>${field("文字数の上限を変える（空欄なら上の値）", text(k("limit"), String(p.limit), "number"))}</section>
+    ${shotBlock(p.id, p.shotHint)}
+    <section class="card"><h2>${p.name} の数字</h2><div class="grid2">${p.metrics.map((m, i) => field(`${m[0]}（${m[1]}）`, text(k("m" + i), "", "number"), k("m" + i))).join("")}</div></section>
+    <section class="card"><h2>テーマ（ジャンル）</h2>${chips(k("theme"), GENRES, true)}${field("詳しく（大まかでもOK）", text(k("theme_detail"), "例：30代向けの格安SIM乗り換え"), k("theme_detail"))}</section>
+    <section class="card"><h2>発信のしかた</h2>${field("形式", chips(k("format"), p.formats, true))}${field("投稿の頻度", chips(k("freq"), FREQ, false))}${field("収益化の方法", chips(k("money"), p.money, true))}${field("URL・アカウント名", text(k("url"), "まだ無ければ空欄でOK"))}${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
+    <section class="card"><h2>いまの段階</h2>${chips(k("stage"), STAGES, false, "stage")}</section>
+    <section class="card"><h2>準備のチェック</h2>${chips(k("prep"), PREP, true)}</section>
+    ${draftBlock(p)}
+    ${logBlock(p)}
+    <section class="launch"><h2>${p.name}でマーケティング開始（戦略5本）</h2>
+      <div class="actions"><button type="button" class="go" data-start="${p.id}">マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button>${S[p.id + ".result"] ? `<button type="button" class="ghost small" data-go="result-${p.id}" style="color:inherit;border-color:currentColor">前回の戦略を見る</button>` : ""}</div>
+      <span class="status" id="mkStatus"></span></section>
+    </div>
+  </details>`;
+}
+
+function tmWriteView(p) {
+  const G = S[TM + "gen"];
+  if (!G) return `<header><h1>まだ投稿がありません</h1></header><section class="card"><p>3ページ（Threads）の「書いてもらう」を押してください。</p><div class="actions"><button type="button" data-go="threads">3ページへ</button></div></section>`;
+  return `<header><div class="eyebrow">4ページ ・ ${esc(G.at || "")}</div><h1>4人が書いた投稿（各5本）</h1>
+    <p class="lead">使ったプロンプト：${esc((G.used || []).join("／"))}。本文はここで直せます。直したら、5ページで採点してもらってください。</p></header>
+  ${G.notice ? `<p class="note">${esc(G.notice)}</p>` : ""}
+  ${TM_PERSONAS.map(per => `<section class="card"><h2>${esc(per.label)}</h2><p class="hint">${esc(per.skill)}</p>
+    ${(G.posts[per.lv] || []).map((x, i) => `<div class="sub"><div class="sub-head"><span>${i + 1}本目${x.used ? `・${esc(x.used)}` : ""}</span></div>
+      <textarea class="big" style="min-height:130px" id="f-tm-${per.lv}-${i}" data-tmedit="${per.lv}|${i}">${esc(x.body || "")}</textarea>
+      <div class="actions" id="chk-tm-${per.lv}-${i}">${tmChecks(p, x.body, G.builtin)}</div>
+      ${x.aim ? `<p class="hint" style="margin:0">狙い：${esc(x.aim)}</p>` : ""}</div>`).join("") || '<p class="hint" style="margin:0">この人の投稿を受け取れませんでした。3ページでもう一度書いてもらってください。</p>'}
+  </section>`).join("")}
+  <section class="launch"><h2>5ページ：ほかの3人に採点してもらう</h2>
+    <p>それぞれの5本を、書いた本人以外の3人が自分の視点で採点します（1〜2分ほど）。</p>
+    <div class="actions"><button type="button" class="go" data-tmreview="1">採点してもらう</button>${S[TM + "rev"] ? `<button type="button" class="ghost small" data-go="tm-review" style="color:inherit;border-color:currentColor">前回の採点を見る</button>` : ""}<button type="button" class="ghost small" data-go="threads" style="color:inherit;border-color:currentColor">← 3ページに戻る</button></div>
+    <span class="status" id="tmRevStatus"></span>
+  </section>`;
+}
+
+const tmTotal = sc => TM_SCORES.reduce((a, s) => a + Math.max(0, Math.min(20, Math.round(Number(sc?.[s[0]]) || 0))), 0);
+function tmRanked(p) {
+  const G = S[TM + "gen"], R = S[TM + "rev"]; if (!G || !R) return null;
+  return TM_PERSONAS.map(per => {
+    const list = (G.posts[per.lv] || []).map((x, i) => {
+      const key = `${per.lv}-${i}`, rv = R.reviews[key] || [];
+      const avg = rv.length ? Math.round(rv.reduce((a, r) => a + r.total, 0) / rv.length) : null;
+      return { per, i, key, x, rv, avg, blocked: tmBlocked(p, x.body), stale: R.bodies?.[key] !== undefined && R.bodies[key] !== x.body };
+    }).sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+    const top = list.find(o => !o.blocked && o.avg !== null) || null;
+    return { per, list, top };
+  });
+}
+function tmPostCard(p, o, mark, G) {
+  return `<article class="strat${mark ? " best" : ""}">
+    <div class="strat-head"><div>${mark ? `<span class="pill-best">${esc(mark)}</span>` : ""}<div class="no">${esc(o.per.label)}・${o.i + 1}本目${o.x.used ? "・" + esc(o.x.used) : ""}</div></div>
+      <div class="big-score"><b>${o.avg ?? "―"}</b><small>/ 100点（3人の平均）</small></div></div>
+    <p style="margin:0;white-space:pre-wrap">${esc(o.x.body || "")}</p>
+    ${o.stale ? '<p class="note" style="margin:0">採点のあとに本文を直しました。点数は直す前のものです。</p>' : ""}
+    <div class="actions">${tmChecks(p, o.x.body, G.builtin)}</div>
+    ${manualHTML(`threads.tm.${o.key}`)}
+    <div class="actions"><button type="button" class="${mark ? "primary" : ""} small" data-tmcopy="${o.key}">本文をコピー</button><button type="button" class="ghost small" data-tmlog="${o.key}">投稿したので記録</button>${o.blocked ? '<span class="status ng">チェックで止まる所があるため、4ページで直してください</span>' : ""}</div>
+    ${o.rv.length ? `<ul class="facts">${o.rv.map(r => { const who = TM_PERSONAS.find(y => y.lv === r.by); return `<li><b>${esc(who ? who.short : "")}：${r.total}点</b>　${esc(r.comment || "")}</li>`; }).join("")}</ul>` : ""}
+  </article>`;
+}
+function tmReviewView(p) {
+  const G = S[TM + "gen"], R = S[TM + "rev"], rk = tmRanked(p);
+  if (!rk) return `<header><h1>まだ採点がありません</h1></header><section class="card"><p>4ページの「採点してもらう」を押してください。</p><div class="actions"><button type="button" data-go="tm-write">4ページへ</button></div></section>`;
+  const tops = rk.map(r => r.top).filter(Boolean).sort((a, b) => b.avg - a.avg);
+  return `<header><div class="eyebrow">5ページ ・ ${esc(R.at || "")}</div><h1>ほかの3人の採点</h1>
+    <p class="lead">それぞれの5本を、書いた本人以外の3人が採点しました（フック力・具体性・逆張り強度・共感性・コメント誘発力 各20点）。点数はAIによる目安です。チェックで止まる投稿は1位にしていません。</p></header>
+  ${tops.length ? tmPostCard(p, tops[0], "全体の1位", G) : '<p class="note">チェックを通る投稿がありませんでした。4ページで直してから、もう一度採点してください。</p>'}
+  ${rk.map(r => `<section class="card"><h2>${esc(r.per.label)}の5本</h2>
+    ${r.list.map(o => tmPostCard(p, o, r.top && o.key === r.top.key ? "この5本で1位" : "", G)).join("")}</section>`).join("")}
+  ${G.tree ? `<section class="card"><h2>リンク用ツリー投稿</h2><p class="hint">本文への自分の返信として投稿します。【案件リンク】を本物のURLに替えてください。</p><textarea id="f-tm-tree" data-tmtree="1">${esc(G.tree)}</textarea><div class="actions" id="chk-tm-tree">${checkHTML(p, G.tree)}</div><div class="actions"><button type="button" class="small" data-tmcopytree="1">ツリー投稿をコピー</button></div></section>` : ""}
+  ${G.confirm?.length ? `<section class="card"><h2>要確認リスト</h2><ul class="facts">${G.confirm.map(t => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
+  <section class="card"><div class="actions"><button type="button" data-go="tm-write">← 4ページ（本文を直す）</button><button type="button" class="ghost" data-go="threads">3ページ（商品・プロンプト）</button></div></section>`;
+}
+
+async function tmRead() {
+  const st = $("#tmReadStatus"), btn = document.querySelector("[data-tmread]"), shots = (SHOTS["tm-threads"] || []).slice(-6), src = tmv("src");
+  if (!src && !shots.length) { toast("テキストか画像を入れてください"); return; }
+  const prompt = `あなたは商品情報の整理係です。下の貼り付けテキストと添付の画像（ASPの広告素材やAmazonなどの商品ページ）から、Threadsのアフィリエイト投稿の材料を抜き出してください。
+# ルール
+- product と info には、書かれている・写っている事実だけを入れる。数字・効果・実績を推測で作らない。セール価格と通常価格は区別して書く
+- 効果効能の表示は「〜と記載」の形にし、断定しない
+- target だけは推測でよい（この商品で悩みが解決しそうな読み手）
+- 広告主の注意事項・禁止表現・SNS掲載の条件が書かれていれば ng に入れる。なければ空文字
+
+# 貼り付けテキスト
+${[...src].slice(0, 8000).join("") || "（なし。画像のみ）"}
+
+# 返す形式（この JSON だけ）
+{ "product": "商品名（40字以内）", "genre": "ジャンル（20字以内）", "target": "具体的な悩みを抱えた層（40字以内）", "info": "価格・容量・特徴などの事実を「。」区切りで（400字以内）", "ng": "広告主の禁止事項（200字以内）", "unclear": ["読み取れなかった・確認が必要なこと"] }`;
+  btn.disabled = true; st.className = "status"; st.textContent = "読み込んでいます…（10〜40秒ほど）";
+  try {
+    const out = await askAI(prompt, { images: shots.map(x => dataUrlToBlob(x.url)), tier: "default", maxTokens: 8000 });
+    let n = 0;
+    ["product", "genre", "target", "info", "ng"].forEach(k => { if (out && typeof out[k] === "string" && out[k].trim()) { S[TM + k] = out[k].trim(); S["_ai." + TM + k] = 1; n++; } });
+    (SHOTS["tm-threads"] || []).forEach(x => x.done = true); save(); saveShots(); go(view, false, true);
+    const un = [].concat(out?.unclear || []).filter(Boolean);
+    toast(n ? `${n}項目を入れました。内容を確認して直してください${un.length ? "（要確認：" + un.join("／") + "）" : ""}` : "読み取れる情報がありませんでした");
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
+}
+let tmCtl = null;
+async function tmGen() {
+  const st = $("#tmGenStatus"), btn = document.querySelector("[data-tmgen]"), stop = $("#tmStop"), used = tmUsed();
+  if (!tmv("product") && !tmv("info")) { toast("商品名か商品情報を入れてください"); return; }
+  if (!used.length) { toast("使うプロンプトに1つ以上チェックを入れてください"); return; }
+  const prompt = `あなたたちはThreadsの投稿を書くSNSライターの4人です。4人それぞれが、同じ商品について投稿を${TM_N}本ずつ書きます（合計${TM_N * 4}本）。
+
+# 4人（違いは書く技術のレベル。変数「口調」が「ペルソナに任せる」なら各自の口調、それ以外ならその口調に統一）
+${TM_PERSONAS.map(x => `- Lv${x.lv} ${x.name}：口調＝${x.tone}／技術＝${x.skill}`).join("\n")}
+
+# 使う型・手法（ユーザーが選んだプロンプト）
+すべて守る。複数あるときは、${TM_N}本の中で組み合わせたり使い分けたりしてよい。プロンプトの中にある出力形式・採点・案の数の指示は無視し、このページの「返す形式」と本数に従う。
+${used.map(x => `## ${x.title || "無題"}\n${x.body}`).join("\n\n")}
+
+# 必ず守るルール（プロンプトより優先）
+${tmBase()}
+- 同じ人の${TM_N}本は、切り口を変えて似た文にしない
+
+# 変数
+${tmVars()}
+
+# 返す形式（この JSON だけ）
+{ "notice": "投稿前に伝えること（なければ空文字）",
+  "posts": { "1": [ { "body": "本文", "used": "使ったプロンプトのタイトル", "aim": "この本の狙い（30字以内）" } ], "2": [], "3": [], "4": [] },
+  "tree": "リンク用ツリー投稿",
+  "confirm": ["【要確認】にした項目や、出典が必要な表現"] }
+posts の "1"〜"4" は Lv1〜Lv4。それぞれ ${TM_N} 件。`;
+  tmCtl = new AbortController();
+  btn.disabled = true; stop.hidden = false; st.className = "status"; st.textContent = `4人が${TM_N}本ずつ書いています…（1〜3分ほど）`;
+  try {
+    const out = await askAI(prompt, { signal: tmCtl.signal, tier: "default", maxTokens: 24000 });
+    const posts = {}; let n = 0;
+    TM_PERSONAS.forEach(per => { posts[per.lv] = [].concat(out?.posts?.[per.lv] || out?.posts?.[String(per.lv)] || []).filter(x => x && x.body).slice(0, TM_N).map(x => ({ body: String(x.body), used: String(x.used || ""), aim: String(x.aim || "") })); n += posts[per.lv].length; });
+    if (!n) throw { message: "投稿を受け取れませんでした。もう一度お試しください。" };
+    S[TM + "gen"] = { at: new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" }), used: used.map(x => x.title || "無題"), builtin: used.some(x => x.id === "builtin"), notice: String(out.notice || ""), posts, tree: fixPR(String(out.tree || "")), confirm: [].concat(out.confirm || []).map(String) };
+    delete S[TM + "rev"]; save(); go("tm-write");
+    toast(`${n}本できました。チェックを見て直してから、採点してもらってください`);
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; }
+  finally { btn.disabled = false; stop.hidden = true; tmCtl = null; }
+}
+async function tmReview() {
+  const G = S[TM + "gen"], st = $("#tmRevStatus"), btn = document.querySelector("[data-tmreview]"); if (!G) return;
+  const items = []; TM_PERSONAS.forEach(per => (G.posts[per.lv] || []).forEach((x, i) => items.push({ key: `${per.lv}-${i}`, author: per.lv, body: x.body })));
+  const prompt = `あなたたちは次の4人です。それぞれの視点で、ほかの人が書いたThreadsの投稿を採点します。
+${TM_PERSONAS.map(x => `- Lv${x.lv} ${x.name}：採点の視点＝${x.eye}`).join("\n")}
+
+# やること
+- 各投稿を、書いた本人（author）以外の3人がそれぞれ採点する。自分の投稿は採点しない
+- 5項目を各0〜20点の整数で：hook=フック力（1文目で当事者を引き込めるか）、specific=具体性（数字や場面で得感が伝わるか）、contrarian=逆張り強度（今の選択肢を使っている人に呼びかけられているか）、empathy=共感性（本音に刺さるか）、comment=コメント誘発力（問いかけ・反応したくなる要素があるか）
+- 甘くしない。同じ人の5本の中でも差をつける
+- 下のルールに反する投稿（PR表記が無い、禁止表現、作った数字・体験など）は、各項目を大きく下げ、コメントで指摘する
+- comment は採点した人の口調で40字以内。良い点か直す点を具体的に
+
+# ルール
+${tmBase()}
+
+# 投稿
+${JSON.stringify(items)}
+
+# 返す形式（この JSON だけ）
+{ "reviews": [ { "key": "1-0", "by": 2, "scores": { "hook": 0, "specific": 0, "contrarian": 0, "empathy": 0, "comment": 0 }, "comment": "" } ] }
+key ごとに author 以外の3人分。合計${items.length * 3}件。`;
+  btn.disabled = true; st.className = "status"; st.textContent = "ほかの3人が採点しています…（1〜2分ほど）";
+  try {
+    const out = await askAI(prompt, { tier: "default", maxTokens: 24000 });
+    const reviews = {}, bodies = {};
+    items.forEach(it => { reviews[it.key] = []; bodies[it.key] = it.body; });
+    [].concat(out?.reviews || []).forEach(r => {
+      const key = String(r.key || ""), by = +r.by, it = items.find(x => x.key === key);
+      if (!it || by === it.author || !TM_PERSONAS.some(x => x.lv === by) || reviews[key].some(x => x.by === by)) return;
+      reviews[key].push({ by, total: tmTotal(r.scores), comment: String(r.comment || "") });
+    });
+    if (!Object.values(reviews).some(x => x.length)) throw { message: "採点を受け取れませんでした。もう一度お試しください。" };
+    S[TM + "rev"] = { at: new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" }), reviews, bodies };
+    save(); go("tm-review"); toast("採点しました。1位の投稿をコピーできます");
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
+}
+const tmPost = key => { const [lv, i] = String(key).split("-"); return S[TM + "gen"]?.posts?.[lv]?.[+i] || null; };
+
 // ---------- 手法・プロンプト集（このブラウザにだけ保存。1つずつコピーできる） ----------
 let promptEdit = null;
 const plist = pid => { S._prompts = S._prompts || {}; return (S._prompts[pid] = S._prompts[pid] || []); };
@@ -606,11 +899,11 @@ async function legacyUnlock(pass) {
 function vaultBlock(p) {
   const pid = p.id, list = plist(pid), ed = promptEdit && promptEdit.pid === pid ? (list.find(x => x.id === promptEdit.id) || {}) : {};
   const head = `<section class="card" id="vault-${pid}"><h2>${p.name} の手法・プロンプト集</h2>
-    <p class="hint">自分の手法やプロンプトを保存して、1つずつコピーできます。このブラウザにだけ保存され、どこにも送信されず、GitHub にも入りません。</p>`;
+    <p class="hint">自分の手法やプロンプトを保存して、1つずつコピーできます。このブラウザにだけ保存され、どこにも送信されず、GitHub にも入りません。</p>${pid === "threads" ? '<p class="hint" style="margin:0"><b>「使う」にチェックしたプロンプト（タイトル＋本文）で、4人が投稿を書きます。複数チェックできます。</b></p>' : ""}`;
   if (S._vault) return head + `<div class="sub"><div class="sub-head">以前の合言葉付きの保存を移します（一度だけ）</div>
       ${field("以前決めた合言葉", `<input type="password" id="f-vpass-${pid}" autocomplete="current-password">`)}
       <div class="actions"><button type="button" class="primary small" data-vmigrate="${pid}">移す</button><span class="status" id="vStatus-${pid}"></span></div></div></section>`;
-  return head + `${list.length ? `<div class="rows">${list.map(it => `<div class="sub"><div class="sub-head"><span>${esc(it.title || "無題")}</span><span class="actions"><button type="button" class="primary small" data-vcopy="${pid}" data-id="${it.id}">コピー</button><button type="button" class="ghost small" data-vedit="${pid}" data-id="${it.id}">直す</button><button type="button" class="ghost small" data-vdel="${pid}" data-id="${it.id}">削除</button></span></div>
+  return head + `${pid === "threads" ? tmBuiltinRow() : ""}${list.length ? `<div class="rows">${list.map(it => `<div class="sub"><div class="sub-head"><span>${pid === "threads" ? tmUseBox(it.id) : ""}${esc(it.title || "無題")}</span><span class="actions"><button type="button" class="primary small" data-vcopy="${pid}" data-id="${it.id}">コピー</button><button type="button" class="ghost small" data-vedit="${pid}" data-id="${it.id}">直す</button><button type="button" class="ghost small" data-vdel="${pid}" data-id="${it.id}">削除</button></span></div>
       <p class="hint" style="margin:0;white-space:pre-wrap">${esc((it.body || "").slice(0, 120))}${(it.body || "").length > 120 ? "…" : ""}</p></div>`).join("")}</div>` : `<p class="hint" style="margin:0">まだ保存されていません。</p>`}
     <div class="sub"><div class="sub-head">${ed.id ? "プロンプトを直す" : "プロンプトを追加する"}</div>
       ${field("名前（例：問いかけで会話を生む型）", `<input type="text" id="f-vtitle-${pid}" value="${esc(ed.title || "")}">`)}
@@ -622,7 +915,7 @@ function vaultBlock(p) {
 }
 async function vaultClick(t) {
   const pid = t.dataset.vmigrate || t.dataset.vsave || t.dataset.vcopy || t.dataset.vedit || t.dataset.vdel || t.dataset.vcancel || t.dataset.vbackup || t.dataset.vrestore;
-  if (t.dataset.vcopy) { const it = plist(pid).find(x => x.id === t.dataset.id); if (it) copy(it.body, "「" + (it.title || "無題") + "」"); return; }
+  if (t.dataset.vcopy) { const it = pid === "threads" && t.dataset.id === "builtin" ? TM_BUILTIN : plist(pid).find(x => x.id === t.dataset.id); if (it) copy(it.body, "「" + (it.title || "無題") + "」"); return; }
   if (t.dataset.vbackup) { copy(JSON.stringify({ gunshiPrompts: 1, data: S._prompts || {} }), "バックアップ"); return; }
   if (t.dataset.vsave) { const title = $("#f-vtitle-" + pid).value.trim(), body = $("#f-vbody-" + pid).value; if (!body.trim()) return toast("本文を入れてください"); const L = plist(pid), id = promptEdit?.pid === pid ? promptEdit.id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6), k = L.findIndex(x => x.id === id); if (k >= 0) L[k] = { id, title, body }; else L.push({ id, title, body }); promptEdit = null; save(); go(view, false, true); toast("保存しました"); }
   if (t.dataset.vedit) { promptEdit = { pid, id: t.dataset.id }; go(view, false, true); $("#f-vtitle-" + pid)?.scrollIntoView({ block: "center" }); }
@@ -1056,8 +1349,8 @@ function go(to, push = true, keepScroll = false) {
   view = to;
   const p = PLATFORMS.find(x => x.id === to), rp = to.startsWith("result-") ? PLATFORMS.find(x => "result-" + x.id === to) : null;
   const y = window.scrollY;
-  $("#app").innerHTML = to === "common" ? commonView() : to === "proof" ? proofView() : rp ? resultView(rp) : p ? platformView(p) : homeView();
-  if (!p && !rp && to !== "common" && to !== "proof") view = "home";
+  $("#app").innerHTML = to === "common" ? commonView() : to === "proof" ? proofView() : to === "tm-write" ? tmWriteView(TP()) : to === "tm-review" ? tmReviewView(TP()) : rp ? resultView(rp) : p ? platformView(p) : homeView();
+  if (!p && !rp && !["common", "proof", "tm-write", "tm-review"].includes(to)) view = "home";
   $("#navHome").hidden = view === "home";
   $("#copyBar").textContent = view.startsWith("result-") ? "全部コピー" : "profile.md をコピー";
   if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
@@ -1078,7 +1371,10 @@ document.addEventListener("input", e => {
   if (el.id === "f-apikey") { apiKey = el.value.trim(); try { if ($("#f-keysave")?.checked) localStorage.setItem(KEY_API, apiKey); } catch (x) {} $("#connStatus").className = "status"; $("#connStatus").textContent = "いまの接続：" + engineLabel(); return; }
   if (el.dataset && el.dataset.bodyedit !== undefined && curRes()) { const p = curRes(), R = S[p.id + ".result"], i = +el.dataset.bodyedit; if (R.strategies[i]) { R.strategies[i].body = el.value; save(); } const box = $("#chk-body-" + i); if (box) box.innerHTML = checkHTML(p, el.value); return; }
   if (el.dataset && el.dataset.draftedit) { const pid = el.dataset.draftedit, i = +el.dataset.i, a = arr(pid + ".drafts"); if (a[i]) { a[i].text = el.value; save(); } const box = $(`#chk-${pid}-${i}`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === pid), el.value); return; }
+  if (el.dataset && el.dataset.tmedit) { const [lv, i] = el.dataset.tmedit.split("|"), x = tmPost(lv + "-" + i); if (x) { x.body = el.value; save(); } const box = $(`#chk-tm-${lv}-${i}`); if (box) box.innerHTML = tmChecks(TP(), el.value, S[TM + "gen"]?.builtin); return; }
+  if (el.dataset && el.dataset.tmtree) { const G = S[TM + "gen"]; if (G) { G.tree = el.value; save(); } const box = $("#chk-tm-tree"); if (box) box.innerHTML = checkHTML(TP(), el.value); return; }
   if (el.dataset && el.dataset.k && el.type !== "checkbox" && el.type !== "radio") setKey(el.dataset.k, el.value, el);
+  if (el.dataset && el.dataset.k && el.dataset.k.startsWith(TM)) tmCntUpdate(el);
   if (el.dataset && el.dataset.logm) { const [pid, i, j] = el.dataset.logm.split("|"), e = arr(pid + ".log")[+i]; if (e) { e.m = e.m || []; e.m[+j] = el.value; save(); const p = PLATFORMS.find(x => x.id === pid); const r = $(`#lograte-${pid}-${i}`); if (r) r.textContent = `${LOGM[pid].slice(-1)[0]}率：${pct(logRate(p, e))}`; const sm = $("#logsum-" + pid); if (sm) sm.innerHTML = logSummary(p); } return; }
   if (el.dataset && el.dataset.logmemo) { const [pid, i] = el.dataset.logmemo.split("|"), e = arr(pid + ".log")[+i]; if (e) { e.memo = el.value; save(); } return; }
   if (el.dataset && el.dataset.check) { const box = $(`#chk-${el.dataset.check}-my`); if (box) box.innerHTML = checkHTML(PLATFORMS.find(x => x.id === el.dataset.check), el.value); }
@@ -1086,6 +1382,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", async e => {
   const el = e.target;
   if (el.id === "f-keysave") { try { if (el.checked) localStorage.setItem(KEY_API, apiKey); else localStorage.removeItem(KEY_API); } catch (x) {} toast(el.checked ? "この端末にキーを保存しました" : "保存したキーを消しました"); return; }
+  if (el.dataset && el.dataset.tmuse) { const ids = new Set(tmUseIds()); el.checked ? ids.add(el.dataset.tmuse) : ids.delete(el.dataset.tmuse); S[TM + "use"] = [...ids]; save(); go(view, false, true); return; }
   if (el.dataset && el.dataset.bool) { S[el.dataset.bool] = el.checked; save(); return; }
   if (el.dataset && el.dataset.shots) {
     const scope = el.dataset.shots, files = [...el.files];
@@ -1134,6 +1431,13 @@ document.addEventListener("click", async e => {
   if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
   if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
   if (t.dataset.start) startMarketing(t.dataset.start);
+  if (t.dataset.tmread) tmRead();
+  if (t.dataset.tmgen) tmGen();
+  if (t.id === "tmStop") tmCtl?.abort();
+  if (t.dataset.tmreview) tmReview();
+  if (t.dataset.tmcopy) { const x = tmPost(t.dataset.tmcopy); if (x) { if (tmBlocked(TP(), x.body)) toast("コピーできません：PR表記・【要確認】・禁止表現などを4ページで直してください"); else copyChecked(TP(), x.body, "本文", "threads.tm." + t.dataset.tmcopy); } }
+  if (t.dataset.tmcopytree) { const G = S[TM + "gen"]; if (G?.tree) copyChecked(TP(), G.tree, "ツリー投稿", "threads.tm.tree"); }
+  if (t.dataset.tmlog) { const x = tmPost(t.dataset.tmlog), [lv, i] = t.dataset.tmlog.split("-"); if (x) { addLog("threads", { type: "その他", body: x.body, memo: `投稿づくり：Lv${lv}・${+i + 1}本目${x.used ? "・" + x.used : ""}` }); toast("投稿の記録に追加しました（3ページの「そのほかの機能」にあります）"); } }
   if (t.id === "stopMk") mkCtl?.abort();
   if (t.id === "testConn") {
     const s = $("#connStatus"); s.className = "status"; s.textContent = "テスト中…"; t.disabled = true;
@@ -1158,3 +1462,5 @@ go((location.hash || "#home").slice(1), false);
   } catch (e) {}
 })();
 </script>
+
+</body></html>
