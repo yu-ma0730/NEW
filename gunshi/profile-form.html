@@ -105,6 +105,9 @@ label.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .calc small { color: var(--muted); }
 .reading { font-size: .92rem; border-left: 3px solid var(--gold); padding-left: 10px; margin: 0; }
 .facts { margin: 0; padding-left: 1.2em; font-size: .9rem; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: .85rem; width: 100%; }
+.checklist .ok { color: var(--good); } .checklist .ng { color: var(--bad); } .checklist .warn { color: var(--gold); }
+.checklist .sub { padding-left: 1.4em; font-size: .8rem; }
 pre.out { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
 /* launch */
 .launch { background: var(--ink); color: var(--bg); border-radius: 12px; padding: 22px 18px; display: grid; gap: 12px; }
@@ -281,10 +284,63 @@ function prMissing(t) {
   return bad;
 }
 const fixPR = t => t.replace(new RegExp(LINK_RE.source + "(?:[ 　]*PR)?", "g"), "$1 PR");
+// 法律・規約に触れやすい表現（見つけたらコピーできない）
+const NG_RULES = [
+  { re: /絶対|必ず|100[%％]|誰でも|確実に/g, why: "景品表示法（言い切り・保証）", alt: "「多くの場合」「〜しやすい」など、幅のある言い方に" },
+  { re: /No\.?\s?1|ナンバーワン|日本一|業界最安|最安値|業界初|日本初/gi, why: "景品表示法（根拠のない最上級）", alt: "根拠（調査名・時期）を書くか、削る" },
+  { re: /治る|治す|完治|痩せる|やせる|シミが消え|若返|アンチエイジング|免疫力|デトックス/g, why: "薬機法・健康増進法（効果の断定）", alt: "使用感や事実の説明にする" },
+  { re: /稼げる|儲かる|月収\s*\d+\s*万|不労所得|ほったらかし/g, why: "収入の保証・誇大表現", alt: "実際の作業と結果の幅を書く" },
+  { re: /クリックして|タップして|押して(ね|ください)|ポチって/g, why: "ASP規約（クリックのお願い）", alt: "読者が自分で選ぶ理由を書く" }
+];
+// 本当なら使ってよいが、確認が必要な表現（警告だけ）
+const WARN_RULES = [
+  { re: /今だけ|残りわずか|期間限定|先着/g, why: "本当の期限・数量か確認（違えば景品表示法）", alt: "実在するなら日付・数量を書く" }
+];
+// 体験の表現（体験の証明がない商品では使えない）
+const EXP_RE = /使ってみ|使っています|使ってる|愛用|実際に(使|試|契約|購入)|私も(使|契約|購入|乗り換)|乗り換えてみ|試してみ|買ってよかった|契約してみ|使い始めて/g;
+const NG_PROMPT = "- 次の表現は使わない：絶対・必ず・100%・誰でも・確実に／根拠のないNo.1・最安・日本初／治る・痩せる・シミが消える・若返る・免疫力／稼げる・儲かる・月収〇万・不労所得／クリックして・タップして";
+function findRules(rules, t) { return rules.map(r => ({ ...r, words: [...new Set(t.match(r.re) || [])] })).filter(r => r.words.length); }
+function proofOf(pid) { const id = S[pid + ".proof"]; return (S._proofs || []).find(x => x.id === id) || null; }
+const proofOK = pid => !!proofOf(pid)?.verdict?.ok;
+function expFind(p, t) { return proofOK(p.id) ? [] : [...new Set(t.match(EXP_RE) || [])]; }
+function guard(p, t) {
+  const block = [], warn = [];
+  if (countFor(p, t) > limitOf(p)) block.push("文字数の上限を超えています");
+  if (prMissing(t).length) block.push("「 PR」が無いリンクがあります");
+  findRules(NG_RULES, t).forEach(r => block.push(`${r.why}：「${r.words.join("」「")}」`));
+  const ex = expFind(p, t); if (ex.length) block.push(`体験の証明がない商品なのに、体験の表現があります：「${ex.join("」「")}」`);
+  findRules(WARN_RULES, t).forEach(r => warn.push(`${r.why}：「${r.words.join("」「")}」`));
+  return { block, warn };
+}
 function checkHTML(p, t) {
-  const n = countFor(p, t), lim = limitOf(p), miss = prMissing(t);
-  return `<span class="status ${n > lim ? "ng" : "ok"}">${n.toLocaleString()} / ${lim.toLocaleString()}${p.unit === "全角" ? "（全角換算）" : "字"}${n > lim ? "　上限を超えています" : ""}</span>
-    <span class="status ${miss.length ? "ng" : "ok"}">${(t.match(LINK_RE) || []).length ? (miss.length ? `「 PR」が無いリンクが${miss.length}本あります` : "リンクはすべて「 PR」付き") : "リンクなし"}</span>`;
+  const n = countFor(p, t), lim = limitOf(p), miss = prMissing(t), links = (t.match(LINK_RE) || []).length;
+  const ng = findRules(NG_RULES, t), wn = findRules(WARN_RULES, t), ex = expFind(p, t), pr = proofOf(p.id);
+  const li = (ok, txt) => `<li class="${ok ? "ok" : "ng"}">${ok ? "☑" : "☒"} ${txt}</li>`;
+  return `<ul class="checklist">
+    ${li(n <= lim, `文字数 ${n.toLocaleString()} / ${lim.toLocaleString()}${p.unit === "全角" ? "（全角換算）" : "字"}`)}
+    ${li(!miss.length, links ? (miss.length ? `「 PR」が無いリンクが${miss.length}本` : "リンクはすべて「URL PR」") : "リンクなし")}
+    ${li(!ng.length, ng.length ? "法律・規約に触れる表現があります" : "法律・規約に触れる表現なし")}
+    ${ng.map(r => `<li class="ng sub">「${esc(r.words.join("」「"))}」…${esc(r.why)}。${esc(r.alt)}</li>`).join("")}
+    ${proofOK(p.id) ? li(true, `体験の証明あり（${esc(pr.name)}）：体験談を書いてよい`) : li(!ex.length, ex.length ? `体験の証明がないのに体験の表現：「${esc(ex.join("」「"))}」` : "体験の表現なし（体験の証明がないため、調べた情報として書く）")}
+    ${wn.map(r => `<li class="warn">⚠ 「${esc(r.words.join("」「"))}」…${esc(r.why)}</li>`).join("")}
+  </ul>`;
+}
+function manualHTML(key) {
+  const c = (f, label) => `<label class="chip"><input type="checkbox" data-bool="_chk.${key}.${f}"${S[`_chk.${key}.${f}`] ? " checked" : ""}><span>${label}</span></label>`;
+  return `<div class="chips">${c("official", "料金・キャンペーンを公式サイトで確認した")}${c("read", "声に出して読んで直した")}</div>`;
+}
+function copyChecked(p, t, label, key) {
+  const g = guard(p, t);
+  if (g.block.length) { toast("コピーできません：" + g.block[0]); return; }
+  const miss = [];
+  if (!S[`_chk.${key}.official`]) miss.push("公式サイトで確認"); if (!S[`_chk.${key}.read`]) miss.push("声に出して読む");
+  copy(t, label);
+  if (miss.length || g.warn.length) setTimeout(() => toast(`コピーしました。確認が残っています：${miss.concat(g.warn.length ? ["期限・数量の表現"] : []).join("・")}`), 1500);
+}
+function expRule(pid) {
+  const pr = proofOf(pid);
+  if (pr && pr.verdict?.ok) return `- 本人は「${pr.name}」を実際に使っている（写真・スクショで確認済み）。次の事実と本人のメモだけを使って、一人称の体験として書いてよい。ここに無い体験は作らない：${JSON.stringify({ 確認できた事実: pr.verdict.facts || [], いつから: v(`_pm.${pr.id}.since`), 良かった点: v(`_pm.${pr.id}.good`), 不満な点: v(`_pm.${pr.id}.bad`) })}`;
+  return `- 本人がこの商品を使ったことは確認できていない。「使ってみた」「愛用」「実際に試した」「私も契約した」など体験の表現は禁止。調べた情報・比較・選び方として書く`;
 }
 
 // ---------- 状態 ----------
@@ -377,6 +433,7 @@ function homeView() {
       return `<button type="button" class="tile" data-go="${p.id}"><span class="nm">${p.name}</span><span class="tg">${p.tag}</span><span class="badge${st ? " on" : ""}">${st ? esc(st) : n ? `入力中（${n}項目）` : "未入力"}</span>${S[p.id + ".result"] ? '<span class="badge">戦略あり</span>' : ""}</button>`;
     }).join("")}
       <button type="button" class="tile sub" data-go="common"><span class="nm">共通プロフィール</span><span class="tg">立場・AI・ASP（管理画面のスクショ取込あり）・自分のこと・目標・案件</span><span class="badge${filled("c") ? " on" : ""}">${filled("c") ? `${filled("c")}項目` : "未入力"}</span></button>
+      <button type="button" class="tile sub" data-go="proof"><span class="nm">体験の証明</span><span class="tg">紹介する商品を実際に使っていることを、写真・スクショでAIに確認してもらう</span><span class="badge${(S._proofs || []).some(x => x.verdict?.ok) ? " on" : ""}">${(S._proofs || []).length ? `${(S._proofs || []).filter(x => x.verdict?.ok).length}/${(S._proofs || []).length}件 確認済み` : "未登録"}</span></button>
     </div>
   </section>
 
@@ -407,6 +464,7 @@ function platformView(p) {
     ${field("困っていること・やりたいこと", area(k("trouble"), "例：何を投稿すればいいか分からない"))}</section>
   <section class="card"><h2>いまの段階</h2><p class="hint">一番近いものを1つ選んでください。まだ何もしていなくても大丈夫です。</p>${chips(k("stage"), STAGES, false, "stage")}</section>
   <section class="card"><h2>準備のチェック</h2><p class="hint">終わっているものにチェックを入れます。チェックが少ないほど、事前調査から始める戦略になります。</p>${chips(k("prep"), PREP, true)}</section>
+  ${proofSelect(p)}
   ${draftBlock(p)}
   ${logBlock(p)}
   <section class="launch"><h2>${p.name}でマーケティング開始</h2>
@@ -414,6 +472,98 @@ function platformView(p) {
     <div class="actions"><button type="button" class="go" data-start="${p.id}">マーケティング開始</button><button type="button" class="ghost small" id="stopMk" hidden style="color:inherit;border-color:currentColor">止める</button>${S[p.id + ".result"] ? `<button type="button" class="ghost small" data-go="result-${p.id}" style="color:inherit;border-color:currentColor">前回の戦略を見る</button>` : ""}</div>
     <span class="status" id="mkStatus"></span>
   </section>`;
+}
+
+function proofSelect(p) {
+  const L = S._proofs || [], pr = proofOf(p.id);
+  return `<section class="card"><h2>この媒体で紹介する商品</h2>
+    <p class="hint">選んだ商品の「体験の証明」ができていれば、下書きや戦略の本文に体験談が入り、チェック項目にも自動でチェックが入ります。</p>
+    ${field("紹介する商品・サービス", `<select id="f-${p.id}-proof" data-k="${p.id}.proof"><option value="">（選ばない／まだ決めていない）</option>${L.map(x => `<option value="${x.id}"${pr && pr.id === x.id ? " selected" : ""}>${esc(x.name)}${x.verdict?.ok ? "（証明あり）" : "（証明なし）"}</option>`).join("")}</select>`)}
+    <div class="actions"><span class="status ${pr?.verdict?.ok ? "ok" : ""}">${pr ? (pr.verdict?.ok ? "✅ 体験の証明あり：体験談を書けます" : "体験の証明がまだです：調べた情報として書きます") : "商品を選ぶと、体験の有無に合わせて文章が変わります"}</span><button type="button" class="ghost small" data-go="proof">体験の証明ページへ</button></div>
+  </section>`;
+}
+function proofView() {
+  const L = S._proofs || [];
+  return `<header><div class="eyebrow">投稿の前に</div><h1>体験の証明</h1>
+    <p class="lead">紹介する商品を実際に使っていることを、写真やスクショでAIに確認してもらいます。確認できると、その商品を紹介する文章のチェック項目に自動でチェックが入り、AIが体験談の入った文章を書けるようになります。</p></header>
+  <section class="card"><h2>何をアップすればいい？</h2>
+    <ul class="facts"><li>商品と一緒に写した自分の写真（自分の部屋・手元など）</li><li>契約・購入の完了画面、マイページ、購入履歴のスクショ</li><li>実際に使っている画面（アプリ・管理画面など）</li></ul>
+    <p class="note" style="margin:0">名前・住所・電話番号・メール・注文番号・会員IDは、できるだけ隠してからアップしてください。画像はAIの確認のために送られ、このブラウザに保存されます。記事やSNSに載せるときも、個人情報は必ず隠してください。</p></section>
+  ${L.map(proofCard).join("")}
+  <section class="card"><h2>商品を追加する</h2>${field("商品・サービス名", `<input type="text" id="f-proofname" placeholder="例：〇〇モバイル（格安SIM）">`)}<div class="actions"><button type="button" class="primary small" id="proofAdd">追加する</button></div></section>`;
+}
+function proofCard(pr, i) {
+  const scope = "proof-" + pr.id, shots = SHOTS[scope] || [], V = pr.verdict, pending = shots.filter(x => !x.done).length;
+  return `<section class="card" id="proof-${pr.id}"><div class="sub-head"><h2 style="margin:0">${esc(pr.name)}</h2><button type="button" class="ghost small" data-del="_proofs" data-i="${i}">削除</button></div>
+    ${V ? `<div class="first" style="color:${V.ok ? "var(--good)" : "var(--bad)"}">${V.ok ? "✅ 実際に使っている証拠を確認できました" : "⚠️ まだ確認できていません"}</div>
+      <p class="hint" style="margin:0">${esc(V.reason || "")}（${esc(V.at || "")}）</p>
+      ${V.facts?.length ? `<div><b>確認できた事実</b><ul class="facts">${V.facts.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${V.privacy?.length ? `<p class="note" style="margin:0">個人情報が写っています：${esc(V.privacy.join("、"))}。記事やSNSに載せるときは必ず隠してください。</p>` : ""}
+      ${pending && V ? `<p class="status">画像が増えました。もう一度確認してください。</p>` : ""}` : `<p class="hint" style="margin:0">まだ確認していません。</p>`}
+    <label class="drop" for="file-${scope}"><b>写真・スクショを選ぶ（複数OK）</b><span>JPEG・PNG・WebP</span><input type="file" id="file-${scope}" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-shots="${scope}"></label>
+    ${shots.length ? `<div class="shots">${shots.map(x => `<div class="shot"><div class="pic"><img src="${x.url}" alt="アップした証拠の画像"><span class="stamp${x.done ? " done" : ""}">${x.done ? "確認済み" : "未確認"}</span></div><div class="foot"><button type="button" class="ghost small" data-delshot="${scope}" data-id="${x.id}">削除</button></div></div>`).join("")}</div>` : ""}
+    <div class="grid2">${field("いつから使っている？", text(`_pm.${pr.id}.since`, "例：2026年8月から"))}</div>
+    ${field("良かった点（自分の言葉で）", area(`_pm.${pr.id}.good`, "例：月額が3,000円下がった。手続きは30分で終わった"))}
+    ${field("不満な点・合わない人", area(`_pm.${pr.id}.bad`, "例：昼休みは通信が遅い"))}
+    <div class="actions"><button type="button" class="primary" data-proofcheck="${pr.id}"${shots.length ? "" : " disabled"}>AIで確認する</button><span class="status" id="proofStatus-${pr.id}"></span></div>
+  </section>`;
+}
+async function checkProof(id) {
+  const pr = (S._proofs || []).find(x => x.id === id); if (!pr) return;
+  const scope = "proof-" + id, shots = (SHOTS[scope] || []).slice(-6), st = $("#proofStatus-" + id), btn = document.querySelector(`[data-proofcheck="${id}"]`);
+  const prompt = `あなたはアフィリエイト記事の「体験の表記」が本当かを確認するアシスタントです。ユーザーは「${pr.name}」を実際に使っていると言っています。
+添付の${shots.length}枚の画像が、本人がこの商品・サービスを実際に購入・契約・利用していることを示しているか確認してください。
+
+# 判定の基準
+- ok を true にするのは、画像から「${pr.name}」を本人が購入・契約・利用していると読み取れる場合だけ（例：本人の手元や部屋にある商品の写真、契約・購入の完了画面、マイページ、購入履歴、利用中のアプリ画面）
+- 公式サイトの宣伝画像・商品ページだけ・他人の写真・商品名が分からない画像は ok を false にする
+- 本人かどうかを完全に確かめることはできないので、画像から読み取れる範囲で判定する
+- 画像から読み取れる事実（プラン名・契約日・購入日・月額・使用期間など）を facts に入れる。推測はしない
+- 画像に写っている個人情報（氏名・住所・電話番号・メールアドレス・注文番号・会員ID・顔など）を privacy に挙げる
+
+# 本人のメモ
+いつから：${v(`_pm.${id}.since`)}／良かった点：${v(`_pm.${id}.good`)}／不満な点：${v(`_pm.${id}.bad`)}
+
+# 返す形式（この JSON だけ）
+{ "ok": true, "kinds": ["商品写真・契約画面・購入履歴・利用画面・その他 のどれか"], "facts": ["読み取れた事実"], "privacy": ["写っている個人情報"], "reason": "判定の理由（1文）" }`;
+  btn.disabled = true; st.className = "status"; st.textContent = "確認しています…（10〜40秒ほど）";
+  try {
+    const out = await askAI(prompt, { images: shots.map(x => dataUrlToBlob(x.url)), tier: "default", maxTokens: 8000 });
+    pr.verdict = { ok: out.ok === true, kinds: [].concat(out.kinds || []), facts: [].concat(out.facts || []).map(String), privacy: [].concat(out.privacy || []).map(String), reason: String(out.reason || ""), at: new Date().toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" }) };
+    (SHOTS[scope] || []).forEach(x => x.done = true); save(); saveShots(); go(view, false, true);
+    toast(pr.verdict.ok ? "確認できました。この商品の文章に体験談を入れられます" : "まだ確認できませんでした。理由を見て、別の画像を足してください");
+  } catch (err) { st.className = "status ng"; st.textContent = err.message || "うまくいきませんでした"; btn.disabled = false; }
+}
+async function rewriteExp(kind, pid, i) {
+  const p = PLATFORMS.find(x => x.id === pid), pr = proofOf(pid);
+  const target = kind === "res" ? S[pid + ".result"]?.strategies?.[i] : arr(pid + ".drafts")[i];
+  const key = kind === "res" ? "body" : "text";
+  if (!target || !pr) return;
+  const lim = limitOf(p);
+  const prompt = `次の${p.name}用の文章を、本人の実際の体験が伝わる形に書き直してください。
+
+# 使ってよい体験（これ以外の体験は作らない）
+${expRule(pid)}
+
+# ルール
+- 文字数の上限：${p.unit === "全角" ? `全角換算で${lim}字（半角は0.5字、URLは1本で全角12字）` : `${lim}字`}。少し短く収める
+- リンクはそのまま残し、URL の直後に半角スペースと PR を付ける
+${NG_PROMPT}
+- 【あなたの体験：〇〇】の空欄は、上の事実とメモで埋められる所だけ埋める。埋められない所は空欄のまま残す
+- 良い点だけでなく、不満な点・合わない人も正直に入れる
+- 文章の型（切り口）は変えない
+
+# 元の文章
+${target[key]}
+
+# 返す形式（この JSON だけ）
+{ "text": "書き直した文章" }`;
+  toast("書き直しています…（20秒〜1分ほど）");
+  try {
+    const out = await askAI(prompt, { tier: "default", maxTokens: 8000 });
+    if (!out || !out.text) throw { message: "書き直しを受け取れませんでした" };
+    target[key] = fixPR(String(out.text)); save(); go(view, false, true); toast("体験ありで書き直しました。内容が本当か必ず確認してください");
+  } catch (err) { toast(err.message || "うまくいきませんでした"); }
 }
 
 function draftBlock(p) {
@@ -424,11 +574,13 @@ function draftBlock(p) {
     ${drafts.map((d, i) => `<div class="sub"><div class="sub-head"><span>${esc(d.title || p.draftLabel)}</span><span class="actions"><button type="button" class="small" data-copydraft="${p.id}" data-i="${i}">コピー</button><button type="button" class="ghost small" data-del="${k("drafts")}" data-i="${i}">削除</button></span></div>
       <textarea class="big" id="${fid(k("drafts") + "-" + i)}" data-draftedit="${p.id}" data-i="${i}">${esc(d.text)}</textarea>
       <div class="actions" id="chk-${p.id}-${i}">${checkHTML(p, d.text || "")}</div>
-      <div class="actions"><button type="button" class="ghost small" data-fixpr="${p.id}" data-i="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logdraft="${p.id}" data-i="${i}">投稿したので記録</button></div>
+      ${manualHTML(`${p.id}.d.${i}`)}
+      <div class="actions"><button type="button" class="ghost small" data-fixpr="${p.id}" data-i="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logdraft="${p.id}" data-i="${i}">投稿したので記録</button>${proofOK(p.id) ? `<button type="button" class="ghost small" data-rewrite="draft" data-p="${p.id}" data-i="${i}">体験ありで書き直す</button>` : ""}</div>
       ${d.note ? `<p class="hint" style="margin:0">${esc(d.note)}</p>` : ""}</div>`).join("")}
     <div class="sub"><div class="sub-head">自分で書いた文章をチェック</div>
       <textarea id="${fid(k("mydraft"))}" data-k="${k("mydraft")}" data-check="${p.id}" placeholder="ここに貼ると、文字数と「 PR」をその場で確認します">${esc(S[k("mydraft")])}</textarea>
       <div class="actions" id="chk-${p.id}-my">${checkHTML(p, v(k("mydraft")))}</div>
+      ${manualHTML(`${p.id}.my`)}
       <div class="actions"><button type="button" class="ghost small" data-fixmy="${p.id}">リンクに「 PR」を付ける</button><button type="button" class="small" data-copymy="${p.id}">コピー</button></div></div>
   </section>`;
 }
@@ -587,8 +739,7 @@ const sub = (s, g) => CRITERIA.filter(c => c[3] === g).reduce((a, c) => a + sc(s
 const subMax = g => CRITERIA.filter(c => c[3] === g).reduce((a, c) => a + c[2], 0);
 function gate(s, p) {
   const issues = [];
-  if (countFor(p, s.body || "") > limitOf(p)) issues.push("文字数の上限を超えています");
-  if (prMissing(s.body || "").length) issues.push("「 PR」が無いリンクがあります");
+  issues.push(...guard(p, s.body || "").block);
   if (s.legal_ok === false) issues.push("法令・規約：" + (s.legal_note || "要確認"));
   return issues;
 }
@@ -618,11 +769,12 @@ function stratCard(s, i, best, p) {
     <div class="field"><span class="label">本文</span>
       <textarea class="big" id="f-body-${i}" data-bodyedit="${i}">${esc(s.body || "")}</textarea>
       <div class="actions" id="chk-body-${i}">${checkHTML(p, s.body || "")}</div>
-      <div class="actions"><button type="button" class="primary small" data-copybody="${i}">本文をコピー</button><button type="button" class="ghost small" data-fixbody="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logfrom="${i}">投稿したので記録</button></div></div>
+      ${manualHTML(`${p.id}.res.${i}`)}
+      <div class="actions"><button type="button" class="primary small" data-copybody="${i}">本文をコピー</button><button type="button" class="ghost small" data-fixbody="${i}">リンクに「 PR」を付ける</button><button type="button" class="ghost small" data-logfrom="${i}">投稿したので記録</button>${proofOK(p.id) ? `<button type="button" class="ghost small" data-rewrite="res" data-p="${p.id}" data-i="${i}">体験ありで書き直す</button>` : ""}</div></div>
     <div class="field"><span class="label">評価点</span>
       <div class="bars"><div class="no">ICE（戦略の見込み）${sub(s, "ICE")}/${subMax("ICE")}</div>${CRITERIA.filter(c => c[3] === "ICE").map(row).join("")}
       <div class="no">4U（本文の出来）${sub(s, "4U")}/${subMax("4U")}</div>${CRITERIA.filter(c => c[3] === "4U").map(row).join("")}</div></div>
-    <div class="first">合計 ${total(s)}点 / ${MAXTOTAL}点　${issues.length ? `<span style="color:var(--bad)">関門NG：${esc(issues.join("・"))}</span>` : '<span style="color:var(--good)">関門クリア（文字数・URL PR・法令）</span>'}</div>
+    <div class="first">合計 ${total(s)}点 / ${MAXTOTAL}点　${issues.length ? `<span style="color:var(--bad)">関門NG：${esc(issues.join("・"))}</span>` : '<span style="color:var(--good)">関門クリア（文字数・URL PR・法令・体験表現）</span>'}</div>
     <div class="field"><span class="label">感想</span><p style="margin:0">${esc(s.comment || "")}</p></div>
   </article>`;
 }
@@ -781,6 +933,8 @@ async function makeDrafts(pid) {
 - 文字数の上限：${p.unit === "全角" ? `全角換算で${lim}字（半角は0.5字、URLは1本で全角12字として数える）` : `${lim}字（改行は数えない）`}。必ず上限より少し短く収める
 - リンクを入れるときは、必ず URL の直後に半角スペースと PR を付ける（例：https://example.com PR）。実際の URL が分からない場合は「【案件リンク】 PR」と書く
 ${p.rules.map(r => "- " + r).join("\n")}
+${expRule(pid)}
+${NG_PROMPT}
 - 入力に無い実績・数字・体験談・お客様の声を作らない。体験が必要な所は【あなたの体験：〇〇】と空けておく
 - 日本の読者向けに、煽らず誠実に。効果や収入を断定しない
 - 下書きどうしは切り口を変える。番号や日付は付けない
@@ -818,6 +972,8 @@ async function startMarketing(pid) {
 - 文字数の上限：${p.unit === "全角" ? `全角換算で${lim}字（半角は0.5字、URLは1本で全角12字として数える）` : `${lim}字（改行は数えない）`}。上限より少し短く収める
 ${p.id === "blog" || p.id === "note" ? "- ブログ・note は、記事タイトル・見出し構成・導入文までを1,000字以内で書く。冒頭に「本記事はアフィリエイト広告を利用しています」を入れる\n" : ""}- リンクは必ず URL の直後に半角スペースと PR（例：https://example.com PR）。実際の URL が分からなければ「【案件リンク】 PR」と書く
 ${p.rules.map(r => "- " + r).join("\n")}
+${expRule(p.id)}
+${NG_PROMPT}
 - 入力に無い実績・数字・体験談・お客様の声を作らない。体験が必要な所は【あなたの体験：〇〇】と空けておく
 - 段階が「まだ何もしていない」「これから始める」「事前調査中」なら、宣伝より信頼づくり・自己紹介・役立つ情報の本文を中心にする
 - 日本の読者向けに、煽らず誠実に。効果や収入を断定しない。自動投稿はせず本人が手で投稿する前提
@@ -895,8 +1051,8 @@ function go(to, push = true, keepScroll = false) {
   view = to;
   const p = PLATFORMS.find(x => x.id === to), rp = to.startsWith("result-") ? PLATFORMS.find(x => "result-" + x.id === to) : null;
   const y = window.scrollY;
-  $("#app").innerHTML = to === "common" ? commonView() : rp ? resultView(rp) : p ? platformView(p) : homeView();
-  if (!p && !rp && to !== "common") view = "home";
+  $("#app").innerHTML = to === "common" ? commonView() : to === "proof" ? proofView() : rp ? resultView(rp) : p ? platformView(p) : homeView();
+  if (!p && !rp && to !== "common" && to !== "proof") view = "home";
   $("#navHome").hidden = view === "home";
   $("#copyBar").textContent = view.startsWith("result-") ? "全部コピー" : "profile.md をコピー";
   if (push) { try { history.pushState(null, "", view === "home" ? location.pathname + location.search : "#" + view); } catch (e) {} }
@@ -925,6 +1081,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", async e => {
   const el = e.target;
   if (el.id === "f-keysave") { try { if (el.checked) localStorage.setItem(KEY_API, apiKey); else localStorage.removeItem(KEY_API); } catch (x) {} toast(el.checked ? "この端末にキーを保存しました" : "保存したキーを消しました"); return; }
+  if (el.dataset && el.dataset.bool) { S[el.dataset.bool] = el.checked; save(); return; }
   if (el.dataset && el.dataset.shots) {
     const scope = el.dataset.shots, files = [...el.files];
     SHOTS[scope] = SHOTS[scope] || [];
@@ -935,6 +1092,7 @@ document.addEventListener("change", async e => {
   if (el.dataset && el.dataset.k && (el.type === "checkbox" || el.type === "radio" || el.tagName === "SELECT")) {
     setKey(el.dataset.k, el.value, el);
     if (el.id === "f-model") { const s = $("#connStatus"); if (s) s.textContent = "いまの接続：" + engineLabel(); }
+    if (/\.proof$/.test(el.dataset.k)) { go(view, false, true); toast(proofOK(el.dataset.k.slice(0, -6)) ? "体験の証明あり：チェック項目と文章のルールを切り替えました" : "体験の証明なし：調べた情報として書くルールにしました"); }
   }
 });
 
@@ -950,7 +1108,7 @@ document.addEventListener("click", async e => {
   if (t.id === "navHome") go("home");
   if (t.id === "copyBar") curRes() ? copy(resultMd(curRes()), "戦略") : copy(profileMd(), "profile.md");
   if (t.id === "copyResult" && curRes()) copy(resultMd(curRes()), "戦略");
-  if (t.dataset.copybody !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.copybody]; if (s) { if (prMissing(s.body).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, s.body) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(s.body, "本文"); } }
+  if (t.dataset.copybody !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.copybody]; if (s) copyChecked(p, s.body || "", "本文", `${p.id}.res.${t.dataset.copybody}`); }
   if (t.dataset.fixbody !== undefined && curRes()) { const s = S[curRes().id + ".result"].strategies[+t.dataset.fixbody]; if (s) { s.body = fixPR(s.body || ""); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.read) readShots(t.dataset.read);
   if (t.dataset.draft) makeDrafts(t.dataset.draft);
@@ -958,12 +1116,15 @@ document.addEventListener("click", async e => {
   if (t.dataset.logfrom !== undefined && curRes()) { const p = curRes(), s = S[p.id + ".result"].strategies[+t.dataset.logfrom]; if (s) { addLog(p.id, { type: LOG_TYPES.includes(s.type) ? s.type : (LOG_TYPES.find(x => (s.type || "").includes(x.replace("型", ""))) || "その他"), body: s.body || "" }); toast(`${p.name}の記録に追加しました。数日後に数字を入れてください`); } }
   if (t.dataset.logdraft) { const pid = t.dataset.logdraft, d = arr(pid + ".drafts")[+t.dataset.i]; if (d) { addLog(pid, { type: LOG_TYPES.find(x => (d.title || "").includes(x.replace("型", ""))) || "その他", body: d.text || "" }); go(view, false, true); toast("記録に追加しました"); } }
   if (t.dataset.logai) reviewLog(t.dataset.logai);
+  if (t.id === "proofAdd") { const name = $("#f-proofname").value.trim(); if (!name) { toast("商品・サービス名を入れてください"); return; } const L = arr("_proofs"); L.push({ id: Date.now().toString(36), name, verdict: null }); S._proofs = L; save(); go(view, false, true); }
+  if (t.dataset.proofcheck) checkProof(t.dataset.proofcheck);
+  if (t.dataset.rewrite) rewriteExp(t.dataset.rewrite, t.dataset.p, +t.dataset.i);
   if (["vmigrate", "vsave", "vcopy", "vedit", "vdel", "vcancel", "vbackup", "vrestore"].some(k => t.dataset[k] !== undefined)) vaultClick(t);
   if (t.dataset.logcopy) copy(logMd(PLATFORMS.find(x => x.id === t.dataset.logcopy)), "記録");
-  if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) { const p = PLATFORMS.find(x => x.id === t.dataset.copydraft); if (prMissing(d.text).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, d.text) > limitOf(p)) toast("文字数の上限を超えています。短くしてからコピーしてください"); else copy(d.text, "下書き"); } }
+  if (t.dataset.copydraft) { const d = arr(t.dataset.copydraft + ".drafts")[+t.dataset.i]; if (d) copyChecked(PLATFORMS.find(x => x.id === t.dataset.copydraft), d.text || "", "下書き", `${t.dataset.copydraft}.d.${t.dataset.i}`); }
   if (t.dataset.fixpr) { const pid = t.dataset.fixpr, a = arr(pid + ".drafts"), d = a[+t.dataset.i]; if (d) { d.text = fixPR(d.text); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); } }
   if (t.dataset.fixmy) { const pid = t.dataset.fixmy; S[pid + ".mydraft"] = fixPR(v(pid + ".mydraft")); save(); go(view, false, true); toast("リンクに「 PR」を付けました"); }
-  if (t.dataset.copymy) { const pid = t.dataset.copymy, p = PLATFORMS.find(x => x.id === pid), tx = v(pid + ".mydraft"); if (prMissing(tx).length) toast("「 PR」が無いリンクがあります。先に「リンクに PR を付ける」を押してください"); else if (countFor(p, tx) > limitOf(p)) toast("文字数の上限を超えています"); else copy(tx, "文章"); }
+  if (t.dataset.copymy) { const pid = t.dataset.copymy; copyChecked(PLATFORMS.find(x => x.id === pid), v(pid + ".mydraft"), "文章", `${pid}.my`); }
   if (t.dataset.delshot) { SHOTS[t.dataset.delshot] = (SHOTS[t.dataset.delshot] || []).filter(s => s.id !== t.dataset.id); saveShots(); go(view, false, true); }
   if (t.dataset.add) { const a = arr(t.dataset.add).length ? arr(t.dataset.add) : [{}]; a.push({}); S[t.dataset.add] = a; save(); go(view, false, true); }
   if (t.dataset.del) { const a = arr(t.dataset.del); a.splice(+t.dataset.i, 1); S[t.dataset.del] = a; save(); go(view, false, true); }
