@@ -1,0 +1,270 @@
+<title>Threads 文字数カウンター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=Zen+Maru+Gothic:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: editor on the left, live readout on the right; stacks to one column on phones */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1d2129;
+  --muted: #5c6472;
+  --line: #dde1e8;
+  --accent: #2f5bd3;
+  --band: #dbe5ff;
+  --ok: #1f7a4a;
+  --ok-bg: #e3f4ea;
+  --warn: #8a5a00;
+  --warn-bg: #fdf0d2;
+  --ng: #b42318;
+  --ng-bg: #fde4e1;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171c; --surface: #1c2027; --fg: #e8ebf0; --muted: #a2a9b5; --line: #2f3540;
+    --accent: #8aa8ff; --band: #263459;
+    --ok: #6fd39c; --ok-bg: #173527; --warn: #f1c46b; --warn-bg: #3a2e14; --ng: #ff8f84; --ng-bg: #3f1c1a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171c; --surface: #1c2027; --fg: #e8ebf0; --muted: #a2a9b5; --line: #2f3540;
+  --accent: #8aa8ff; --band: #263459;
+  --ok: #6fd39c; --ok-bg: #173527; --warn: #f1c46b; --warn-bg: #3a2e14; --ng: #ff8f84; --ng-bg: #3f1c1a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+header h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); }
+.grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+label.lead { display: block; font-weight: 700; margin-bottom: 6px; }
+textarea {
+  width: 100%; min-height: 240px; resize: vertical; padding: 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+  font: inherit; font-size: 16px; line-height: 1.8;
+}
+textarea:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.range { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9rem; }
+.range input { width: 4.5em; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font-family: var(--font-num); }
+.spacer { flex: 1; }
+button { font: inherit; font-size: 0.9rem; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+.note { font-size: 0.85rem; color: var(--muted); margin: 8px 0 0; }
+.sample { color: var(--warn); }
+
+.count { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.count .num { font-family: var(--font-num); font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font-size: 0.8rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.ng { background: var(--ng-bg); color: var(--ng); }
+.meter { position: relative; height: 10px; border-radius: 5px; background: var(--line); margin: 12px 0 4px; overflow: hidden; }
+.meter .band { position: absolute; top: 0; bottom: 0; background: var(--band); }
+.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 5px; transition: width .15s; }
+@media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
+.scale { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 0.75rem; color: var(--muted); }
+
+h2 { font-size: 0.85rem; letter-spacing: 0.06em; color: var(--muted); margin: 20px 0 8px; font-weight: 700; }
+ul.checks, ol.sentences, ul.words { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; }
+.checks .detail { color: var(--muted); font-size: 0.85rem; display: block; }
+.sentences li { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+.sentences li:first-child { border-top: 0; }
+.sentences .tag { font-size: 0.8rem; color: var(--muted); }
+.sentences .txt { overflow-wrap: anywhere; }
+.sentences .n { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.br { font-size: 0.75rem; color: var(--accent); margin-left: 4px; }
+.words li { font-size: 0.9rem; overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 0.9rem; }
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>Threads 文字数カウンター</h1>
+    <p>投稿を貼ると、文字数・改行ルール・PR表記・注意したい言葉をその場でチェックします。</p>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <label class="lead" for="post">投稿本文</label>
+      <textarea id="post" spellcheck="false" placeholder="ここに投稿を貼り付け"></textarea>
+      <div class="row">
+        <span class="range">
+          <label for="min">目標</label><input id="min" type="number" inputmode="numeric" value="160" min="0">
+          〜<input id="max" type="number" inputmode="numeric" value="200" min="1" aria-label="上限">文字
+        </span>
+        <span class="spacer"></span>
+        <button id="sampleBtn" type="button">例文</button>
+        <button id="clearBtn" type="button">消す</button>
+        <button id="copyBtn" type="button" class="primary">コピー</button>
+      </div>
+      <p class="note" id="sampleNote" hidden><span class="sample">いま入っているのは例文です。</span>あなたの投稿に置き換えてください。</p>
+      <p class="note">数え方：絵文字・記号・スペース・改行もすべて1文字。Threadsの上限は500文字です。</p>
+    </section>
+
+    <aside class="card" aria-live="polite">
+      <div class="count">
+        <span class="num" id="total">0</span><span>文字</span>
+        <span class="pill" id="status"></span>
+      </div>
+      <div class="meter" aria-hidden="true"><div class="band" id="band"></div><div class="fill" id="fill"></div></div>
+      <div class="scale"><span>0</span><span id="scaleMax"></span></div>
+      <p class="note" id="sub"></p>
+
+      <h2>チェック</h2>
+      <ul class="checks" id="checks"></ul>
+
+      <h2>1文ごとの文字数</h2>
+      <ol class="sentences" id="sentences"></ol>
+
+      <h2>注意したい言葉</h2>
+      <ul class="words" id="words"></ul>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function () {
+  var SAMPLE = "【PR】朝のコーヒー淹れるのが面倒な人、全自動コーヒーメーカー使った方がいい。\nだって、ボタン1つで豆を挽くところから全部やってくれるのに、淹れたての香りで飲めるの🥹毎朝カフェに寄ってて出費が気になってる人、絶対試して。毎朝お店に並ぶより、家でゆっくり淹れたての一杯飲める方が良くない？🥹";
+  var LABELS4 = ["フック", "ギャップ", "逆張り", "問いかけ"];
+  var END = "。！？!?";
+  var EMOJI = /\p{Extended_Pictographic}/u;
+  var PR = /【PR】|[#＃]PR|(^|[^A-Za-z])PR([^A-Za-z]|$)|広告|プロモーション/i;
+  var WORDS = [
+    { re: /治る|治す|治療|完治/g, level: "ng", why: "薬機法：病気を治すような表現" },
+    { re: /痩せ|やせる|脂肪(が|を)?(燃|落)/g, level: "ng", why: "薬機法・健康増進法：痩身効果の表現" },
+    { re: /シミが消え|シワが消え|若返/g, level: "ng", why: "薬機法：化粧品の効能を超える表現" },
+    { re: /免疫力/g, level: "ng", why: "健康増進法：身体機能の改善をうたう表現" },
+    { re: /元本保証|必ず儲か|絶対儲か/g, level: "ng", why: "金融商品の断定表現" },
+    { re: /【要確認/g, level: "ng", why: "空欄のまま。商品情報で埋めてください" },
+    { re: /100[%％]|１００[%％]/g, level: "warn", why: "効果の保証に読めないか確認" },
+    { re: /絶対|必ず/g, level: "warn", why: "呼びかけならOK。効果の保証ならNG" },
+    { re: /誰でも|完全|永久/g, level: "warn", why: "断定しすぎていないか確認" },
+    { re: /No\.?1|ナンバーワン|日本一|世界一|業界初/gi, level: "warn", why: "出典と調査条件がある時だけ使える" },
+    { re: /最安|最高品質|最強/g, level: "warn", why: "根拠がある時だけ使える" },
+    { re: /今だけ|残りわずか|本日限り|期間限定/g, level: "warn", why: "事実の時だけ使える" },
+    { re: /宣伝じゃない|案件じゃない|たまたま見つけ/g, level: "ng", why: "ステマ：広告を中立な口コミに見せる表現" }
+  ];
+
+  var seg = (window.Intl && Intl.Segmenter) ? new Intl.Segmenter("ja", { granularity: "grapheme" }) : null;
+  function graphemes(s) {
+    if (seg) return Array.from(seg.segment(s), function (x) { return x.segment; });
+    return Array.from(s);
+  }
+  function isEnd(c) { return c !== undefined && (END.indexOf(c) >= 0 || EMOJI.test(c)); }
+
+  function splitSentences(g) {
+    var out = [], cur = "";
+    for (var i = 0; i < g.length; i++) {
+      var c = g[i];
+      if (c === "\n") {
+        if (cur.trim()) out.push({ text: cur, br: true });
+        else if (out.length) out[out.length - 1].br = true;
+        cur = "";
+        continue;
+      }
+      cur += c;
+      if (isEnd(c) && !isEnd(g[i + 1])) { out.push({ text: cur, br: false }); cur = ""; }
+    }
+    if (cur.trim()) out.push({ text: cur, br: false });
+    return out;
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var post = $("post"), minEl = $("min"), maxEl = $("max");
+
+  function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function mark(level) { return level === "ok" ? "○" : level === "warn" ? "△" : "×"; }
+
+  function render() {
+    var text = post.value.replace(/\r\n?/g, "\n");
+    var body = text.replace(/\n+$/, "");
+    var g = graphemes(body);
+    var total = g.length;
+    var noBreak = g.filter(function (c) { return c !== "\n"; }).length;
+    var min = parseInt(minEl.value, 10) || 0;
+    var max = Math.max(parseInt(maxEl.value, 10) || 1, min + 1);
+
+    $("total").textContent = total;
+    var st = $("status");
+    if (total === 0) { st.className = "pill"; st.textContent = ""; }
+    else if (total < min) { st.className = "pill warn"; st.textContent = "あと" + (min - total) + "文字"; }
+    else if (total > max) { st.className = "pill ng"; st.textContent = (total - max) + "文字オーバー"; }
+    else { st.className = "pill ok"; st.textContent = "ちょうどいい"; }
+
+    var scale = Math.max(Math.round(max * 1.25), total);
+    $("band").style.left = (min / scale * 100) + "%";
+    $("band").style.width = ((max - min) / scale * 100) + "%";
+    $("fill").style.width = Math.min(total / scale * 100, 100) + "%";
+    $("scaleMax").textContent = scale;
+    $("sub").textContent = "改行を除くと " + noBreak + " 文字 ／ Threads上限まで残り " + (500 - total) + " 文字";
+
+    var sentences = splitSentences(g);
+    var breaks = g.filter(function (c) { return c === "\n"; }).length;
+    var emojis = g.filter(function (c) { return EMOJI.test(c); }).length;
+
+    var checks = [];
+    checks.push({ level: total === 0 ? "warn" : (total >= min && total <= max ? "ok" : "ng"),
+      label: "文字数 " + min + "〜" + max, detail: total + "文字" });
+    var brOk = breaks === 1 && sentences.length > 1 && sentences[0].br;
+    checks.push({ level: brOk ? "ok" : "ng", label: "改行は1文目の後だけ",
+      detail: brOk ? "OK" : (breaks === 0 ? "改行がありません" : breaks > 1 ? "改行が" + breaks + "回あります（1回だけにする）" : "改行の位置が1文目の後ではありません") });
+    var hasPR = PR.test(body);
+    checks.push({ level: hasPR ? "ok" : "ng", label: "PR表記",
+      detail: hasPR ? (PR.test(g.slice(0, 15).join("")) ? "先頭にあります" : "あります（先頭に置くと分かりやすい）") : "【PR】などを入れてください（ステマ規制）" });
+    checks.push({ level: emojis <= 2 ? "ok" : "ng", label: "絵文字2回まで", detail: emojis + "回" });
+    var hasNum = /[0-9０-９]|[一二三四五六七八九十百千万]+(円|分|秒|日|回|個|枚|本|袋|杯|週間|ヶ月|か月)/.test(body);
+    checks.push({ level: hasNum ? "ok" : "warn", label: "数字が1つ以上", detail: hasNum ? "あり" : "価格・時間などの数字を入れる" });
+    checks.push({ level: sentences.length === 4 ? "ok" : "warn", label: "4文構成", detail: sentences.length + "文" });
+
+    $("checks").innerHTML = checks.map(function (c) {
+      return '<li><span class="pill ' + c.level + '">' + mark(c.level) + '</span><span>' + esc(c.label) + '<span class="detail">' + esc(c.detail) + "</span></span></li>";
+    }).join("");
+
+    $("sentences").innerHTML = sentences.length ? sentences.map(function (s, i) {
+      var tag = sentences.length === 4 ? (i + 1) + " " + LABELS4[i] : (i + 1) + "文目";
+      return '<li><span class="tag">' + tag + '</span><span class="txt">' + esc(s.text) + (s.br ? '<span class="br">↵改行</span>' : "") +
+        '</span><span class="n">' + graphemes(s.text).length + "</span></li>";
+    }).join("") : '<li class="empty">まだ文がありません</li>';
+
+    var hits = [];
+    WORDS.forEach(function (w) {
+      var m = body.match(w.re);
+      if (m) hits.push({ level: w.level, word: Array.from(new Set(m)).join("・"), why: w.why });
+    });
+    hits.sort(function (a, b) { return a.level === b.level ? 0 : a.level === "ng" ? -1 : 1; });
+    $("words").innerHTML = hits.length ? hits.map(function (h) {
+      return '<li><span class="pill ' + h.level + '">' + (h.level === "ng" ? "NG候補" : "要確認") + "</span> 「" + esc(h.word) + "」 " + esc(h.why) + "</li>";
+    }).join("") : '<li class="empty">見つかりませんでした（最終確認は人の目で）</li>';
+
+    $("sampleNote").hidden = post.value !== SAMPLE;
+    try { localStorage.setItem("threads-counter-draft", post.value); } catch (e) {}
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem("threads-counter-draft"); } catch (e) {}
+  post.value = saved ? saved : SAMPLE;
+
+  post.addEventListener("input", render);
+  minEl.addEventListener("input", render);
+  maxEl.addEventListener("input", render);
+  $("sampleBtn").addEventListener("click", function () { post.value = SAMPLE; render(); post.focus(); });
+  $("clearBtn").addEventListener("click", function () { post.value = ""; render(); post.focus(); });
+  $("copyBtn").addEventListener("click", function () {
+    var btn = this;
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = "コピー"; }, 1500); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(post.value).then(function () { done("コピーしました"); }, function () { post.select(); done("選択しました"); });
+    } else { post.select(); done("選択しました"); }
+  });
+  render();
+})();
+</script>
