@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube台本メーカー</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎬%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f6fa; --card: #ffffff; --text: #1f2330; --muted: #6b7183;
+    --border: #dfe2ea; --accent: #e5322d; --accent-soft: #fdecea;
+    --ok: #1f8a4c; --warn-bg: #fff6e0; --warn: #8a5a00; --code: #f7f8fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161c; --card: #1d2029; --text: #e8eaf0; --muted: #9aa0b1;
+      --border: #313543; --accent: #ff5a52; --accent-soft: #3a1f1f;
+      --ok: #4cc17f; --warn-bg: #3a3017; --warn: #f0c46a; --code: #171a21;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  header h1 { margin: 0; font-size: 26px; }
+  header p { margin: 4px 0 20px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  form, .card { min-width: 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .card + .card { margin-top: 16px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+  .hint { font-size: 12px; color: var(--muted); font-weight: normal; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; padding: 8px 10px; font: inherit; font-size: 14px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .seg button {
+    flex: 1; padding: 10px; border: 0; background: transparent; color: var(--text);
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .char-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 12px; margin-top: 10px; }
+  .char-box .role { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: normal; margin-top: 12px; }
+  .minutes { display: flex; align-items: center; gap: 10px; }
+  .minutes input[type=range] { flex: 1; }
+  .minutes input[type=number] { width: 80px; }
+  .estimate { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .warn { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 12px; }
+  .hidden { display: none !important; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; overflow-x: auto; }
+  .tabs button {
+    padding: 8px 14px; border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); }
+  td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .output { width: 100%; min-height: 460px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; background: var(--code); }
+  .counter { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .counter .good { color: var(--ok); font-weight: 700; }
+  .counter .bad { color: var(--accent); font-weight: 700; }
+  .empty { color: var(--muted); text-align: center; padding: 60px 10px; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎬 YouTube台本メーカー</h1>
+    <p>登場人物・ジャンル・尺を選ぶと、構成表と台本の下書きを作ります。</p>
+  </header>
+
+  <div class="grid">
+    <!-- ===== 入力 ===== -->
+    <form id="form" autocomplete="off">
+      <div class="card">
+        <h2>① 用途</h2>
+        <div class="seg" id="modeSeg">
+          <button type="button" data-mode="client">クラウドワークス等の依頼</button>
+          <button type="button" data-mode="original" class="on">オリジナル</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>② 動画の内容</h2>
+        <label for="theme">テーマ・タイトル案 <span class="hint">（必須）</span></label>
+        <input type="text" id="theme" required maxlength="200" placeholder="例：知らないと損する、お金が貯まる人の習慣5選">
+
+        <label for="genre">ジャンル</label>
+        <select id="genre"></select>
+        <input type="text" id="genreOther" class="hidden" maxlength="50" placeholder="ジャンル名を入力" style="margin-top:6px">
+
+        <label>動画の時間</label>
+        <div class="minutes">
+          <input type="range" id="minutesRange" min="1" max="30" step="0.5" value="10">
+          <input type="number" id="minutes" min="0.5" max="60" step="0.5" value="10">
+          <span>分ぐらい</span>
+        </div>
+        <div class="estimate" id="estimate"></div>
+
+        <label for="audience">想定視聴者 <span class="hint">（任意）</span></label>
+        <input type="text" id="audience" maxlength="200" placeholder="例：貯金が苦手な20〜30代の会社員">
+
+        <label for="points">入れたいポイント <span class="hint">（1行に1つ。空欄なら尺に合わせて自動）</span></label>
+        <textarea id="points" placeholder="先取り貯金&#10;固定費の見直し&#10;ポイ活"></textarea>
+
+        <label class="check"><input type="checkbox" id="directions" checked> テロップ・画像などの演出指示を入れる</label>
+      </div>
+
+      <div class="card">
+        <h2>③ 登場人物</h2>
+        <div class="char-box">
+          <div class="role">語り手（解説する・話を進める）</div>
+          <select id="tellerPreset"></select>
+          <div class="row">
+            <div><label>表示名</label><input type="text" id="tellerName" maxlength="30"></div>
+            <div><label>口調・キャラ</label><input type="text" id="tellerTone" maxlength="100"></div>
+          </div>
+        </div>
+        <div class="char-box">
+          <div class="role">受け手（質問する・リアクションする）</div>
+          <select id="listenerPreset"></select>
+          <div class="row" id="listenerFields">
+            <div><label>表示名</label><input type="text" id="listenerName" maxlength="30"></div>
+            <div><label>口調・キャラ</label><input type="text" id="listenerTone" maxlength="100"></div>
+          </div>
+        </div>
+        <button type="button" class="btn" id="swapBtn" style="margin-top:10px">⇅ 語り手と受け手を入れ替える</button>
+      </div>
+
+      <!-- 依頼用 -->
+      <div class="card hidden" id="clientCard">
+        <h2>④ 依頼の条件</h2>
+        <div class="row">
+          <div><label for="clientName">クライアント名 <span class="hint">（メモ用）</span></label><input type="text" id="clientName" maxlength="100"></div>
+          <div><label for="charCount">指定文字数 <span class="hint">（あれば優先）</span></label><input type="number" id="charCount" min="100" max="50000" step="100" placeholder="例：4000"></div>
+        </div>
+        <label for="clientRules">マニュアル・構成の指示</label>
+        <textarea id="clientRules" maxlength="5000" placeholder="クライアントのマニュアルの要点を貼り付け&#10;例：冒頭は「どうも、〇〇です」で始める／1セリフ50文字以内"></textarea>
+        <label for="ngWords">NGワード</label>
+        <input type="text" id="ngWords" maxlength="1000" placeholder="例：絶対、必ず儲かる">
+        <label class="check"><input type="checkbox" id="aiAllowed"> この依頼ではAIの利用が許可されている</label>
+        <div class="warn" id="aiWarn">AI利用の可否が確認できていない依頼では、構成表とテンプレートだけを作ります。AIで書いた台本を無断で納品すると、契約違反になる恐れがあります。</div>
+      </div>
+
+      <!-- オリジナル用 -->
+      <div class="card" id="originalCard">
+        <h2>④ チャンネル情報 <span class="hint">（任意）</span></h2>
+        <label for="channelName">チャンネル名</label>
+        <input type="text" id="channelName" maxlength="100">
+        <label for="channelConcept">コンセプト</label>
+        <input type="text" id="channelConcept" maxlength="500" placeholder="例：難しいお金の話を3分でわかりやすく">
+        <label for="cta">最後に呼びかけること</label>
+        <input type="text" id="cta" maxlength="200" value="チャンネル登録と高評価、コメントで感想を教えてね">
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn primary">構成とテンプレートを作る</button>
+        <button type="button" class="btn" id="genBtn">✨ AIで下書きを生成</button>
+      </div>
+      <div class="estimate" id="aiNote"></div>
+    </form>
+
+    <!-- ===== 出力 ===== -->
+    <section class="card" id="out">
+      <div class="tabs" id="tabs">
+        <button data-tab="outline" class="on">構成表</button>
+        <button data-tab="template">台本テンプレート</button>
+        <button data-tab="prompt">AI用プロンプト</button>
+        <button data-tab="script">台本（編集）</button>
+      </div>
+
+      <div data-pane="outline">
+        <div class="empty" id="emptyMsg">左の項目を入力して「構成とテンプレートを作る」を押してください。</div>
+        <table id="outlineTable" class="hidden">
+          <thead><tr><th>パート</th><th>時間</th><th>文字数</th><th>やること</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div data-pane="template" class="hidden">
+        <textarea class="output" id="templateOut" readonly></textarea>
+        <div class="actions">
+          <button class="btn" data-copy="templateOut">コピー</button>
+          <button class="btn" id="useTemplate">これを「台本（編集）」で書く</button>
+        </div>
+      </div>
+
+      <div data-pane="prompt" class="hidden">
+        <p class="hint" style="margin-top:0">APIキーがなくても、これをコピーして Claude などのチャットに貼り付ければ下書きを作れます。</p>
+        <textarea class="output" id="promptOut" readonly></textarea>
+        <div class="actions"><button class="btn" data-copy="promptOut">コピー</button></div>
+      </div>
+
+      <div data-pane="script" class="hidden">
+        <textarea class="output" id="scriptOut" placeholder="AIの下書きやテンプレートがここに入ります。自由に編集できます。"></textarea>
+        <div class="counter" id="counter"></div>
+        <div class="actions">
+          <button class="btn" data-copy="scriptOut">コピー</button>
+          <button class="btn" id="downloadBtn">.txtで保存</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { mode: "original", options: null, targetChars: 0 };
+const STORE_KEY = "yt-script-maker-v1";
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = data.detail;
+    throw new Error(typeof d === "string" ? d : "入力内容を確認してください");
+  }
+  return data;
+}
+
+// ---------- 選択肢 ----------
+function fillCharacterSelect(sel, withNone) {
+  sel.innerHTML = "";
+  if (withNone) sel.add(new Option("なし（1人語り）", "none"));
+  state.options.characters.forEach(c => sel.add(new Option(c.label, c.id)));
+}
+
+function applyPreset(prefix) {
+  const id = $(prefix + "Preset").value;
+  const c = state.options.characters.find(x => x.id === id);
+  if (prefix === "listener") $("listenerFields").classList.toggle("hidden", id === "none");
+  if (!c) return;
+  $(prefix + "Name").value = c.name;
+  $(prefix + "Tone").value = c.tone;
+  if (id === "custom") $(prefix + "Name").focus();
+}
+
+// ---------- モード ----------
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
+  $("clientCard").classList.toggle("hidden", mode !== "client");
+  $("originalCard").classList.toggle("hidden", mode !== "original");
+  updateAiState(); updateEstimate();
+}
+
+function aiBlocked() { return state.mode === "client" && !$("aiAllowed").checked; }
+
+function updateAiState() {
+  $("aiWarn").classList.toggle("hidden", !aiBlocked());
+  const enabled = state.options && state.options.ai_enabled;
+  $("genBtn").disabled = aiBlocked() || !enabled;
+  $("aiNote").textContent = aiBlocked() ? "この依頼はAI利用が未許可のため、AI生成はオフになっています。"
+    : enabled ? "" : "AI生成を使うにはサーバーに ANTHROPIC_API_KEY を設定してください（「AI用プロンプト」のコピーは使えます）。";
+}
+
+// ---------- 尺 → 文字数 ----------
+function updateEstimate() {
+  const min = parseFloat($("minutes").value) || 0;
+  const solo = $("listenerPreset").value === "none";
+  const cpm = state.options ? state.options.chars_per_minute[solo ? "solo" : "dialogue"] : 300;
+  const est = Math.round(min * cpm / 10) * 10;
+  const cc = parseInt($("charCount").value, 10);
+  $("estimate").textContent = (state.mode === "client" && cc)
+    ? `指定文字数 ${cc.toLocaleString()}文字 で作ります（尺からの目安は約${est.toLocaleString()}文字）`
+    : `目安：約${est.toLocaleString()}文字（${solo ? "1人語り" : "掛け合い"}・1分あたり約${cpm}文字）`;
+}
+
+// ---------- フォーム → リクエスト ----------
+function speaker(prefix) {
+  return { preset: $(prefix + "Preset").value, name: $(prefix + "Name").value, tone: $(prefix + "Tone").value };
+}
+
+function collect() {
+  const cc = parseInt($("charCount").value, 10);
+  return {
+    mode: state.mode,
+    theme: $("theme").value.trim(),
+    genre: $("genre").value,
+    genre_other: $("genreOther").value,
+    minutes: parseFloat($("minutes").value) || 10,
+    teller: speaker("teller"),
+    listener: $("listenerPreset").value === "none" ? null : speaker("listener"),
+    target_audience: $("audience").value,
+    points: $("points").value.split("\n").map(s => s.trim()).filter(Boolean),
+    with_directions: $("directions").checked,
+    client_name: $("clientName").value,
+    char_count: Number.isFinite(cc) ? cc : null,
+    client_rules: $("clientRules").value,
+    ng_words: $("ngWords").value,
+    ai_allowed: $("aiAllowed").checked,
+    channel_name: $("channelName").value,
+    channel_concept: $("channelConcept").value,
+    cta: $("cta").value,
+  };
+}
+
+// ---------- 保存（このブラウザだけ） ----------
+const SAVE_IDS = ["theme","genre","genreOther","minutes","audience","points","directions","tellerPreset","tellerName",
+  "tellerTone","listenerPreset","listenerName","listenerTone","clientName","charCount","clientRules","ngWords",
+  "aiAllowed","channelName","channelConcept","cta","scriptOut"];
+function save() {
+  const data = { mode: state.mode };
+  SAVE_IDS.forEach(id => { const el = $(id); data[id] = el.type === "checkbox" ? el.checked : el.value; });
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+function restore() {
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) {}
+  if (!data) return false;
+  SAVE_IDS.forEach(id => {
+    if (!(id in data)) return;
+    const el = $(id); if (el.type === "checkbox") el.checked = data[id]; else el.value = data[id];
+  });
+  $("minutesRange").value = $("minutes").value;
+  setMode(data.mode || "original");
+  return true;
+}
+
+// ---------- 出力 ----------
+function showTab(name) {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  document.querySelectorAll("[data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== name));
+}
+
+function render(data) {
+  state.targetChars = data.target_chars;
+  const tbody = document.querySelector("#outlineTable tbody");
+  tbody.innerHTML = "";
+  data.outline.forEach(s => {
+    const tr = document.createElement("tr");
+    [s.title, `${s.start}〜${s.end}`, `約${s.chars}字`, s.purpose].forEach((v, i) => {
+      const td = document.createElement("td"); td.textContent = v; if (i === 1 || i === 2) td.className = "num"; tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  $("emptyMsg").classList.add("hidden");
+  $("outlineTable").classList.remove("hidden");
+  $("templateOut").value = data.template;
+  $("promptOut").value = data.prompt || "この依頼はAI利用が許可されていないため、プロンプトは作成していません。";
+  document.querySelector('[data-copy="promptOut"]').disabled = !data.prompt;
+  updateCounter();
+}
+
+function updateCounter() {
+  // 見出し・演出指示・話者名を除いた「セリフ」の文字数を数える
+  const lines = $("scriptOut").value.split("\n")
+    .filter(l => !/^\s*(【[^】]*】\s*)+(（[^）]*）\s*)?$/.test(l) && !/^\s*[■※]/.test(l));
+  const body = lines.map(l => l.replace(/【[^】]*】/g, "").replace(/^[^：:]{1,15}[：:]/, "").replace(/^\s*（[^）]*）\s*$/, ""))
+    .join("").replace(/\s/g, "");
+  const n = body.length, t = state.targetChars;
+  if (!t) { $("counter").textContent = `セリフ文字数：${n.toLocaleString()}文字`; return; }
+  const diff = (n - t) / t, ok = Math.abs(diff) <= 0.1;
+  $("counter").innerHTML = `セリフ文字数：<span class="${ok ? "good" : "bad"}">${n.toLocaleString()}文字</span> ／ 目標 約${t.toLocaleString()}文字（${diff >= 0 ? "+" : ""}${Math.round(diff * 100)}%）`;
+}
+
+async function build() {
+  if (!$("theme").value.trim()) { $("theme").focus(); toast("テーマを入力してください"); return null; }
+  save();
+  const data = await api("/api/build", collect());
+  render(data);
+  return data;
+}
+
+// ---------- イベント ----------
+document.querySelectorAll("#modeSeg button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$("genre").addEventListener("change", () => $("genreOther").classList.toggle("hidden", $("genre").value !== "other"));
+$("minutesRange").addEventListener("input", () => { $("minutes").value = $("minutesRange").value; updateEstimate(); });
+$("minutes").addEventListener("input", () => { $("minutesRange").value = $("minutes").value; updateEstimate(); });
+$("charCount").addEventListener("input", updateEstimate);
+$("aiAllowed").addEventListener("change", updateAiState);
+$("tellerPreset").addEventListener("change", () => applyPreset("teller"));
+$("listenerPreset").addEventListener("change", () => { applyPreset("listener"); updateEstimate(); });
+$("swapBtn").addEventListener("click", () => {
+  if ($("listenerPreset").value === "none") { toast("受け手が「なし」のときは入れ替えできません"); return; }
+  ["Preset", "Name", "Tone"].forEach(k => {
+    const a = $("teller" + k).value; $("teller" + k).value = $("listener" + k).value; $("listener" + k).value = a;
+  });
+});
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($(b.dataset.copy).value); toast("コピーしました"); }
+  catch (e) { $(b.dataset.copy).select(); toast("選択しました。Ctrl+C でコピーしてください"); }
+}));
+$("useTemplate").addEventListener("click", () => {
+  if ($("scriptOut").value.trim() && !confirm("編集中の台本をテンプレートで置き換えますか？")) return;
+  $("scriptOut").value = $("templateOut").value; updateCounter(); save(); showTab("script");
+});
+$("scriptOut").addEventListener("input", () => { updateCounter(); clearTimeout(save._t); save._t = setTimeout(save, 500); });
+$("downloadBtn").addEventListener("click", () => {
+  const name = ($("theme").value.trim() || "台本").replace(/[\\/:*?"<>|]/g, "").slice(0, 40);
+  const blob = new Blob([$("scriptOut").value], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name + ".txt"; a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try { if (await build()) showTab("outline"); } catch (err) { toast(err.message); }
+});
+
+$("genBtn").addEventListener("click", async () => {
+  const btn = $("genBtn");
+  try {
+    if (!(await build())) return;
+    if ($("scriptOut").value.trim() && !confirm("編集中の台本をAIの下書きで置き換えますか？")) return;
+    btn.disabled = true; btn.textContent = "生成中…（1〜2分かかります）";
+    const data = await api("/api/generate", collect());
+    $("scriptOut").value = data.script; updateCounter(); save(); showTab("script");
+    toast(data.truncated ? "途中で切れました。続きは手で追記してください" : "下書きができました。必ず見直してから使ってください");
+  } catch (err) { toast(err.message); }
+  finally { btn.textContent = "✨ AIで下書きを生成"; updateAiState(); }
+});
+
+// ---------- 初期化 ----------
+(async () => {
+  try { state.options = await api("/api/options"); }
+  catch (e) { toast("サーバーに接続できません"); return; }
+  state.options.genres.forEach(g => $("genre").add(new Option(g.label, g.id)));
+  fillCharacterSelect($("tellerPreset"), false);
+  fillCharacterSelect($("listenerPreset"), true);
+  $("tellerPreset").value = "marisa"; applyPreset("teller");
+  $("listenerPreset").value = "reimu"; applyPreset("listener");
+  restore();
+  $("genreOther").classList.toggle("hidden", $("genre").value !== "other");
+  $("listenerFields").classList.toggle("hidden", $("listenerPreset").value === "none");
+  updateAiState(); updateEstimate(); updateCounter();
+})();
+</script>
+</body>
+</html>
