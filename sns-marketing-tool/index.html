@@ -189,6 +189,12 @@ textarea{resize:vertical;min-height:64px}
 .draft pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--body);font-size:14px;background:var(--bg);border-radius:8px;padding:12px;border:1px solid var(--line)}
 .count{font-size:12px}
 .count.over{color:var(--bad);font-weight:700}
+.draft .part{display:flex;flex-direction:column;gap:6px}
+.draft .part .h b{font-size:13px}
+.draft .btns{display:flex;gap:8px;flex-wrap:wrap}
+.ypp{display:grid;gap:10px;font-size:14px}
+.ypp .bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.ypp .bar i{display:block;height:100%;background:var(--accent)}
 .check{display:flex;flex-direction:column;gap:6px;font-size:14px}
 .check label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
 .check input{accent-color:var(--accent);margin-top:5px}
@@ -492,6 +498,14 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <label for="pPlatform">投稿するSNS</label>
         <select id="pPlatform"></select>
       </div>
+      <div class="field" id="ytTypeField" hidden>
+        <label for="pYtType">動画の種類</label>
+        <select id="pYtType">
+          <option value="long">長尺（横型の通常の動画）</option>
+          <option value="short">ショート（縦型・3分以内）</option>
+        </select>
+        <span class="hint">YouTubeでは、タイトル・概要欄・冒頭の台本をセットで作ります。</span>
+      </div>
       <div class="field">
         <label for="pTheme">テーマ</label>
         <input type="text" id="pTheme">
@@ -560,6 +574,18 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
           <label><input type="checkbox" id="c7">「No.1」「必ず」などの表現には根拠がある。他者の写真や音源を無断で使っていない</label>
         </div>
       </div>
+      <div class="sec" id="ytCheckSec" hidden>
+        <h2>YouTubeで公開する前に</h2>
+        <div class="card check">
+          <label><input type="checkbox" id="y1">サムネイルの文字は短く大きく、スマホの小さな画面でも読める</label>
+          <label><input type="checkbox" id="y2">タイトルとサムネイルで同じ言葉をくり返さず、2つ合わせて中身が伝わる</label>
+          <label><input type="checkbox" id="y3">冒頭（長尺は最初の30秒、ショートは最初の1〜2秒）で「この動画で分かること」を伝えた</label>
+          <label><input type="checkbox" id="y4">長尺はチャプターの時間を実際の動画に合わせた（0:00から始めて3つ以上、それぞれ10秒以上）</label>
+          <label><input type="checkbox" id="y5">「子ども向け」かどうかの設定を選んだ</label>
+          <label><input type="checkbox" id="y6">本物と見間違えるようなAI生成・加工の映像は「改変または合成されたコンテンツ」をオンにした</label>
+          <label><input type="checkbox" id="y7">終了画面・カードで、次に見てほしい動画を1本だけ案内した</label>
+        </div>
+      </div>
       <div class="next"><button class="btn ghost" data-go="step2">戻る</button><button class="btn" data-go="step4">振り返りへ進む</button></div>
     </div>
   </section>
@@ -568,6 +594,15 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
   <section class="panel" id="step4" role="tabpanel" aria-labelledby="tab-step4" hidden>
     <form class="form" onsubmit="return false">
       <div class="hd"><h2>先月の数字</h2><p class="hint">各SNSの分析画面（インサイト）から、1か月分の合計を入れてください。</p></div>
+      <div class="field">
+        <label for="mPlatform">振り返るSNS</label>
+        <select id="mPlatform">
+          <option value="sns">Instagram・X・TikTok などのSNS</option>
+          <option value="yt">YouTube</option>
+        </select>
+        <span class="hint">YouTubeは見る数字が違うため、専用の項目で診断します。記録もSNSごとに分けて残ります。</span>
+      </div>
+      <div data-pf="sns">
       <div class="row2">
         <div class="field"><label for="mF0">フォロワー（月初）</label><input type="number" min="0" id="mF0"></div>
         <div class="field"><label for="mF1">フォロワー（月末）</label><input type="number" min="0" id="mF1"></div>
@@ -584,6 +619,38 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <div class="field"><label for="mSave">保存</label><input type="number" min="0" id="mSave"></div>
         <div class="field"><label for="mShare">シェア</label><input type="number" min="0" id="mShare"></div>
       </div>
+      </div>
+      <div data-pf="yt" hidden>
+      <div class="field">
+        <label for="mYtType">先月のメインの動画</label>
+        <select id="mYtType">
+          <option value="long">長尺</option>
+          <option value="short">ショート</option>
+        </select>
+        <span class="hint">長尺とショートは基準が大きく違います。両方投稿している場合は、YouTube Studio のアナリティクスで「動画」「ショート」のタブを切り替えて、片方ずつ入れてください。</span>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mYSub0">チャンネル登録者（月初）</label><input type="number" min="0" id="mYSub0"></div>
+        <div class="field"><label for="mYSub1">チャンネル登録者（月末）</label><input type="number" min="0" id="mYSub1"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mYViews">視聴回数</label><input type="number" min="0" id="mYViews"></div>
+        <div class="field"><label for="mYWatch">総再生時間（時間）</label><input type="number" min="0" step="0.1" id="mYWatch"></div>
+      </div>
+      <div class="row2">
+        <div class="field" data-yt="long"><label for="mYCtr">インプレッションのクリック率（%）</label><input type="number" min="0" max="100" step="0.1" id="mYCtr"></div>
+        <div class="field" data-yt="short" hidden><label for="mYSwipe">視聴を選択した割合（%）</label><input type="number" min="0" max="100" step="0.1" id="mYSwipe"></div>
+        <div class="field"><label for="mYAvp">平均視聴率（%）</label><input type="number" min="0" step="0.1" id="mYAvp"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mYLike">高評価</label><input type="number" min="0" id="mYLike"></div>
+        <div class="field"><label for="mYCom">コメント</label><input type="number" min="0" id="mYCom"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="mYShare">共有</label><input type="number" min="0" id="mYShare"></div>
+        <div class="field"></div>
+      </div>
+      </div>
       <div class="row2">
         <div class="field"><label for="mClick">リンククリック</label><input type="number" min="0" id="mClick"></div>
         <div class="field"><label for="mCv" data-af="成果（発生）件数">成果の件数（予約・購入）</label><input type="number" min="0" id="mCv"></div>
@@ -592,14 +659,19 @@ footer{margin-top:40px;font-size:12px;color:var(--muted);border-top:1px solid va
         <div class="field"><label for="mRev" data-af="報酬額（円）">売上（円・任意）</label><input type="number" min="0" id="mRev"></div>
         <div class="field" data-mode="af"><label for="mAppr">承認件数</label><input type="number" min="0" id="mAppr"></div>
       </div>
-      <p class="example">インプレッション＝表示された回数、リーチ＝見た人の数（同じ人は1回）。X（旧Twitter）は「保存」を「ブックマーク」、シェアを「リポスト」で入れてください。</p>
+      <p class="example" data-pf="sns">インプレッション＝表示された回数、リーチ＝見た人の数（同じ人は1回）。X（旧Twitter）は「保存」を「ブックマーク」、シェアを「リポスト」で入れてください。</p>
+      <p class="example" data-pf="yt" hidden>数字は YouTube Studio のアナリティクス（期間を「先月」にする）で見られます。クリック率と平均視聴率は画面に出ている%をそのまま入れてください。概要欄のリンクのクリック数は YouTube では分からないため、ASPの管理画面や短縮URLの計測を使います。</p>
     </form>
     <div class="out">
       <div class="sec">
         <h2>診断結果</h2>
         <div class="summary" id="summary"></div>
         <div class="card"><div class="metrics" id="metrics"></div></div>
-        <p class="small muted">判定の基準は、フォロワー数千人規模のアカウントでよく使われる一般的な目安です。SNSやジャンルで差が大きいので、他社と比べるより「先月の自分」と比べるのがおすすめです。</p>
+        <p class="small muted" id="metricNote">判定の基準は、フォロワー数千人規模のアカウントでよく使われる一般的な目安です。SNSやジャンルで差が大きいので、他社と比べるより「先月の自分」と比べるのがおすすめです。</p>
+      </div>
+      <div class="sec" id="yppSec" hidden>
+        <div class="sec-h"><h2>収益化の条件まで</h2><span class="small muted">YouTube パートナープログラムの目安</span></div>
+        <div class="card ypp" id="ypp"></div>
       </div>
       <div class="sec">
         <h2>次にやること</h2>
@@ -655,7 +727,7 @@ const OPTS = {
   af:{industry:[['af_career','転職・副業'],['af_beauty','美容・コスメ'],['af_health','健康・ダイエット'],['af_money','お金・投資'],['af_life','暮らし・ガジェット'],['af_study','学習・資格']],
       goal:[['sales','紹介した商品で成果を出す'],['aware','まずフォロワーを増やす'],['fan','信頼して読み続けてもらう']]}
 };
-const LINKPOS = {ig:'投稿文のリンクは押せないため、プロフィールのリンクかストーリーズのリンクスタンプに置く', x:'本文にそのまま貼れる', tt:'プロフィールのリンクに置く（表示には条件あり）', yt:'概要欄か固定コメントに置く', line:'メッセージに直接貼れる', th:'本文に貼れる', li:'本文に貼れる'};
+const LINKPOS = {ig:'投稿文のリンクは押せないため、プロフィールのリンクかストーリーズのリンクスタンプに置く', x:'本文にそのまま貼れる', tt:'プロフィールのリンクに置く（表示には条件あり）', yt:'長尺は概要欄か固定コメントに置く（ショートの概要欄・コメントのリンクは押せないため、チャンネルページのリンクか、「関連動画」に設定した長尺へ誘導する）', line:'メッセージに直接貼れる', th:'本文に貼れる', li:'本文に貼れる'};
 const GENRE_NOTE = {
   af_career:'「必ず転職できる」「年収が上がる」など、結果を言い切る表現は避ける。',
   af_beauty:'化粧品は薬機法で言える効果の範囲が決まっている。「シミが消える」「治る」などは使わない。',
@@ -710,7 +782,9 @@ const HIRE_ACT = ['募集要項のお知らせ','会社説明会・見学会の�
 
 const SAMPLE_HIST = [
   {mode:'own', month:'2026-07', v:{er:1.9,save:0.31,share:0.09,ctr:0.38,grow:4.1,reachf:980,cvr:11.2}, rev:14000, note:'カルーセル投稿を週2本に増やした'},
-  {mode:'af', month:'2026-07', v:{er:2.2,save:0.36,share:0.21,ctr:0.55,grow:5.3,reachf:2560,cvr:0.6}, rev:6000, note:'転職サイトBから転職エージェントAに商品を変えた'}
+  {mode:'af', month:'2026-07', v:{er:2.2,save:0.36,share:0.21,ctr:0.55,grow:5.3,reachf:2560,cvr:0.6}, rev:6000, note:'転職サイトBから転職エージェントAに商品を変えた'},
+  {mode:'own', pf:'yt', month:'2026-07', v:{ictr:3.1,avp:33,er:2.4,sub:0.38,ctr:0.62,cvr:10.5}, rev:12600, note:'サムネイルの文字を10字以内にした'},
+  {mode:'af', pf:'yt', month:'2026-07', v:{ictr:3.4,avp:36,er:2.8,sub:0.46,ctr:1.9,cvr:0.9}, rev:8000, note:'動画の冒頭で「向いている人」を先に話した'}
 ];
 const SAMPLE = {
   mode:'own', recMonth:'', recNote:'リールを週1本追加した', mCv:'14', mRev:'19600', mAppr:'',
@@ -726,7 +800,8 @@ const SAMPLE = {
   rKw:'カフェ パフェ モンブラン', rTrends:'秋限定スイーツ\nモンブラン\nハロウィン\n推し活カフェ\n台風',
   rRates:{'秋限定スイーツ':{rel:3,mom:3,ease:3,risk:0},'モンブラン':{rel:3,mom:2,ease:3,risk:0},'ハロウィン':{rel:2,mom:3,ease:2,risk:0},'推し活カフェ':{rel:2,mom:2,ease:1,risk:0},'台風':{rel:1,mom:3,ease:1,risk:1}},
   pCta:'visit', pTags:'カフェ 渋谷カフェ いちごパフェ', pAd:'none', pSponsor:'',
-  mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96'
+  mF0:'1200', mF1:'1290', mImp:'18500', mReach:'15200', mLike:'310', mCom:'12', mSave:'64', mShare:'18', mClick:'96',
+  pYtType:'long', mPlatform:'sns', mYtType:'long', mYSub0:'480', mYSub1:'521', mYViews:'9800', mYWatch:'310', mYCtr:'3.8', mYSwipe:'', mYAvp:'36', mYLike:'260', mYCom:'31', mYShare:'24'
 };
 const SAMPLE_AF = Object.assign({}, SAMPLE, {
   mode:'af', industry:'af_career', goal:'sales', ages:['20','30'], assets:['text'], hours:'4',
@@ -748,7 +823,8 @@ const STORE = 'sns-navi-v1';
 
 /* ---------- state io ---------- */
 let RATES = {}, HIST = [], FOCUS = {own:null, af:null}, MODE = 'own';
-const TEXT_IDS = ['afPain','c0name','c0fit','c0rew','c0appr','c0epc','c0used','c0sns','c1name','c1fit','c1rew','c1appr','c1epc','c1used','c1sns','c2name','c2fit','c2rew','c2appr','c2epc','c2used','c2sns','mCv','mRev','mAppr','recMonth','recNote','rKw','rTrends','industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick'];
+const TEXT_IDS = ['afPain','c0name','c0fit','c0rew','c0appr','c0epc','c0used','c0sns','c1name','c1fit','c1rew','c1appr','c1epc','c1used','c1sns','c2name','c2fit','c2rew','c2appr','c2epc','c2used','c2sns','mCv','mRev','mAppr','recMonth','recNote','rKw','rTrends','industry','goal','hours','persona','freq','calPlatform','start','pPlatform','pTheme','pPain','pBenefit','pPoints','pCta','pTags','pAd','pSponsor','mF0','mF1','mImp','mReach','mLike','mCom','mSave','mShare','mClick',
+  'pYtType','mPlatform','mYtType','mYSub0','mYSub1','mYViews','mYWatch','mYCtr','mYSwipe','mYAvp','mYLike','mYCom','mYShare'];
 function readState(){
   const s = {};
   TEXT_IDS.forEach(id => s[id] = $(id).value);
@@ -831,8 +907,8 @@ const SOURCES = [
    links:(k,all) => [['Creative Center','https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/ja'],['キーワード検索',`https://www.tiktok.com/search?q=${enc(k)}`]]},
   {name:'Instagram', look:'上位に出る投稿の形式（リールかカルーセルか）と、1枚目の作り方を見る。',
    links:(k,all) => [['キーワード検索',`https://www.instagram.com/explore/search/keyword/?q=${enc(k)}`]]},
-  {name:'YouTube', look:'今週アップされた動画のうち、チャンネル登録者数のわりに再生数が多いものに注目する。',
-   links:(k,all) => [['今週の動画',`https://www.youtube.com/results?search_query=${enc(k)}&sp=EgIIAw%253D%253D`]]},
+  {name:'YouTube', look:'今週アップされた動画のうち、チャンネル登録者数のわりに再生数が多いものに注目する。再生回数順で、長く見られ続けている定番のテーマとタイトルの付け方も確認する。検索窓に言葉を入れたときに出る候補も、よく検索されている言葉のヒントになる。',
+   links:(k,all) => [['今週の動画',`https://www.youtube.com/results?search_query=${enc(k)}&sp=EgIIAw%253D%253D`],['再生回数順',`https://www.youtube.com/results?search_query=${enc(k)}&sp=CAM%253D`],['YouTube内の検索数',`https://trends.google.co.jp/trends/explore?geo=JP&gprop=youtube&q=${all.map(enc).join(',')}`]]},
   {name:'Threads', look:'コメントが多い投稿から、お客様が実際に使っている言葉を拾う。',
    links:(k,all) => [['キーワード検索',`https://www.threads.com/search?q=${enc(k)}`]]}
 ];
@@ -1100,7 +1176,8 @@ function renderStep2(s){
   $('freqHint').textContent = pf.name + 'の目安：' + pf.cadence;
   let warn = '';
   if (s.calPlatform === 'line' && f > 1) warn = 'LINE公式アカウントは配信のたびに通知が届くため、週3回以上はブロックが増えやすくなります。週1回以下がおすすめです。';
-  else if (+s.hours < 3 && f >= 5) warn = '週1〜2時間で週' + f + '回はかなり大変です。続かないと逆効果なので、まず週3回から始めて、慣れたら増やしましょう。';
+  else if (s.calPlatform === 'yt' && f >= 5) warn = 'YouTubeの長尺は1本の撮影・編集に数時間かかります。週' + f + '回にする場合は、ショートを中心にして、長尺は月2本程度にしましょう。カレンダーの「長尺」の日をショートに入れ替えてもかまいません。';
+  else if (+s.hours < 3 && f >= 5) warn ='週1〜2時間で週' + f + '回はかなり大変です。続かないと逆効果なので、まず週3回から始めて、慣れたら増やしましょう。';
   $('calWarn').innerHTML = warn ? `<p class="warnbox">${esc(warn)}</p>` : '';
   let html = '';
   for (let w = 1; w <= 4; w++){
@@ -1199,6 +1276,14 @@ function renderStep3(s){
     const len = pf.xcount ? xLength(body) : [...body].length;
     return {h, body, len};
   });
+  const yt = pk === 'yt';
+  $('ytTypeField').hidden = !yt;
+  $('ytCheckSec').hidden = !yt;
+  if (yt){
+    renderYtDrafts(s, {theme, pain, benefit, points, hooks, tags, ad, sponsor});
+    renderLegal(s, pf, ad, sponsor);
+    return;
+  }
   $('drafts').innerHTML = drafts.map((d,i) =>
     `<div class="draft"><div class="h"><h3>案${i+1}：${esc(d.h.name)}</h3>
       <span class="count num${d.len > pf.limit ? ' over' : ''}">${d.len} / ${pf.limit}${pf.xcount ? '（全角は2で計算）' : '文字'}${d.len > pf.limit ? '　文字数オーバー' : ''}</span></div>
@@ -1207,6 +1292,69 @@ function renderStep3(s){
       <div><button class="btn sm" data-copy="${i}">この案をコピー</button></div></div>`).join('');
   renderLegal(s, pf, ad, sponsor);
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(drafts[+b.dataset.copy].body, '下書きをコピーしました', $('draft-' + b.dataset.copy)));
+}
+
+/* YouTube：タイトル・概要欄・冒頭の台本をセットで作る */
+const YT_TITLE_MAX = 100;
+const CTA_YT = {
+  save:'あとで見返せるように「後で見る」に保存しておいてください。',
+  comment:'あなたはどう思いますか？ コメントで教えてください。',
+  profile:'ほかの動画はチャンネルページから見られます。役に立ったら、チャンネル登録をお願いします。',
+  link:{long:'詳しくは下のリンクからどうぞ。', short:'詳しくはチャンネルページのリンクからどうぞ。'},
+  visit:'ご来店・ご予約をお待ちしています。'
+};
+const SAY_YT = {
+  save:'あとで見返せるように保存しておいてください',
+  comment:'あなたはどう思いますか？コメントで教えてください',
+  profile:'ほかの動画もチャンネルで見られます。チャンネル登録もお願いします',
+  link:{long:'詳しくは概要欄のリンクからどうぞ', short:'詳しくはチャンネルページのリンクからどうぞ'},
+  visit:'ご来店・ご予約をお待ちしています'
+};
+const pick = (v, type) => typeof v === 'string' ? v : v[type];
+const ts = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+function renderYtDrafts(s, {theme, pain, benefit, points, hooks, tags, ad, sponsor}){
+  const type = s.pYtType === 'short' ? 'short' : 'long';
+  const pts = points.length ? points : ['ポイント1', 'ポイント2'];
+  const n = pts.length;
+  const needLink = s.pCta === 'link' || s.pAd === 'af';
+  const titles = [`「${pain}」という人へ｜${theme}`, `${theme}｜知っておきたい${n}つのポイント`, `【${theme}】${benefit}`];
+  const leads = [`${pain}。そんな人に向けて、${theme}を紹介します。\n${benefit}。`, `${theme}について、知っておきたいポイントを${n}つにまとめました。\n${benefit}。`, `${benefit}。`];
+  const drafts = hooks.map((h, i) => {
+    const title = titles[i];
+    const d = [];
+    if (ad) d.push('【PR】');
+    d.push(leads[i], '', '▼この動画で分かること', ...pts.map(p => '・' + p));
+    if (type === 'long'){
+      // チャプター：0:00から始めて3つ以上・それぞれ10秒以上（時間は仮）
+      d.push('', '▼目次', '0:00 はじめに', ...pts.map((p, j) => ts(30 + j * 60) + ' ' + p), ts(30 + n * 60) + ' まとめ');
+    }
+    d.push('', pick(CTA_YT[s.pCta], type));
+    if (needLink && type === 'long') d.push('▶ （ここにURL）');
+    if (ad) d.push('', '※' + AD[s.pAd](sponsor));
+    if (tags) d.push('', tags);
+    const desc = d.join('\n');
+    const hookLine = h.text.replace(/\n/g, ' ');
+    const sc = type === 'short'
+      ? [ad ? `（最初から画面の上にテロップ）【PR】${sponsor}` : '', `【0〜2秒】${hookLine}`, '【本編】' + pts.join(' → ') + '（1つ5〜10秒）', `【最後の2秒】${pick(SAY_YT[s.pCta], type)}`]
+      : [`【最初の30秒】${hookLine}`, ad ? `（冒頭で話す・テロップ）${AD[s.pAd](sponsor)}` : '', i === 2 ? '' : `この動画で分かること：${benefit}`, '【本編】', ...pts.map((p, j) => `${j + 1}. ${p}`), `【最後】${pick(SAY_YT[s.pCta], type)}`];
+    return {h, title, desc, script: sc.filter(Boolean).join('\n')};
+  });
+  const count = (t, max) => { const len = [...t.replace(/\r?\n/g, '')].length; return `<span class="count num${len > max ? ' over' : ''}">${len} / ${max.toLocaleString()}文字${len > max ? '　文字数オーバー' : ''}</span>`; };
+  const note = type === 'long'
+    ? '目次（チャプター）の時間は仮です。動画に合わせて直してください。タイトルは大事な言葉を前半に、概要欄は最初の2〜3行が検索結果やおすすめに表示されやすい部分です。ハッシュタグは最初の3つがタイトルの上に表示されます。'
+    : 'ショートの概要欄やコメントのリンクは押せません。誘導したい場合は、チャンネルページのリンクか、ショートの「関連動画」に設定した長尺の概要欄にリンクを置きます。字幕なしでも伝わるよう、テロップも入れましょう。';
+  $('drafts').innerHTML = `<p class="small muted">${esc(note)}</p>` + drafts.map((d, i) =>
+    `<div class="draft"><div class="h"><h3>案${i+1}：${esc(d.h.name)}</h3></div>
+      <p class="small muted">${esc(d.h.why)}</p>
+      <div class="part"><div class="h"><b>タイトル</b>${count(d.title, YT_TITLE_MAX)}</div><pre id="yd-${i}-title">${esc(d.title)}</pre></div>
+      <div class="part"><div class="h"><b>概要欄</b>${count(d.desc, P.yt.limit)}</div><pre id="yd-${i}-desc">${esc(d.desc)}</pre></div>
+      <div class="part"><div class="h"><b>${type === 'short' ? '台本' : '冒頭と全体の流れ（台本）'}</b></div><pre id="yd-${i}-script">${esc(d.script)}</pre></div>
+      <div class="btns"><button class="btn sm" data-ycopy="${i}-title">タイトルをコピー</button><button class="btn sm ghost" data-ycopy="${i}-desc">概要欄をコピー</button><button class="btn sm ghost" data-ycopy="${i}-script">台本をコピー</button></div></div>`).join('');
+  const LBL = {title:'タイトル', desc:'概要欄', script:'台本'};
+  document.querySelectorAll('[data-ycopy]').forEach(b => b.onclick = () => {
+    const [i, part] = b.dataset.ycopy.split('-');
+    copy(drafts[+i][part], LBL[part] + 'をコピーしました', $('yd-' + b.dataset.ycopy));
+  });
 }
 
 function renderLegal(s, pf, ad, sponsor){
@@ -1252,9 +1400,46 @@ const METRICS = [
    warn_af:{t:'紹介の仕方を具体的にする', d:'「こんな人に向いている／向いていない」をはっきり書くと、合う人だけがクリックして成果率が上がります。'}}
 ];
 METRICS.find(m => m.id === 'ctr').bad_af = {t:'「誰に・どう伝えるか」を変える', d:'商品名より先に「この悩みがどう変わるか」を書き、リンクの置き場所（プロフィールなど）もはっきり伝えましょう。'};
+// YouTube用。lo_short/hi_short はショートの基準、only はその種類の動画だけで使う指標
+const CVR = METRICS.find(m => m.id === 'cvr');
+const METRICS_YT = [
+  {id:'ictr', only:'long', name:'インプレッションのクリック率', def:'サムネイルが表示されたうち、再生された割合（Studioの数字）', lo:2, hi:5, unit:'%',
+   bad:{t:'サムネイルとタイトルを作り直す', d:'サムネイルの文字は短く大きくし、タイトルとは別の言葉で「見ると何が分かるか」を伝えましょう。YouTube Studio の「テストと比較」で、サムネイルを複数比べることもできます。'},
+   warn:{t:'伸びた動画のサムネイルの共通点を探す', d:'クリック率が高かった動画3本のサムネイルを並べ、文字数・色・顔や商品の写り方の共通点を次の動画に使いましょう。'}},
+  {id:'swipe', only:'short', name:'視聴を選択した割合', def:'フィードに表示されたうち、スワイプされずに見られた割合', lo:60, hi:75, unit:'%',
+   bad:{t:'最初の1秒を変える', d:'あいさつや前置きを削り、いちばん見せたい場面か結論から始めましょう。動きのある映像と、大きなテロップが効果的です。'},
+   warn:{t:'冒頭のひと言を比べる', d:'同じネタで書き出しだけ変えたショートを2本出し、どちらが見られたかを比べてみましょう。'}},
+  {id:'avp', name:'平均視聴率', def:'動画の長さのうち、平均で何%まで見られたか', lo:30, hi:50, lo_short:70, hi_short:90, unit:'%',
+   bad:{t:'冒頭の約束と中身をそろえる', d:'タイトル・サムネイルで約束したことを最初の30秒で見せ、前置きを削りましょう。維持率のグラフで、大きく下がる場面を確認します。'},
+   warn:{t:'離脱が多い場面を削る', d:'維持率のグラフで下がっている場面を1つ見つけ、次の動画ではその種類の話を短くするか、テンポを上げましょう。'}},
+  {id:'er', name:'反応率', def:'（高評価＋コメント＋共有）÷ 視聴回数', lo:2, hi:4, unit:'%',
+   bad:{t:'コメントしやすい問いかけを入れる', d:'動画の途中と最後で「あなたはどっち？」のように、一言で答えられる質問をしましょう。返信すると次の反応も増えます。'},
+   warn:{t:'反応の多い動画のテーマを増やす', d:'コメントが多かった動画のテーマを、角度を変えてもう1本作ってみましょう。'}},
+  {id:'sub', name:'登録率', def:'登録者の増加 ÷ 視聴回数', lo:0.2, hi:0.5, unit:'%',
+   bad:{t:'チャンネル登録する理由を伝える', d:'「毎週〇曜日に〇〇を紹介しています」のように、登録すると何が見られるかを動画の最後で伝えましょう。チャンネルページの説明文も同じ内容にそろえます。'},
+   warn:{t:'シリーズにして次の動画につなぐ', d:'同じテーマで続きものにし、終了画面で次の動画を案内すると、登録につながりやすくなります。'}},
+  {id:'ctr', name:'リンククリック率', def:'リンククリック ÷ 視聴回数', lo:0.3, hi:1, unit:'%',
+   bad:{t:'リンクの場所を動画の中で伝える', d:'概要欄の1〜2行目と固定コメントにリンクを置き、動画の中でも「概要欄のリンクから」と口頭で伝えましょう。ショートのリンクは押せないため、長尺かチャンネルページに誘導します。'},
+   warn:{t:'クリックする理由をはっきり話す', d:'「詳しくはこちら」ではなく、リンク先で何が分かるか・何がもらえるかを話しましょう。'},
+   bad_af:{t:'「誰に・どう伝えるか」を変える', d:'商品名より先に「この悩みがどう変わるか」を話し、概要欄の1〜2行目にリンクを置きましょう。'}},
+  CVR
+];
+const metricsFor = s => s.mPlatform === 'yt' ? METRICS_YT.filter(m => !m.only || m.only === (s.mYtType === 'short' ? 'short' : 'long')) : METRICS;
 const MKEYS = ['er','save','share','ctr','grow','reachf','cvr'];
 function computeVals(s){
   const n = k => Math.max(0, +s[k] || 0);
+  if (s.mPlatform === 'yt'){
+    const views = n('mYViews');
+    const pctY = (a,b) => b > 0 ? a / b * 100 : null;
+    const raw = k => s[k] === '' ? null : n(k);
+    return {
+      ictr: raw('mYCtr'), swipe: raw('mYSwipe'), avp: raw('mYAvp'),
+      er: pctY(n('mYLike') + n('mYCom') + n('mYShare'), views),
+      sub: pctY(n('mYSub1') - n('mYSub0'), views),
+      ctr: pctY(n('mClick'), views),
+      cvr: s.mCv === '' ? null : pctY(n('mCv'), n('mClick'))
+    };
+  }
   const reach = n('mReach'), imp = n('mImp'), f0 = n('mF0'), f1 = n('mF1');
   const eng = n('mLike') + n('mCom') + n('mSave') + n('mShare');
   const pct = (a,b) => b > 0 ? a / b * 100 : null;
@@ -1265,16 +1450,26 @@ function computeVals(s){
   };
 }
 const fmtV = (v, unit) => v === null || v === undefined ? '—' : (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(Math.abs(v) < 10 ? 2 : 1)) + unit;
+// 記録の区分：SNS／YouTube長尺／YouTubeショートは基準が違うので分けて比べる
+const pfKey = s => s.mPlatform !== 'yt' ? 'sns' : s.mYtType === 'short' ? 'yt_short' : 'yt';
 function prevRecord(s){
-  return HIST.filter(r => r.mode === s.mode && r.month < s.recMonth).sort((a,b) => b.month.localeCompare(a.month))[0] || null;
+  return HIST.filter(r => r.mode === s.mode && (r.pf || 'sns') === pfKey(s) && r.month < s.recMonth).sort((a,b) => b.month.localeCompare(a.month))[0] || null;
 }
 function renderStep4(s){
   const af = s.mode === 'af';
   const val = computeVals(s);
   const prev = prevRecord(s);
   const tally = {good:0, warn:0, bad:0};
-  const results = METRICS.map(m => {
-    const lo = (af && m.lo_af !== undefined) ? m.lo_af : m.lo, hi = (af && m.hi_af !== undefined) ? m.hi_af : m.hi;
+  const yt = s.mPlatform === 'yt', short = yt && s.mYtType === 'short';
+  document.querySelectorAll('[data-pf]').forEach(el => el.hidden = el.dataset.pf !== (yt ? 'yt' : 'sns'));
+  document.querySelectorAll('[data-yt]').forEach(el => el.hidden = el.dataset.yt !== (short ? 'short' : 'long'));
+  $('metricNote').textContent = yt
+    ? '判定の基準は一般的な目安です。YouTubeはジャンルや動画の長さで差が大きいので、他のチャンネルと比べるより「先月の自分」と比べるのがおすすめです。'
+    : '判定の基準は、フォロワー数千人規模のアカウントでよく使われる一般的な目安です。SNSやジャンルで差が大きいので、他社と比べるより「先月の自分」と比べるのがおすすめです。';
+  renderYpp(s, yt, short);
+  const results = metricsFor(s).map(m => {
+    let lo = (af && m.lo_af !== undefined) ? m.lo_af : m.lo, hi = (af && m.hi_af !== undefined) ? m.hi_af : m.hi;
+    if (short && m.lo_short !== undefined){ lo = m.lo_short; hi = m.hi_short; }
     const v = val[m.id];
     const st = v === null ? null : v < lo ? 'bad' : v < hi ? 'warn' : 'good';
     if (st) tally[st]++;
@@ -1334,24 +1529,41 @@ function renderStep4(s){
 
   renderHist(s, val);
 }
+// 収益化（YouTube パートナープログラム）の条件までの目安。月の数字から1年・90日分を見積もる
+function renderYpp(s, yt, short){
+  $('yppSec').hidden = !yt;
+  if (!yt) return;
+  const subs = Math.max(0, +s.mYSub1 || 0);
+  const goals = [['チャンネル登録者', subs, 1000, '人', '']];
+  if (short) goals.push(['ショートの視聴回数（90日の見込み）', Math.round((+s.mYViews || 0) * 3), 10000000, '回', '先月の視聴回数×3で計算']);
+  else goals.push(['総再生時間（12か月の見込み）', Math.round((+s.mYWatch || 0) * 12), 4000, '時間', '先月の総再生時間×12で計算。ショートの再生時間は含まれません']);
+  $('ypp').innerHTML = goals.map(([name, v, goal, unit, note]) => {
+    const p = Math.min(100, v / goal * 100);
+    return `<div><div class="sec-h"><b>${name}</b><span class="num">${v.toLocaleString()} / ${goal.toLocaleString()}${unit}${v >= goal ? '　<span style="color:var(--good)">達成</span>' : ''}</span></div>
+      <div class="bar"><i style="width:${p}%"></i></div>${note ? `<span class="small muted">${note}</span>` : ''}</div>`;
+  }).join('') +
+  '<p class="small muted">広告収益の条件は、登録者1,000人に加えて「直近12か月の総再生時間4,000時間」か「直近90日のショートの視聴回数1,000万回」のどちらか。メンバーシップなどのファン向け機能は、より少ない条件から使えます。条件は変わることがあるため、YouTube Studio の「収益化」で確認してください。</p>';
+}
 function renderHist(s, val){
-  const rows = HIST.filter(r => r.mode === s.mode).sort((a,b) => b.month.localeCompare(a.month));
-  $('hist').innerHTML = rows.length ? `<table class="judge"><thead><tr><th>月</th><th>エンゲージメント率</th><th>保存率</th><th>クリック率</th><th>成果率</th><th>${s.mode === 'af' ? '報酬' : '売上'}</th><th>変えたこと</th><th></th></tr></thead><tbody>` +
-    rows.map(r => `<tr><td class="num">${esc(r.month)}</td><td class="num">${fmtV(r.v.er,'%')}</td><td class="num">${fmtV(r.v.save,'%')}</td><td class="num">${fmtV(r.v.ctr,'%')}</td><td class="num">${fmtV(r.v.cvr,'%')}</td>
+  const yt = s.mPlatform === 'yt';
+  const rows = HIST.filter(r => r.mode === s.mode && (r.pf || 'sns') === pfKey(s)).sort((a,b) => b.month.localeCompare(a.month));
+  const cols = yt ? [s.mYtType === 'short' ? ['swipe','視聴を選択した割合'] : ['ictr','クリック率'],['avp','平均視聴率'],['sub','登録率'],['cvr','成果率']] : [['er','エンゲージメント率'],['save','保存率'],['ctr','クリック率'],['cvr','成果率']];
+  $('hist').innerHTML = rows.length ? `<table class="judge"><thead><tr><th>月</th>${cols.map(([,l]) => `<th>${l}</th>`).join('')}<th>${s.mode === 'af' ? '報酬' : '売上'}</th><th>変えたこと</th><th></th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="num">${esc(r.month)}</td>${cols.map(([k]) => `<td class="num">${fmtV(r.v[k],'%')}</td>`).join('')}
       <td class="num">${r.rev === null || r.rev === undefined ? '—' : Number(r.rev).toLocaleString() + '円'}</td><td>${esc(r.note || '')}</td>
       <td><button type="button" class="btn sm ghost" data-del="${esc(r.month)}">削除</button></td></tr>`).join('') + '</tbody></table>'
     : '<p class="small muted">まだ記録がありません。上の数字を入れたら「この月の結果を記録」を押してください。</p>';
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'もう一度押すと削除'; return; }
-    HIST = HIST.filter(r => !(r.mode === MODE && r.month === b.dataset.del));
+    HIST = HIST.filter(r => !(r.mode === MODE && (r.pf || 'sns') === pfKey(s) && r.month === b.dataset.del));
     render();
     toast('記録を削除しました');
   });
   $('recBtn').onclick = () => {
     const month = $('recMonth').value;
     if (!month){ toast('記録する月を選んでください'); return; }
-    const rec = {mode: MODE, month, v: computeVals(readState()), rev: $('mRev').value === '' ? null : +$('mRev').value, note: $('recNote').value.trim()};
-    HIST = HIST.filter(r => !(r.mode === MODE && r.month === month)).concat([rec]);
+    const rec = {mode: MODE, pf: pfKey(s), month, v: computeVals(readState()), rev: $('mRev').value === '' ? null : +$('mRev').value, note: $('recNote').value.trim()};
+    HIST = HIST.filter(r => !(r.mode === MODE && (r.pf || 'sns') === rec.pf && r.month === month)).concat([rec]);
     render();
     toast(month + ' の結果を記録しました');
   };
