@@ -17,6 +17,7 @@
     }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
          background: var(--bg); color: var(--text); font-size: 14px; }
   header { padding: 16px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -197,8 +198,8 @@
 <main>
   <!-- 左：投稿フォーム -->
   <section class="card">
-    <h2>① どこに・何を投稿する？</h2>
-    <p class="hint" style="margin:-6px 0 10px">タブを切り替えて投稿先ごとに内容を作れます（✓ が付いた投稿先に投稿）</p>
+    <h2 id="composeTitle">① どこに・何を投稿する？</h2>
+    <p class="hint" id="tabHint" style="margin:-6px 0 10px">タブを切り替えて投稿先ごとに内容を作れます（✓ が付いた投稿先に投稿）</p>
     <div class="tabs" id="tabs"></div>
     <div class="panel" id="panel"></div>
 
@@ -243,7 +244,8 @@
 </main>
 
 <script>
-const NAMES = { x: "X", threads: "Threads", blog: "ブログ" };
+const ALL_NAMES = { x: "X", threads: "Threads", blog: "ブログ" };
+let NAMES = {};  // 使える投稿先（サーバーの ENABLED_PLATFORMS で決まる）
 const STATUS = { scheduled: "予約中", posting: "投稿中", done: "投稿済", partial: "一部失敗", failed: "失敗", canceled: "取消" };
 const DOW = ["日", "月", "火", "水", "木", "金", "土"];
 const LIMIT = { x: 280, threads: 500 };
@@ -299,6 +301,11 @@ async function api(path, opts = {}) {
 
 // ---------- 投稿先タブ ----------
 function renderTabs() {
+  // 投稿先が1つだけならタブと切り替えスイッチは出さない
+  const single = Object.keys(NAMES).length === 1;
+  $("tabs").hidden = single; $("tabHint").hidden = single;
+  $("composeTitle").textContent = single ? `① ${Object.values(NAMES)[0]} に何を投稿する？` : "① どこに・何を投稿する？";
+  $("panel").style.borderRadius = single ? "10px" : "";
   $("tabs").innerHTML = Object.entries(NAMES).map(([k, v]) =>
     `<button class="tab ${k === state.tab ? "active" : ""} ${state.drafts[k].on ? "enabled" : ""}" data-tab="${k}">` +
     `<span class="dot ${k}"></span>${v}<span class="on-mark">${state.drafts[k].on ? "✓" : ""}</span></button>`).join("");
@@ -308,10 +315,12 @@ function renderTabs() {
 }
 
 function renderPanel() {
+  if (!NAMES[state.tab]) return;
+  const single = Object.keys(NAMES).length === 1;
   const pf = state.tab, d = state.drafts[pf];
   const others = Object.keys(NAMES).filter((k) => k !== pf);
   $("panel").innerHTML = `
-    <div class="panel-top">
+    <div class="panel-top" ${single ? "hidden" : ""}>
       <label class="switch"><input type="checkbox" id="pfOn" ${d.on ? "checked" : ""}>${NAMES[pf]} に投稿する</label>
       <select class="copy" id="copyFrom">
         <option value="">他の内容をコピー…</option>
@@ -474,26 +483,27 @@ function accountCard(pf) {
       </details>`;
   } else if (pf === "threads") {
     body = `
-      ${on ? "" : `<div class="row-btn"><button class="btn login threads" data-login="threads" ${a.app_ready ? "" : "disabled"}>@ Threads でログイン</button></div>`}
-      <details ${!on && !a.app_ready ? "open" : ""}><summary>方法1：Threads でログイン（アプリ登録が必要）</summary>
+      <details ${on ? "" : "open"}><summary>${on ? "トークンを入れ直す" : "方法1：アクセストークンを貼り付け（かんたん・おすすめ）"}</summary>
         <ol>
-          <li><a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers</a> で「Threads API にアクセス」するアプリを作成</li>
-          <li>権限 <b>threads_basic</b>・<b>threads_content_publish</b> を追加</li>
-          <li>「リダイレクトコールバックURL」に次を登録：<br><code>${escapeHtml(a.redirect_uri)}</code><br>
-              ※ Meta は <b>https の URL しか登録できません</b>。この PC だけで使う場合は方法2が簡単です</li>
-          <li>Threads App ID / App Secret を下に貼り付けて保存</li>
+          <li><a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers</a> でアプリを作成（ユースケースは「Threads API にアクセス」）</li>
+          <li>「ユースケース」→ Threads API の「カスタマイズ」で権限 <b>threads_basic</b>・<b>threads_content_publish</b> を追加</li>
+          <li>「役割」→「Threads テスター」に自分の Threads アカウントを追加し、Threads アプリの設定 → アカウント → ウェブサイトのアクセス許可 で招待を承認</li>
+          <li>Threads API の「ユーザートークン生成ツール」でトークンを発行して、下に貼り付け →「接続」</li>
+        </ol>
+        <label class="f">アクセストークン<textarea id="thToken" autocomplete="off" placeholder="THAA... で始まる長い文字列"></textarea></label>
+        <div class="row-btn"><button class="btn login threads" data-token="threads">接続</button></div>
+        <p class="hint">下の「アプリ設定」に App ID / Secret も保存しておくと、トークンを 60 日有効に延長し、その後も自動で更新します。</p>
+      </details>
+      <details ${a.app_ready && !on ? "open" : ""}><summary>方法2：Threads でログイン ／ アプリ設定</summary>
+        <ol>
+          <li>Meta for Developers のアプリ →「アプリの設定」→「ベーシック」の <b>Threads App ID / App Secret</b> を下に保存</li>
+          <li>「Threads でログイン」を使う場合は、リダイレクトコールバックURLに次を登録：<br><code>${escapeHtml(a.redirect_uri)}</code><br>
+              ※ Meta は <b>https の URL しか登録できない</b>ため、この PC だけで使う場合は方法1を使ってください</li>
         </ol>
         <label class="f">Threads App ID<input id="thId" value="${escapeHtml(a.client_id)}" autocomplete="off"></label>
         <label class="f">Threads App Secret<input id="thSecret" type="password" placeholder="${a.app_ready ? "（保存済み・変更するときだけ入力）" : ""}" autocomplete="off"></label>
-        <div class="row-btn"><button class="btn ghost" data-save="threads">保存</button></div>
-      </details>
-      <details><summary>方法2：アクセストークンを貼り付け</summary>
-        <ol>
-          <li>Meta for Developers のアプリ画面 →「ユースケース」→ Threads API の「ユーザートークン生成ツール」でトークンを発行</li>
-          <li>下に貼り付けて「接続」（App Secret を保存済みなら、60日有効の長期トークンに自動で交換します）</li>
-        </ol>
-        <label class="f">アクセストークン<textarea id="thToken" autocomplete="off"></textarea></label>
-        <div class="row-btn"><button class="btn ghost" data-token="threads">接続</button></div>
+        <div class="row-btn"><button class="btn ghost" data-save="threads">保存</button>
+          ${a.app_ready && !on ? `<button class="btn login threads" data-login="threads">@ Threads でログイン</button>` : ""}</div>
       </details>`;
   } else {
     body = `
@@ -547,7 +557,7 @@ function renderAccounts(focus) {
     if (a.app_ready && !(body.client_secret || body.app_secret)) {
       return accMsg(pf, "Secret も入力してください（変更しない場合は保存不要です）", false);
     }
-    run(pf, b, () => post(`/api/accounts/${pf}/app`, body), "保存しました。ログインボタンを押してください");
+    run(pf, b, () => post(`/api/accounts/${pf}/app`, body), pf === "x" ? "保存しました。ログインボタンを押してください" : "保存しました");
   }));
   $("acctBody").querySelector("[data-token]")?.addEventListener("click", (e) =>
     run("threads", e.target, () => post("/api/accounts/threads/token", { token: $("thToken").value }), "接続しました"));
@@ -564,8 +574,7 @@ function openAccounts(focus) {
 
 async function loadAccounts() {
   state.accounts = await api("/api/accounts");
-  renderPanel();
-  loadStatus().catch(() => {});
+  await loadStatus();
 }
 
 // ---------- 予約 ----------
@@ -679,7 +688,7 @@ function pfBlock(p, k) {
   const topic = k === "threads" && b?.topic ? ` › ${escapeHtml(b.topic)}` : "";
   const r = (p.results || {})[k];
   const res = r ? `<div class="res" style="color:var(--${r.ok ? "ok" : "danger"})">${r.ok ? "✓" : "✗"} ${escapeHtml(r.info || "")}</div>` : "";
-  return `<div class="pf-block"><div class="pf-name"><span class="dot ${k}"></span>${NAMES[k]}${topic}</div>${body}${res}</div>`;
+  return `<div class="pf-block"><div class="pf-name"><span class="dot ${k}"></span>${ALL_NAMES[k]}${topic}</div>${body}${res}</div>`;
 }
 
 function renderList() {
@@ -726,10 +735,14 @@ async function loadPosts() {
 async function loadStatus() {
   state.status = await api("/api/status");
   const s = state.status;
+  NAMES = Object.fromEntries(Object.entries(s.platforms).map(([k, p]) => [k, p.name]));
+  if (!NAMES[state.tab]) state.tab = Object.keys(NAMES)[0];
+  if (Object.keys(NAMES).length === 1) state.drafts[state.tab].on = true;
+  renderTabs();
   $("badges").innerHTML = (s.dry_run ? `<span class="badge test">テストモード（実際には投稿しません）</span>` : "") +
     Object.entries(s.platforms).map(([k, p]) =>
       `<span class="badge ${p.configured ? "on" : ""}" data-acct="${k}" style="cursor:pointer">${p.name}: ${p.configured ? "接続済" : "未ログイン"}</span>`).join("");
-  if (!state.accounts) renderPanel();
+  renderPanel();
 }
 
 // ---------- イベント ----------

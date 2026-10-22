@@ -14,11 +14,15 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-PLATFORMS = {
+ALL_PLATFORMS = {
     "x": "X",
     "threads": "Threads",
     "blog": "ブログ",
 }
+
+# 使う投稿先（.env の ENABLED_PLATFORMS、カンマ区切り）。今は Threads だけ。
+_enabled = [p.strip() for p in os.environ.get("ENABLED_PLATFORMS", "threads").split(",")]
+PLATFORMS = {k: v for k, v in ALL_PLATFORMS.items() if k in _enabled} or {"threads": "Threads"}
 
 # 文字数上限（X は全角を 2 として数える）
 X_LIMIT = 280
@@ -198,5 +202,5 @@ def send(platform, post):
     if dry_run():
         return "（テストモード：実際には投稿していません）"
     if not is_configured(platform):
-        raise PostError(f"{PLATFORMS[platform]} のアカウントが連携されていません（画面の「アカウント連携」からログイン）")
+        raise PostError(f"{ALL_PLATFORMS[platform]} のアカウントが連携されていません（画面の「アカウント連携」からログイン）")
     return SENDERS[platform](post)

@@ -211,8 +211,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.redirect("/?auth_error=" + urllib.parse.quote(f"{platforms.PLATFORMS[pf]}: {e}"))
             return self.redirect(f"/?connected={pf}")
         if url.path == "/api/accounts":
-            info = accounts.public_info()
-            for pf in ("x", "threads"):
+            info = {k: v for k, v in accounts.public_info().items() if k in platforms.PLATFORMS}
+            for pf in [p for p in ("x", "threads") if p in info]:
                 info[pf]["redirect_uri"] = self.redirect_uri(pf)
             for pf in info:
                 info[pf]["env"] = platforms.env_configured(pf)
