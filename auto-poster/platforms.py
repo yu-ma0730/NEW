@@ -1,6 +1,7 @@
 """各投稿先（X / Threads / ブログ）への投稿処理。
 
-標準ライブラリのみで動くようにしている。認証情報は環境変数（.env）から読む。
+標準ライブラリのみで動くようにしている。認証情報は「アカウント連携」画面で
+ログインしたもの（accounts.py）を優先し、なければ環境変数（.env）を使う。
 """
 import base64
 import hashlib
@@ -34,6 +35,11 @@ def env(name):
 
 
 def is_configured(platform):
+    import accounts  # 循環 import を避けるためここで読む
+    return accounts.connected(platform) or env_configured(platform)
+
+
+def env_configured(platform):
     if platform == "x":
         return all(env(k) for k in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET"))
     if platform == "threads":
@@ -108,7 +114,12 @@ def post_x(post):
     texts = parts_of(post, "x")
     if any(x_length(t) > X_LIMIT for t in texts):
         raise PostError(f"X の文字数上限（{X_LIMIT}、全角は2換算）を超えています")
+    import accounts
     url = "https://api.x.com/2/tweets"
+    if accounts.connected("x"):
+        auth = lambda: f"Bearer {accounts.x_access_token()}"  # noqa: E731
+    else:
+        auth = lambda: _oauth1_header("POST", url)  # noqa: E731
     first_id = prev_id = None
     for text in texts:  # 2件目以降は前のポストへの返信としてつなげる
         payload = {"text": text}
@@ -116,7 +127,7 @@ def post_x(post):
             payload["reply"] = {"in_reply_to_tweet_id": prev_id}
         data = _request(
             url,
-            headers={"Authorization": _oauth1_header("POST", url), "Content-Type": "application/json"},
+            headers={"Authorization": auth(), "Content-Type": "application/json"},
             body=json.dumps(payload).encode(),
         )
         prev_id = data.get("data", {}).get("id")
@@ -132,7 +143,8 @@ def post_threads(post):
         raise PostError(f"Threads の文字数上限（{THREADS_LIMIT}）を超えています")
     topic = post.get("bodies", {}).get("threads", {}).get("topic", "")
     base = "https://graph.threads.net/v1.0/me"
-    token = env("THREADS_ACCESS_TOKEN")
+    import accounts
+    token = accounts.threads_access_token() if accounts.connected("threads") else env("THREADS_ACCESS_TOKEN")
     form = {"Content-Type": "application/x-www-form-urlencoded"}
     first_id = prev_id = None
     for text in texts:  # 2件目以降は前の投稿への返信（スレッドに追加）としてつなげる
@@ -162,9 +174,12 @@ def post_blog(post):
     text = blog["body"]
     title = blog.get("title") or text.splitlines()[0][:60]
     content = "".join(f"<p>{line}</p>" for line in _escape(text).splitlines() if line.strip())
-    auth = base64.b64encode(f"{env('WP_USER')}:{env('WP_APP_PASSWORD')}".encode()).decode()
+    import accounts
+    acc = accounts.get("blog") if accounts.connected("blog") else {
+        "url": env("WP_URL"), "user": env("WP_USER"), "app_password": env("WP_APP_PASSWORD")}
+    auth = base64.b64encode(f"{acc['user']}:{acc['app_password']}".encode()).decode()
     data = _request(
-        env("WP_URL").rstrip("/") + "/wp-json/wp/v2/posts",
+        acc["url"].rstrip("/") + "/wp-json/wp/v2/posts",
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         body=json.dumps({"title": title, "content": content, "status": "publish"}).encode(),
     )
@@ -183,5 +198,5 @@ def send(platform, post):
     if dry_run():
         return "（テストモード：実際には投稿していません）"
     if not is_configured(platform):
-        raise PostError(f"{PLATFORMS[platform]} の認証情報が .env に設定されていません")
+        raise PostError(f"{PLATFORMS[platform]} のアカウントが連携されていません（画面の「アカウント連携」からログイン）")
     return SENDERS[platform](post)

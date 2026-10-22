@@ -108,6 +108,38 @@
                      min-height: 220px; resize: vertical; outline: none; padding: 12px 0 0; }
   .pf-blog .foot { padding: 6px 0 0; border-top: 1px dashed var(--line); justify-content: space-between; }
 
+  /* ---------- アカウント連携 ---------- */
+  .btn.acct { margin-left: auto; background: var(--card); border: 1px solid var(--line); color: var(--text); padding: 6px 12px; }
+  dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100vw - 32px));
+           max-height: calc(100vh - 32px); background: var(--card); color: var(--text); }
+  dialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .dlg-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line);
+              position: sticky; top: 0; background: var(--card); z-index: 1; }
+  .dlg-head h2 { margin: 0; }
+  .dlg-body { padding: 12px 16px 16px; display: grid; gap: 12px; }
+  .acc { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .acc.focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .acc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .acc-top .pf { font-weight: 700; font-size: 15px; }
+  .acc-state { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .acc-state.on { color: var(--ok); border-color: var(--ok); }
+  .acc-actions { margin-left: auto; display: flex; gap: 6px; }
+  .acc details { margin-top: 10px; }
+  .acc summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  .acc .f { display: grid; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .acc .f input, .acc .f textarea { padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+                                    color: var(--text); font: inherit; font-size: 13px; width: 100%; }
+  .acc .f textarea { min-height: 60px; resize: vertical; }
+  .acc a { color: var(--accent); }
+  .acc ol { margin: 8px 0 0; padding-left: 20px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .acc code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; word-break: break-all; color: var(--text); }
+  .acc .row-btn { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .btn.login { color: #fff; padding: 8px 14px; }
+  .btn.login.x { background: #000; } .btn.login.threads { background: #000; } .btn.login.blog { background: #21759b; }
+  .acc .msg { margin-top: 6px; }
+  .who { font-size: 12px; color: var(--muted); }
+  .who a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
   /* ---------- 予定表 ---------- */
   .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .cal-head .title { font-weight: 700; font-size: 15px; margin-right: auto; }
@@ -154,7 +186,13 @@
 <header>
   <h1>📅 自動投稿スケジューラー</h1>
   <div class="badges" id="badges"></div>
+  <button class="btn acct" id="openAcct">🔑 アカウント連携</button>
 </header>
+
+<dialog id="acctDlg">
+  <div class="dlg-head"><h2>🔑 アカウント連携</h2><button class="btn ghost" id="closeAcct">閉じる</button></div>
+  <div class="dlg-body" id="acctBody"></div>
+</dialog>
 
 <main>
   <!-- 左：投稿フォーム -->
@@ -272,7 +310,6 @@ function renderTabs() {
 function renderPanel() {
   const pf = state.tab, d = state.drafts[pf];
   const others = Object.keys(NAMES).filter((k) => k !== pf);
-  const unconfigured = state.status && !state.status.dry_run && !state.status.platforms[pf].configured;
   $("panel").innerHTML = `
     <div class="panel-top">
       <label class="switch"><input type="checkbox" id="pfOn" ${d.on ? "checked" : ""}>${NAMES[pf]} に投稿する</label>
@@ -281,7 +318,7 @@ function renderPanel() {
         ${others.map((k) => `<option value="${k}">${NAMES[k]} からコピー</option>`).join("")}
       </select>
     </div>
-    ${unconfigured ? `<div class="warn-note">⚠ ${NAMES[pf]} の認証情報が .env に未設定です（このままだと投稿は失敗します）</div>` : ""}
+    ${accountLine(pf)}
     <div class="editor ${d.on ? "" : "off"}" id="editor"></div>`;
   $("pfOn").addEventListener("change", (e) => {
     d.on = e.target.checked; saveDrafts(); renderTabs(); $("editor").classList.toggle("off", !d.on);
@@ -331,8 +368,8 @@ function renderThread(pf) {
   const isX = pf === "x";
   const rows = d.parts.map((t, i) => {
     const head = isX
-      ? `<span class="name">あなた</span><span class="handle">@you</span>`
-      : `<span class="name">あなた</span>` + (i === 0
+      ? `<span class="name">${escapeHtml(displayName("x"))}</span>`
+      : `<span class="name">${escapeHtml(displayName("threads"))}</span>` + (i === 0
           ? `<span class="topic-sep">›</span><input class="topic" id="topic" maxlength="50" placeholder="トピックを追加" value="${escapeHtml(d.topic)}">`
           : "");
     const ph = i === 0 ? (isX ? "いまどうしてる？" : "今なにしてる？") : (isX ? "ポストを追加" : "スレッドに追加");
@@ -391,6 +428,144 @@ function renderBlog() {
   count();
   $("bTitle").addEventListener("input", (e) => { d.title = e.target.value; saveDrafts(); });
   $("bBody").addEventListener("input", (e) => { d.body = e.target.value; count(); saveDrafts(); });
+}
+
+// ---------- アカウント連携 ----------
+function displayName(pf) {
+  const a = state.accounts?.[pf];
+  return a?.connected && a.username ? a.username.replace(/^@/, pf === "threads" ? "" : "@") : "あなた";
+}
+
+function accountLine(pf) {
+  const a = state.accounts?.[pf];
+  if (a?.connected) return `<div class="who">投稿アカウント: <b>${escapeHtml(a.username || a.url || "接続済")}</b>　<a data-acct="${pf}">変更</a></div><div style="height:8px"></div>`;
+  if (a?.env) return `<div class="who">.env の認証情報で投稿します　<a data-acct="${pf}">ログインに切り替え</a></div><div style="height:8px"></div>`;
+  return `<div class="warn-note">⚠ ${NAMES[pf]} にログインしていません（このままだと投稿は失敗します）　<a data-acct="${pf}" style="color:inherit;text-decoration:underline;cursor:pointer">ログインする</a></div>`;
+}
+
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-acct]");
+  if (a) openAccounts(a.dataset.acct);
+});
+
+function fmtDate(sec) { const d = new Date(sec * 1000); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; }
+
+function accountCard(pf) {
+  const a = state.accounts[pf];
+  const on = a.connected;
+  const stateText = on ? `✓ ${escapeHtml(a.username || "接続済")}` : a.env ? ".env で設定済" : "未ログイン";
+  const expires = on && a.expires_at && pf === "threads" ? `<span class="who">期限 ${fmtDate(a.expires_at)}（自動更新）</span>` : "";
+  const actions = on ? `<button class="btn danger" data-disc="${pf}">ログアウト</button>` : "";
+  let body = "";
+  if (pf === "x") {
+    body = `
+      ${on ? "" : `<div class="row-btn"><button class="btn login x" data-login="x" ${a.app_ready ? "" : "disabled"}>𝕏 でログイン</button></div>
+      ${a.app_ready ? "" : `<p class="hint">ログインするには、先に下の「初回設定」で X のアプリを登録してください。</p>`}`}
+      <details ${a.app_ready ? "" : "open"}><summary>初回設定（X のアプリ登録）</summary>
+        <ol>
+          <li><a href="https://developer.x.com/en/portal/dashboard" target="_blank" rel="noopener">developer.x.com</a> でプロジェクトとアプリを作成</li>
+          <li>アプリの「User authentication settings」で<br>App permissions：<b>Read and write</b> ／ Type：<b>Web App</b></li>
+          <li>Callback URI に次を登録：<br><code>${escapeHtml(a.redirect_uri)}</code></li>
+          <li>「Keys and tokens」の <b>OAuth 2.0 Client ID / Client Secret</b> を下に貼り付けて保存</li>
+        </ol>
+        <label class="f">Client ID<input id="xId" value="${escapeHtml(a.client_id)}" autocomplete="off"></label>
+        <label class="f">Client Secret<input id="xSecret" type="password" placeholder="${a.app_ready ? "（保存済み・変更するときだけ入力）" : ""}" autocomplete="off"></label>
+        <div class="row-btn"><button class="btn ghost" data-save="x">保存</button></div>
+      </details>`;
+  } else if (pf === "threads") {
+    body = `
+      ${on ? "" : `<div class="row-btn"><button class="btn login threads" data-login="threads" ${a.app_ready ? "" : "disabled"}>@ Threads でログイン</button></div>`}
+      <details ${!on && !a.app_ready ? "open" : ""}><summary>方法1：Threads でログイン（アプリ登録が必要）</summary>
+        <ol>
+          <li><a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers</a> で「Threads API にアクセス」するアプリを作成</li>
+          <li>権限 <b>threads_basic</b>・<b>threads_content_publish</b> を追加</li>
+          <li>「リダイレクトコールバックURL」に次を登録：<br><code>${escapeHtml(a.redirect_uri)}</code><br>
+              ※ Meta は <b>https の URL しか登録できません</b>。この PC だけで使う場合は方法2が簡単です</li>
+          <li>Threads App ID / App Secret を下に貼り付けて保存</li>
+        </ol>
+        <label class="f">Threads App ID<input id="thId" value="${escapeHtml(a.client_id)}" autocomplete="off"></label>
+        <label class="f">Threads App Secret<input id="thSecret" type="password" placeholder="${a.app_ready ? "（保存済み・変更するときだけ入力）" : ""}" autocomplete="off"></label>
+        <div class="row-btn"><button class="btn ghost" data-save="threads">保存</button></div>
+      </details>
+      <details><summary>方法2：アクセストークンを貼り付け</summary>
+        <ol>
+          <li>Meta for Developers のアプリ画面 →「ユースケース」→ Threads API の「ユーザートークン生成ツール」でトークンを発行</li>
+          <li>下に貼り付けて「接続」（App Secret を保存済みなら、60日有効の長期トークンに自動で交換します）</li>
+        </ol>
+        <label class="f">アクセストークン<textarea id="thToken" autocomplete="off"></textarea></label>
+        <div class="row-btn"><button class="btn ghost" data-token="threads">接続</button></div>
+      </details>`;
+  } else {
+    body = `
+      <details ${on ? "" : "open"}><summary>${on ? "接続先を変更" : "WordPress に接続"}</summary>
+        <ol>
+          <li>WordPress の管理画面 →「ユーザー」→「プロフィール」</li>
+          <li>一番下の「アプリケーションパスワード」で名前（例：自動投稿）を入れて発行</li>
+          <li>表示されたパスワードを下に貼り付け（ログイン用のパスワードではありません）</li>
+        </ol>
+        <label class="f">サイト URL<input id="wpUrl" placeholder="https://example.com" value="${escapeHtml(a.url)}"></label>
+        <label class="f">ユーザー名<input id="wpUser" value="${escapeHtml(a.user)}" autocomplete="off"></label>
+        <label class="f">アプリケーションパスワード<input id="wpPass" type="password" autocomplete="off"></label>
+        <div class="row-btn"><button class="btn login blog" data-wp>接続テストして保存</button></div>
+      </details>`;
+  }
+  return `<div class="acc" id="acc-${pf}">
+    <div class="acc-top"><span class="dot ${pf}"></span><span class="pf">${NAMES[pf]}</span>
+      <span class="acc-state ${on ? "on" : ""}">${stateText}</span>${expires}<div class="acc-actions">${actions}</div></div>
+    ${body}<div class="msg" id="accMsg-${pf}"></div></div>`;
+}
+
+function renderAccounts(focus) {
+  $("acctBody").innerHTML = `<p class="hint" style="margin:0">ここでログインしたアカウントに投稿します。ログイン情報はこの PC の <code>data/accounts.json</code> にだけ保存されます。</p>` +
+    Object.keys(NAMES).map(accountCard).join("");
+  if (focus) {
+    const el = $("acc-" + focus);
+    el.classList.add("focus"); el.scrollIntoView({ block: "nearest" });
+  }
+  const accMsg = (pf, text, ok) => { const m = $("accMsg-" + pf); m.textContent = text; m.className = "msg " + (ok ? "ok" : "err"); };
+  const run = async (pf, btn, fn, okText) => {
+    btn.disabled = true;
+    try { await fn(); await loadAccounts(); renderAccounts(pf); accMsg(pf, okText, true); }
+    catch (e) { accMsg(pf, e.message, false); btn.disabled = false; }
+  };
+  const post = (path, body = {}) => api(path, { method: "POST", body: JSON.stringify(body) });
+
+  $("acctBody").querySelectorAll("[data-login]").forEach((b) => b.addEventListener("click", async () => {
+    const pf = b.dataset.login;
+    try { location.href = (await post(`/api/accounts/${pf}/login`)).url; } catch (e) { accMsg(pf, e.message, false); }
+  }));
+  $("acctBody").querySelectorAll("[data-disc]").forEach((b) => b.addEventListener("click", () => {
+    const pf = b.dataset.disc;
+    if (confirm(`${NAMES[pf]} からログアウトしますか？`)) run(pf, b, () => post(`/api/accounts/${pf}/disconnect`), "ログアウトしました");
+  }));
+  $("acctBody").querySelectorAll("[data-save]").forEach((b) => b.addEventListener("click", () => {
+    const pf = b.dataset.save, a = state.accounts[pf];
+    const body = pf === "x"
+      ? { client_id: $("xId").value, client_secret: $("xSecret").value }
+      : { app_id: $("thId").value, app_secret: $("thSecret").value };
+    // Secret が空欄で保存済みの場合は Secret を変えない
+    if (a.app_ready && !(body.client_secret || body.app_secret)) {
+      return accMsg(pf, "Secret も入力してください（変更しない場合は保存不要です）", false);
+    }
+    run(pf, b, () => post(`/api/accounts/${pf}/app`, body), "保存しました。ログインボタンを押してください");
+  }));
+  $("acctBody").querySelector("[data-token]")?.addEventListener("click", (e) =>
+    run("threads", e.target, () => post("/api/accounts/threads/token", { token: $("thToken").value }), "接続しました"));
+  $("acctBody").querySelector("[data-wp]")?.addEventListener("click", (e) =>
+    run("blog", e.target, () => post("/api/accounts/blog/connect",
+      { url: $("wpUrl").value, user: $("wpUser").value, app_password: $("wpPass").value }), "接続しました"));
+}
+
+function openAccounts(focus) {
+  if (!state.accounts) return;
+  renderAccounts(focus);
+  if (!$("acctDlg").open) $("acctDlg").showModal();
+}
+
+async function loadAccounts() {
+  state.accounts = await api("/api/accounts");
+  renderPanel();
+  loadStatus().catch(() => {});
 }
 
 // ---------- 予約 ----------
@@ -552,8 +727,9 @@ async function loadStatus() {
   state.status = await api("/api/status");
   const s = state.status;
   $("badges").innerHTML = (s.dry_run ? `<span class="badge test">テストモード（実際には投稿しません）</span>` : "") +
-    Object.values(s.platforms).map((p) => `<span class="badge ${p.configured ? "on" : ""}">${p.name}: ${p.configured ? "接続済" : "未設定"}</span>`).join("");
-  renderPanel();
+    Object.entries(s.platforms).map(([k, p]) =>
+      `<span class="badge ${p.configured ? "on" : ""}" data-acct="${k}" style="cursor:pointer">${p.name}: ${p.configured ? "接続済" : "未ログイン"}</span>`).join("");
+  if (!state.accounts) renderPanel();
 }
 
 // ---------- イベント ----------
@@ -572,7 +748,18 @@ $("next").addEventListener("click", () => {
 $("today").addEventListener("click", () => { state.cursor = startOfDay(new Date()); renderCalendar(); });
 $("submit").addEventListener("click", submit);
 
+$("openAcct").addEventListener("click", () => openAccounts());
+$("closeAcct").addEventListener("click", () => $("acctDlg").close());
+
 renderTabs(); renderPanel(); renderChips(); renderCalendar();
+// ログインから戻ってきたとき
+const qs = new URLSearchParams(location.search);
+const back = qs.get("connected"), authErr = qs.get("auth_error");
+if (back || authErr) history.replaceState(null, "", location.pathname);
+loadAccounts().then(() => {
+  if (back) { openAccounts(back); const m = $("accMsg-" + back); m.textContent = "ログインしました"; m.className = "msg ok"; }
+  if (authErr) { openAccounts(); showMsg("ログインに失敗しました：" + authErr, false); alert("ログインに失敗しました\n" + authErr); }
+}).catch(() => {});
 loadStatus().catch((e) => showMsg("サーバーに接続できません: " + e.message, false));
 loadPosts().catch(() => {});
 setInterval(() => loadPosts().catch(() => {}), 30000);

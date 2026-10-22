@@ -6,6 +6,7 @@ import json
 import os
 import threading
 import time
+import urllib.parse
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -29,7 +30,8 @@ def load_env(path=BASE_DIR / ".env"):
 
 load_env()
 
-import platforms  # noqa: E402  (.env 読み込み後に import)
+import accounts  # noqa: E402  (.env 読み込み後に import)
+import platforms  # noqa: E402
 
 lock = threading.Lock()
 
@@ -184,7 +186,37 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         return json.loads(self.rfile.read(length) or b"{}")
 
+    def redirect_uri(self, pf):
+        host = self.headers.get("Host", "127.0.0.1").replace("localhost", "127.0.0.1")  # X は localhost 不可
+        base = os.environ.get("PUBLIC_URL", "").rstrip("/") or f"http://{host}"
+        return f"{base}/auth/{pf}/callback"
+
+    def redirect(self, location):
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.end_headers()
+
     def do_GET(self):
+        url = urllib.parse.urlsplit(self.path)
+        query = dict(urllib.parse.parse_qsl(url.query))
+        # ログイン後に X / Threads から戻ってくる場所
+        if url.path in ("/auth/x/callback", "/auth/threads/callback"):
+            pf = url.path.split("/")[2]
+            if "error" in query or "code" not in query:
+                msg = query.get("error_description") or query.get("error") or "キャンセルされました"
+                return self.redirect("/?auth_error=" + urllib.parse.quote(f"{platforms.PLATFORMS[pf]}: {msg}"))
+            try:
+                (accounts.x_callback if pf == "x" else accounts.threads_callback)(query["code"], query.get("state"))
+            except platforms.PostError as e:
+                return self.redirect("/?auth_error=" + urllib.parse.quote(f"{platforms.PLATFORMS[pf]}: {e}"))
+            return self.redirect(f"/?connected={pf}")
+        if url.path == "/api/accounts":
+            info = accounts.public_info()
+            for pf in ("x", "threads"):
+                info[pf]["redirect_uri"] = self.redirect_uri(pf)
+            for pf in info:
+                info[pf]["env"] = platforms.env_configured(pf)
+            return self.send_json(info)
         if self.path == "/api/status":
             return self.send_json({
                 "dry_run": platforms.dry_run(),
@@ -194,7 +226,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/posts":
             with lock:
                 return self.send_json(load_posts())
-        if self.path in ("/", "/index.html"):
+        if url.path in ("/", "/index.html"):
             raw = (STATIC_DIR / "index.html").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -203,12 +235,44 @@ class Handler(BaseHTTPRequestHandler):
             return self.wfile.write(raw)
         self.send_json({"error": "not found"}, 404)
 
+    def json_only(self):
+        # 他サイトからのフォーム送信（CSRF）を防ぐため JSON 以外は受け付けない
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            self.send_json({"error": "Content-Type は application/json にしてください"}, 415)
+            return False
+        return True
+
     def do_POST(self):
+        if not self.json_only():
+            return
         parts = self.path.strip("/").split("/")
         try:
             body = self.read_body()
         except json.JSONDecodeError:
             return self.send_json({"error": "JSON が不正です"}, 400)
+
+        # アカウント連携  /api/accounts/<pf>/<action>
+        if len(parts) == 4 and parts[:2] == ["api", "accounts"] and parts[2] in platforms.PLATFORMS:
+            pf, action = parts[2], parts[3]
+            try:
+                if action == "disconnect":
+                    accounts.disconnect(pf)
+                elif pf == "x" and action == "app":
+                    accounts.x_save_app(body.get("client_id"), body.get("client_secret", ""))
+                elif pf == "threads" and action == "app":
+                    accounts.threads_save_app(body.get("app_id"), body.get("app_secret"))
+                elif pf in ("x", "threads") and action == "login":
+                    login = accounts.x_login_url if pf == "x" else accounts.threads_login_url
+                    return self.send_json({"url": login(self.redirect_uri(pf))})
+                elif pf == "threads" and action == "token":
+                    accounts.threads_set_token(body.get("token"))
+                elif pf == "blog" and action == "connect":
+                    accounts.blog_connect(body.get("url"), body.get("user"), body.get("app_password"))
+                else:
+                    return self.send_json({"error": "not found"}, 404)
+            except platforms.PostError as e:
+                return self.send_json({"error": str(e)}, 400)
+            return self.send_json({"ok": True})
 
         if parts == ["api", "posts"]:
             try:
@@ -250,6 +314,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"error": "not found"}, 404)
 
     def do_DELETE(self):
+        if not self.json_only():
+            return
         parts = self.path.strip("/").split("/")
         if len(parts) == 3 and parts[:2] == ["api", "posts"]:
             with lock:
