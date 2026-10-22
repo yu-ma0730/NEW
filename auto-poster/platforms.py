@@ -22,6 +22,7 @@ PLATFORMS = {
 # 文字数上限（X は全角を 2 として数える）
 X_LIMIT = 280
 THREADS_LIMIT = 500
+TOPIC_LIMIT = 50
 
 
 class PostError(Exception):
@@ -44,6 +45,14 @@ def is_configured(platform):
 
 def dry_run():
     return env("DRY_RUN") in ("1", "true", "yes")
+
+
+def parts_of(post, platform):
+    """スレッド（連投）の各投稿テキスト。旧形式（content のみ）の予約にも対応。"""
+    body = post.get("bodies", {}).get(platform)
+    if body and body.get("parts"):
+        return body["parts"]
+    return [post["content"]]
 
 
 def x_length(text):
@@ -96,49 +105,63 @@ def _oauth1_header(method, url):
 
 
 def post_x(post):
-    text = post["content"]
-    if x_length(text) > X_LIMIT:
+    texts = parts_of(post, "x")
+    if any(x_length(t) > X_LIMIT for t in texts):
         raise PostError(f"X の文字数上限（{X_LIMIT}、全角は2換算）を超えています")
     url = "https://api.x.com/2/tweets"
-    data = _request(
-        url,
-        headers={"Authorization": _oauth1_header("POST", url), "Content-Type": "application/json"},
-        body=json.dumps({"text": text}).encode(),
-    )
-    tweet_id = data.get("data", {}).get("id")
-    return f"https://x.com/i/web/status/{tweet_id}" if tweet_id else ""
+    first_id = prev_id = None
+    for text in texts:  # 2件目以降は前のポストへの返信としてつなげる
+        payload = {"text": text}
+        if prev_id:
+            payload["reply"] = {"in_reply_to_tweet_id": prev_id}
+        data = _request(
+            url,
+            headers={"Authorization": _oauth1_header("POST", url), "Content-Type": "application/json"},
+            body=json.dumps(payload).encode(),
+        )
+        prev_id = data.get("data", {}).get("id")
+        first_id = first_id or prev_id
+    return f"https://x.com/i/web/status/{first_id}" if first_id else ""
 
 
 # ---------- Threads : Graph API（コンテナ作成 → 公開の2段階） ----------
 
 def post_threads(post):
-    text = post["content"]
-    if len(text) > THREADS_LIMIT:
+    texts = parts_of(post, "threads")
+    if any(len(t) > THREADS_LIMIT for t in texts):
         raise PostError(f"Threads の文字数上限（{THREADS_LIMIT}）を超えています")
+    topic = post.get("bodies", {}).get("threads", {}).get("topic", "")
     base = "https://graph.threads.net/v1.0/me"
     token = env("THREADS_ACCESS_TOKEN")
     form = {"Content-Type": "application/x-www-form-urlencoded"}
-    container = _request(
-        f"{base}/threads",
-        headers=form,
-        body=urllib.parse.urlencode({"media_type": "TEXT", "text": text, "access_token": token}).encode(),
-    )
-    creation_id = container.get("id")
-    if not creation_id:
-        raise PostError(f"コンテナ作成に失敗: {container}")
-    published = _request(
-        f"{base}/threads_publish",
-        headers=form,
-        body=urllib.parse.urlencode({"creation_id": creation_id, "access_token": token}).encode(),
-    )
-    return f"Threads 投稿ID: {published.get('id', '')}"
+    first_id = prev_id = None
+    for text in texts:  # 2件目以降は前の投稿への返信（スレッドに追加）としてつなげる
+        params = {"media_type": "TEXT", "text": text, "access_token": token}
+        if prev_id:
+            params["reply_to_id"] = prev_id
+        elif topic:
+            params["topic_tag"] = topic
+        container = _request(f"{base}/threads", headers=form, body=urllib.parse.urlencode(params).encode())
+        creation_id = container.get("id")
+        if not creation_id:
+            raise PostError(f"コンテナ作成に失敗: {container}")
+        published = _request(
+            f"{base}/threads_publish",
+            headers=form,
+            body=urllib.parse.urlencode({"creation_id": creation_id, "access_token": token}).encode(),
+        )
+        prev_id = published.get("id")
+        first_id = first_id or prev_id
+    return f"Threads 投稿ID: {first_id or ''}（{len(texts)}件）"
 
 
 # ---------- ブログ : WordPress REST API（アプリケーションパスワード） ----------
 
 def post_blog(post):
-    title = post.get("title") or post["content"].splitlines()[0][:60]
-    content = "".join(f"<p>{line}</p>" for line in _escape(post["content"]).splitlines() if line.strip())
+    blog = post.get("bodies", {}).get("blog") or {"title": post.get("title", ""), "body": post["content"]}
+    text = blog["body"]
+    title = blog.get("title") or text.splitlines()[0][:60]
+    content = "".join(f"<p>{line}</p>" for line in _escape(text).splitlines() if line.strip())
     auth = base64.b64encode(f"{env('WP_USER')}:{env('WP_APP_PASSWORD')}".encode()).decode()
     data = _request(
         env("WP_URL").rstrip("/") + "/wp-json/wp/v2/posts",

@@ -108,25 +108,64 @@ def scheduler_loop():
 
 # ---------- API ----------
 
+def clean_parts(parts):
+    return [t.strip() for t in parts or [] if t and t.strip()]
+
+
 def validate(body):
-    content = (body.get("content") or "").strip()
+    """投稿先ごとの内容を検証して bodies（保存形式）を返す。
+
+    body = {"platforms": [...], "scheduled_at": [...],
+            "x": {"parts": [...]}, "threads": {"topic": "", "parts": [...]},
+            "blog": {"title": "", "body": ""}}
+    """
     targets = [p for p in body.get("platforms", []) if p in platforms.PLATFORMS]
     times = body.get("scheduled_at") or []
     if isinstance(times, str):
         times = [times]
-    if not content:
-        raise ValueError("投稿内容を入力してください")
     if not targets:
         raise ValueError("投稿先を1つ以上選んでください")
     if not times:
         raise ValueError("日付を1つ以上選んでください")
     for t in times:
         parse_time(t)
-    if "x" in targets and platforms.x_length(content) > platforms.X_LIMIT:
-        raise ValueError("X の文字数上限（全角140字 / 半角280字）を超えています")
-    if "threads" in targets and len(content) > platforms.THREADS_LIMIT:
-        raise ValueError("Threads の文字数上限（500字）を超えています")
-    return content, (body.get("title") or "").strip(), targets, times
+
+    bodies = {}
+    if "x" in targets:
+        parts = clean_parts(body.get("x", {}).get("parts"))
+        if not parts:
+            raise ValueError("X の内容を入力してください")
+        for i, t in enumerate(parts, 1):
+            if platforms.x_length(t) > platforms.X_LIMIT:
+                raise ValueError(f"X の {i} 件目が文字数上限（全角140字 / 半角280字）を超えています")
+        bodies["x"] = {"parts": parts}
+    if "threads" in targets:
+        th = body.get("threads", {})
+        parts = clean_parts(th.get("parts"))
+        topic = (th.get("topic") or "").strip()
+        if not parts:
+            raise ValueError("Threads の内容を入力してください")
+        for i, t in enumerate(parts, 1):
+            if len(t) > platforms.THREADS_LIMIT:
+                raise ValueError(f"Threads の {i} 件目が文字数上限（500字）を超えています")
+        if len(topic) > platforms.TOPIC_LIMIT or "." in topic or "&" in topic:
+            raise ValueError("Threads のトピックは50字以内で、「.」「&」は使えません")
+        bodies["threads"] = {"topic": topic, "parts": parts}
+    if "blog" in targets:
+        bl = body.get("blog", {})
+        text = (bl.get("body") or "").strip()
+        if not text:
+            raise ValueError("ブログの本文を入力してください")
+        bodies["blog"] = {"title": (bl.get("title") or "").strip(), "body": text}
+    return targets, times, bodies
+
+
+def summary(bodies):
+    """予定表・一覧に出す代表テキスト。"""
+    for pf in ("threads", "x"):
+        if pf in bodies:
+            return bodies[pf]["parts"][0]
+    return bodies["blog"]["title"] or bodies["blog"]["body"]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -173,13 +212,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts == ["api", "posts"]:
             try:
-                content, title, targets, times = validate(body)
+                targets, times, bodies = validate(body)
             except ValueError as e:
                 return self.send_json({"error": str(e)}, 400)
             created = [{
                 "id": uuid.uuid4().hex,
-                "content": content,
-                "title": title,
+                "content": summary(bodies),
+                "bodies": bodies,
                 "platforms": targets,
                 "scheduled_at": parse_time(t).isoformat(),
                 "status": "scheduled",

@@ -8,7 +8,7 @@
   :root {
     --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e3e6eb;
     --accent: #2563eb; --accent-soft: #e0e9fd; --danger: #dc2626; --ok: #16a34a; --warn: #d97706;
-    --x: #111827; --threads: #7c3aed; --blog: #0891b2;
+    --x: #111827; --threads: #7c3aed; --blog: #0891b2; --x-blue: #1d9bf0;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -25,22 +25,13 @@
   .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
   .badge.on { color: var(--ok); border-color: var(--ok); }
   .badge.test { color: var(--warn); border-color: var(--warn); }
-  main { display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 0 20px 20px; }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 0 16px 16px; } }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  main { display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 0 20px 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 0 16px 16px; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
   h2 { font-size: 15px; margin: 0 0 12px; }
-  label.field { display: block; font-weight: 600; margin: 14px 0 6px; }
-  textarea, input[type=text], input[type=time] {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+  label.field { display: block; font-weight: 600; margin: 16px 0 6px; }
+  input[type=time] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
     background: var(--bg); color: var(--text); font: inherit; }
-  textarea { min-height: 130px; resize: vertical; }
-  .counter { font-size: 12px; color: var(--muted); text-align: right; margin-top: 4px; }
-  .counter .over { color: var(--danger); font-weight: 700; }
-  .targets { display: flex; gap: 8px; flex-wrap: wrap; }
-  .target { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line);
-            border-radius: 8px; cursor: pointer; user-select: none; }
-  .target input { margin: 0; }
-  .target:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; }
   .chip { background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 3px 10px; font-size: 12px;
           display: inline-flex; gap: 6px; align-items: center; }
@@ -53,7 +44,71 @@
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
   .msg.err { color: var(--danger); } .msg.ok { color: var(--ok); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; margin-right: 3px; vertical-align: middle; }
+  .dot.x { background: var(--x); } .dot.threads { background: var(--threads); } .dot.blog { background: var(--blog); }
 
+  /* ---------- 投稿先タブ ---------- */
+  .tabs { display: flex; gap: 6px; }
+  .tab { flex: 1; border: 1px solid var(--line); background: none; color: var(--text); border-radius: 8px 8px 0 0;
+         padding: 8px 4px; font: inherit; cursor: pointer; position: relative; border-bottom: 0; opacity: .75; }
+  .tab.active { opacity: 1; font-weight: 700; background: var(--bg); }
+  .tab .on-mark { margin-left: 4px; color: var(--ok); font-weight: 700; }
+  .tab:not(.enabled) { color: var(--muted); }
+  .panel { border: 1px solid var(--line); border-radius: 0 0 10px 10px; padding: 12px; background: var(--bg); }
+  .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+  .switch input { appearance: none; width: 36px; height: 20px; border-radius: 99px; background: var(--line); position: relative;
+                  cursor: pointer; margin: 0; transition: background .15s; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 99px;
+                         background: #fff; transition: left .15s; }
+  .switch input:checked { background: var(--ok); }
+  .switch input:checked::after { left: 18px; }
+  select.copy { font: inherit; font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line);
+                background: var(--card); color: var(--text); }
+  .editor.off { opacity: .4; pointer-events: none; }
+  .warn-note { font-size: 12px; color: var(--warn); margin-bottom: 8px; }
+
+  /* 連投（Threads / X）共通 */
+  .ed-text { width: 100%; border: 0; background: none; color: var(--text); font: inherit; font-size: 15px; resize: none;
+             padding: 2px 0; outline: none; min-height: 26px; line-height: 1.5; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 40px 1fr; gap: 10px; }
+  .av-col { display: flex; flex-direction: column; align-items: center; }
+  .avatar { width: 36px; height: 36px; border-radius: 99px; background: var(--line); flex: none;
+            display: grid; place-items: center; color: var(--muted); font-size: 18px; }
+  .avatar.sm { width: 20px; height: 20px; font-size: 11px; margin-top: 2px; }
+  .line { width: 2px; flex: 1; background: var(--line); margin: 4px 0; min-height: 12px; border-radius: 2px; }
+  .head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 22px; }
+  .head .name { font-weight: 700; }
+  .head .rm { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
+  .pg { font-size: 11px; color: var(--muted); background: var(--line); padding: 1px 7px; border-radius: 99px; }
+  .foot { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding-bottom: 10px; }
+  .foot .over { color: var(--danger); font-weight: 700; }
+  .add { border: 0; background: none; color: var(--muted); font: inherit; font-size: 15px; cursor: pointer; padding: 2px 0; text-align: left; }
+
+  /* Threads 風 */
+  .pf-threads .topic-sep { color: var(--muted); }
+  .pf-threads .topic { border: 0; background: none; color: var(--text); font: inherit; outline: none; min-width: 0; flex: 1;
+                       padding: 0; }
+  .pf-threads .topic::placeholder { color: var(--muted); }
+
+  /* X 風 */
+  .pf-x .handle { color: var(--muted); }
+  .pf-x .add { color: var(--x-blue); font-weight: 600; }
+  .ring { width: 20px; height: 20px; border-radius: 99px; flex: none;
+          background: conic-gradient(var(--ring, var(--x-blue)) calc(var(--p) * 1%), var(--line) 0);
+          -webkit-mask: radial-gradient(circle, transparent 6px, #000 7px); mask: radial-gradient(circle, transparent 6px, #000 7px); }
+  .ring.near { --ring: var(--warn); } .ring.full { --ring: var(--danger); }
+  .pf-x .row.sep { border-top: 1px solid var(--line); padding-top: 10px; }
+
+  /* ブログ風 */
+  .pf-blog { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .pf-blog .b-title { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text);
+                      font: inherit; font-size: 20px; font-weight: 700; padding: 4px 0 10px; outline: none; }
+  .pf-blog .b-body { width: 100%; border: 0; background: none; color: var(--text); font: inherit; font-size: 15px; line-height: 1.8;
+                     min-height: 220px; resize: vertical; outline: none; padding: 12px 0 0; }
+  .pf-blog .foot { padding: 6px 0 0; border-top: 1px dashed var(--line); justify-content: space-between; }
+
+  /* ---------- 予定表 ---------- */
   .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .cal-head .title { font-weight: 700; font-size: 15px; margin-right: auto; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -76,19 +131,20 @@
   .ev.canceled { text-decoration: line-through; opacity: .5; }
   .ev.failed, .ev.partial { border-left-color: var(--danger); }
   .ev.done { border-left-color: var(--ok); }
-  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; margin-right: 2px; vertical-align: middle; }
-  .dot.x { background: var(--x); } .dot.threads { background: var(--threads); } .dot.blog { background: var(--blog); }
 
+  /* ---------- 予約一覧 ---------- */
   .list { margin-top: 16px; }
   .item { border-top: 1px solid var(--line); padding: 10px 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
   .item .when { font-weight: 600; }
+  .item .pf-block { margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .item .pf-name { font-size: 12px; font-weight: 600; }
   .item .body { color: var(--muted); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .item .body + .body { border-top: 1px dashed var(--line); padding-top: 2px; }
   .item .res { font-size: 12px; margin-top: 4px; word-break: break-all; }
   .item .actions { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
   .status { font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
   .st-scheduled { color: var(--accent); } .st-posting { color: var(--warn); } .st-done { color: var(--ok); }
   .st-failed, .st-partial { color: var(--danger); } .st-canceled { color: var(--muted); }
-  .filter { display: flex; gap: 6px; margin-bottom: 4px; }
   .empty { color: var(--muted); padding: 12px 0; }
   .item.flash { animation: flash 1.2s; }
   @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
@@ -103,22 +159,16 @@
 <main>
   <!-- 左：投稿フォーム -->
   <section class="card">
-    <h2>① 内容</h2>
-    <div id="titleWrap" hidden>
-      <label class="field" for="title">ブログのタイトル（空欄なら1行目）</label>
-      <input type="text" id="title" maxlength="120">
-    </div>
-    <textarea id="content" placeholder="投稿する文章を入力"></textarea>
-    <div class="counter" id="counter"></div>
+    <h2>① どこに・何を投稿する？</h2>
+    <p class="hint" style="margin:-6px 0 10px">タブを切り替えて投稿先ごとに内容を作れます（✓ が付いた投稿先に投稿）</p>
+    <div class="tabs" id="tabs"></div>
+    <div class="panel" id="panel"></div>
 
-    <label class="field">② どこに？</label>
-    <div class="targets" id="targets"></div>
-
-    <label class="field">③ いつ？（予定表で日付をクリック・複数可）</label>
+    <label class="field">② いつ？（予定表で日付をクリック・複数可）</label>
     <div class="chips" id="dateChips"></div>
     <p class="hint" id="dateHint">まだ日付が選ばれていません</p>
 
-    <label class="field" for="time">④ 時間</label>
+    <label class="field" for="time">③ 時間</label>
     <input type="time" id="time" value="09:00" step="300">
 
     <button class="btn primary" id="submit">予約する</button>
@@ -143,7 +193,7 @@
     <div class="list">
       <div class="cal-head">
         <span class="title">予約一覧</span>
-        <div class="seg filter" id="filter">
+        <div class="seg" id="filter">
           <button data-f="scheduled">予約中</button>
           <button data-f="history">履歴</button>
           <button data-f="all">すべて</button>
@@ -158,6 +208,13 @@
 const NAMES = { x: "X", threads: "Threads", blog: "ブログ" };
 const STATUS = { scheduled: "予約中", posting: "投稿中", done: "投稿済", partial: "一部失敗", failed: "失敗", canceled: "取消" };
 const DOW = ["日", "月", "火", "水", "木", "金", "土"];
+const LIMIT = { x: 280, threads: 500 };
+
+const emptyDrafts = () => ({
+  x: { on: false, parts: [""] },
+  threads: { on: true, topic: "", parts: [""] },
+  blog: { on: false, title: "", body: "" },
+});
 
 const state = {
   view: localGet("view") || "week",
@@ -166,17 +223,23 @@ const state = {
   selected: new Set(),   // "YYYY-MM-DD"
   posts: [],
   status: null,
+  tab: localGet("tab") || "threads",
+  drafts: loadDrafts(),
 };
 const $ = (id) => document.getElementById(id);
 
 function localGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function localSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function loadDrafts() {
+  try { return { ...emptyDrafts(), ...JSON.parse(localGet("drafts") || "{}") }; } catch { return emptyDrafts(); }
+}
+function saveDrafts() { localSet("drafts", JSON.stringify(state.drafts)); }
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function hm(d) { return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
 function label(d) { return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]})`; }
-function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 // X の重み付き文字数（全角は 2）
 function xLength(t) {
@@ -187,6 +250,7 @@ function xLength(t) {
   }
   return n;
 }
+const lengthOf = (pf, t) => pf === "x" ? xLength(t) : [...t].length;
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -195,33 +259,145 @@ async function api(path, opts = {}) {
   return data;
 }
 
-// ---------- 投稿フォーム ----------
-function renderTargets() {
-  $("targets").innerHTML = Object.entries(NAMES).map(([k, v]) => {
-    const conf = state.status?.platforms[k]?.configured;
-    const note = state.status && !conf && !state.status.dry_run ? " title='.env に認証情報が未設定です'" : "";
-    return `<label class="target"${note}><input type="checkbox" value="${k}"><span class="dot ${k}"></span>${v}${note ? " ⚠" : ""}</label>`;
+// ---------- 投稿先タブ ----------
+function renderTabs() {
+  $("tabs").innerHTML = Object.entries(NAMES).map(([k, v]) =>
+    `<button class="tab ${k === state.tab ? "active" : ""} ${state.drafts[k].on ? "enabled" : ""}" data-tab="${k}">` +
+    `<span class="dot ${k}"></span>${v}<span class="on-mark">${state.drafts[k].on ? "✓" : ""}</span></button>`).join("");
+  $("tabs").querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+    state.tab = b.dataset.tab; localSet("tab", state.tab); renderTabs(); renderPanel();
+  }));
+}
+
+function renderPanel() {
+  const pf = state.tab, d = state.drafts[pf];
+  const others = Object.keys(NAMES).filter((k) => k !== pf);
+  const unconfigured = state.status && !state.status.dry_run && !state.status.platforms[pf].configured;
+  $("panel").innerHTML = `
+    <div class="panel-top">
+      <label class="switch"><input type="checkbox" id="pfOn" ${d.on ? "checked" : ""}>${NAMES[pf]} に投稿する</label>
+      <select class="copy" id="copyFrom">
+        <option value="">他の内容をコピー…</option>
+        ${others.map((k) => `<option value="${k}">${NAMES[k]} からコピー</option>`).join("")}
+      </select>
+    </div>
+    ${unconfigured ? `<div class="warn-note">⚠ ${NAMES[pf]} の認証情報が .env に未設定です（このままだと投稿は失敗します）</div>` : ""}
+    <div class="editor ${d.on ? "" : "off"}" id="editor"></div>`;
+  $("pfOn").addEventListener("change", (e) => {
+    d.on = e.target.checked; saveDrafts(); renderTabs(); $("editor").classList.toggle("off", !d.on);
+  });
+  $("copyFrom").addEventListener("change", (e) => { if (e.target.value) copyDraft(e.target.value, pf); });
+  pf === "blog" ? renderBlog() : renderThread(pf);
+}
+
+function copyDraft(from, to) {
+  const src = state.drafts[from], dst = state.drafts[to];
+  const text = from === "blog" ? src.body : src.parts.filter((t) => t.trim()).join("\n\n");
+  if (to === "blog") {
+    dst.body = text;
+  } else if (from === "blog") {
+    dst.parts = splitText(text, to);
+  } else {
+    dst.parts = src.parts.flatMap((t) => splitText(t, to));
+  }
+  dst.on = true;
+  saveDrafts(); renderTabs(); renderPanel();
+}
+
+// 長い文章を投稿先の文字数上限に収まるよう段落・文単位で分割する
+function splitText(text, pf) {
+  const units = text.split(/(?<=\n\n)|(?<=[。！？!?])/).filter((u) => u);
+  const out = [];
+  let cur = "";
+  for (const u of units) {
+    if (lengthOf(pf, cur + u) <= LIMIT[pf]) { cur += u; continue; }
+    if (cur.trim()) out.push(cur.trim());
+    cur = u;
+    while (lengthOf(pf, cur) > LIMIT[pf]) {  // 1文だけで上限を超える場合は文字単位で切る
+      let i = 0, n = 0;
+      const chars = [...cur];
+      while (i < chars.length && n + lengthOf(pf, chars[i]) <= LIMIT[pf]) n += lengthOf(pf, chars[i++]);
+      out.push(chars.slice(0, i).join("").trim());
+      cur = chars.slice(i).join("");
+    }
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out.length ? out : [""];
+}
+
+// Threads / X：連投（スレッド）エディタ
+function renderThread(pf) {
+  const d = state.drafts[pf], n = d.parts.length;
+  const isX = pf === "x";
+  const rows = d.parts.map((t, i) => {
+    const head = isX
+      ? `<span class="name">あなた</span><span class="handle">@you</span>`
+      : `<span class="name">あなた</span>` + (i === 0
+          ? `<span class="topic-sep">›</span><input class="topic" id="topic" maxlength="50" placeholder="トピックを追加" value="${escapeHtml(d.topic)}">`
+          : "");
+    const ph = i === 0 ? (isX ? "いまどうしてる？" : "今なにしてる？") : (isX ? "ポストを追加" : "スレッドに追加");
+    return `<div class="row ${isX && i > 0 ? "sep" : ""}" data-i="${i}">
+      <div class="av-col"><div class="avatar">👤</div><div class="line"></div></div>
+      <div>
+        <div class="head">${head}${n > 1 ? `<span class="pg">${i + 1} / ${n}</span>` : ""}
+          ${n > 1 ? `<button class="rm" data-rm="${i}" aria-label="削除">×</button>` : ""}</div>
+        <textarea class="ed-text" rows="1" placeholder="${ph}">${escapeHtml(t)}</textarea>
+        <div class="foot" data-foot="${i}"></div>
+      </div>
+    </div>`;
   }).join("");
-  $("targets").querySelectorAll("input").forEach((el) => el.addEventListener("change", updateCounter));
+  $("editor").innerHTML = `<div class="pf-${pf}">${rows}
+    <div class="row"><div class="av-col"><div class="avatar sm">👤</div></div>
+      <button class="add" id="addPart">${isX ? "＋ ポストを追加" : "スレッドに追加"}</button></div></div>`;
+
+  $("editor").querySelectorAll(".ed-text").forEach((ta) => {
+    const i = +ta.closest(".row").dataset.i;
+    autoGrow(ta); updateFoot(pf, i);
+    ta.addEventListener("input", () => { d.parts[i] = ta.value; autoGrow(ta); updateFoot(pf, i); saveDrafts(); });
+  });
+  $("editor").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => {
+    d.parts.splice(+b.dataset.rm, 1); saveDrafts(); renderThread(pf);
+  }));
+  $("topic")?.addEventListener("input", (e) => { d.topic = e.target.value.replace(/[.&]/g, ""); e.target.value = d.topic; saveDrafts(); });
+  $("addPart").addEventListener("click", () => {
+    d.parts.push(""); saveDrafts(); renderThread(pf);
+    const tas = $("editor").querySelectorAll(".ed-text"); tas[tas.length - 1].focus();
+  });
 }
 
-function selectedTargets() { return [...$("targets").querySelectorAll("input:checked")].map((el) => el.value); }
-
-function updateCounter() {
-  const t = $("content").value, targets = selectedTargets(), parts = [];
-  if (targets.includes("x")) { const n = xLength(t); parts.push(`X: <span class="${n > 280 ? "over" : ""}">${n}/280</span>（全角は2）`); }
-  if (targets.includes("threads")) { const n = [...t].length; parts.push(`Threads: <span class="${n > 500 ? "over" : ""}">${n}/500</span>`); }
-  if (!parts.length) parts.push(`${[...t].length} 文字`);
-  $("counter").innerHTML = parts.join("　");
-  $("titleWrap").hidden = !targets.includes("blog");
+function updateFoot(pf, i) {
+  const t = state.drafts[pf].parts[i], n = lengthOf(pf, t), max = LIMIT[pf];
+  const foot = $("editor").querySelector(`[data-foot="${i}"]`);
+  if (pf === "x") {
+    const left = max - n;
+    const cls = left < 0 ? "full" : left <= 20 ? "near" : "";
+    foot.innerHTML = `${left <= 20 ? `<span class="${left < 0 ? "over" : ""}">${left}</span>` : ""}` +
+      `<span class="ring ${cls}" style="--p:${Math.min(100, n / max * 100)}" title="${n}/${max}（全角は2）"></span>`;
+  } else {
+    foot.innerHTML = n ? `<span class="${n > max ? "over" : ""}">${n} / ${max}</span>` : "";
+  }
 }
 
+function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; }
+
+// ブログ：記事エディタ
+function renderBlog() {
+  const d = state.drafts.blog;
+  $("editor").innerHTML = `<div class="pf-blog">
+    <input class="b-title" id="bTitle" placeholder="記事タイトル（空欄なら本文の1行目）" maxlength="120" value="${escapeHtml(d.title)}">
+    <textarea class="b-body" id="bBody" placeholder="本文を入力（空行で段落が分かれます）">${escapeHtml(d.body)}</textarea>
+    <div class="foot"><span>WordPress に「公開」で投稿</span><span id="bCount"></span></div></div>`;
+  const count = () => { $("bCount").textContent = `${[...d.body].length} 文字`; };
+  count();
+  $("bTitle").addEventListener("input", (e) => { d.title = e.target.value; saveDrafts(); });
+  $("bBody").addEventListener("input", (e) => { d.body = e.target.value; count(); saveDrafts(); });
+}
+
+// ---------- 予約 ----------
 function renderChips() {
   const days = [...state.selected].sort();
-  $("dateChips").innerHTML = days.map((s) => {
-    const d = new Date(s + "T00:00");
-    return `<span class="chip">${label(d)}<button data-d="${s}" aria-label="外す">×</button></span>`;
-  }).join("");
+  $("dateChips").innerHTML = days.map((s) =>
+    `<span class="chip">${label(new Date(s + "T00:00"))}<button data-d="${s}" aria-label="外す">×</button></span>`).join("");
   $("dateHint").hidden = days.length > 0;
   $("dateChips").querySelectorAll("button").forEach((b) =>
     b.addEventListener("click", () => { state.selected.delete(b.dataset.d); renderChips(); renderCalendar(); }));
@@ -233,21 +409,26 @@ async function submit() {
   const time = $("time").value;
   const times = [...state.selected].sort().map((s) => new Date(`${s}T${time}`));
   if (times.some((d) => d < new Date())) return showMsg("過去の日時は予約できません", false);
+  const d = state.drafts;
+  const targets = Object.keys(NAMES).filter((k) => d[k].on);
   $("submit").disabled = true;
   try {
     const created = await api("/api/posts", {
       method: "POST",
       body: JSON.stringify({
-        content: $("content").value,
-        title: $("title").value,
-        platforms: selectedTargets(),
-        scheduled_at: times.map((d) => d.toISOString()),
+        platforms: targets,
+        scheduled_at: times.map((t) => t.toISOString()),
+        x: { parts: d.x.parts },
+        threads: { topic: d.threads.topic, parts: d.threads.parts },
+        blog: { title: d.blog.title, body: d.blog.body },
       }),
     });
-    showMsg(`${created.length}件 予約しました`, true);
-    $("content").value = ""; $("title").value = "";
+    showMsg(`${created.length}件 予約しました（${targets.map((k) => NAMES[k]).join("・")}）`, true);
+    const fresh = emptyDrafts();
+    for (const k of Object.keys(fresh)) fresh[k].on = d[k].on;  // 投稿先の選択は引き継ぐ
+    state.drafts = fresh; saveDrafts();
     state.selected.clear();
-    renderChips(); updateCounter();
+    renderChips(); renderTabs(); renderPanel();
     await loadPosts();
   } catch (e) {
     showMsg(e.message, false);
@@ -290,7 +471,7 @@ function renderCalendar() {
     const evs = (byDay[key] || []).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map((p) =>
       `<div class="ev ${p.status}" data-id="${p.id}" title="${escapeHtml(p.content)}">${hm(new Date(p.scheduled_at))} ` +
       p.platforms.map((k) => `<span class="dot ${k}"></span>`).join("") + ` ${escapeHtml(p.content.slice(0, 30))}</div>`).join("");
-    html += `<div class="${cls.join(" ")}" data-d="${key}"><span class="num">${state.view === "week" ? label(d) : d.getDate()}</span>${evs}</div>`;
+    html += `<div class="${cls.join(" ")}" data-d="${key}"><span class="num">${state.view === "week" ? `${d.getMonth() + 1}/${d.getDate()}` : d.getDate()}</span>${evs}</div>`;
   }
   $("grid").innerHTML = html;
 
@@ -314,6 +495,18 @@ function focusItem(id) {
 }
 
 // ---------- 予約一覧 ----------
+function pfBlock(p, k) {
+  const b = (p.bodies || {})[k];
+  let body;
+  if (!b) body = `<div class="body">${escapeHtml(p.content)}</div>`;  // 旧形式の予約
+  else if (k === "blog") body = `<div class="body"><b>${escapeHtml(b.title || "（タイトルなし）")}</b></div><div class="body">${escapeHtml(b.body.slice(0, 120))}${b.body.length > 120 ? "…" : ""}</div>`;
+  else body = b.parts.map((t, i) => `<div class="body">${b.parts.length > 1 ? `<span class="pg">${i + 1}/${b.parts.length}</span> ` : ""}${escapeHtml(t)}</div>`).join("");
+  const topic = k === "threads" && b?.topic ? ` › ${escapeHtml(b.topic)}` : "";
+  const r = (p.results || {})[k];
+  const res = r ? `<div class="res" style="color:var(--${r.ok ? "ok" : "danger"})">${r.ok ? "✓" : "✗"} ${escapeHtml(r.info || "")}</div>` : "";
+  return `<div class="pf-block"><div class="pf-name"><span class="dot ${k}"></span>${NAMES[k]}${topic}</div>${body}${res}</div>`;
+}
+
 function renderList() {
   document.querySelectorAll("#filter button").forEach((b) => b.classList.toggle("active", b.dataset.f === state.filter));
   let list = state.posts;
@@ -325,17 +518,13 @@ function renderList() {
   if (!list.length) { $("items").innerHTML = `<div class="empty">該当する投稿はありません</div>`; return; }
   $("items").innerHTML = list.map((p) => {
     const d = new Date(p.scheduled_at);
-    const res = Object.entries(p.results || {}).map(([k, r]) =>
-      `<div class="res" style="color:var(--${r.ok ? "ok" : "danger"})">${NAMES[k]}: ${r.ok ? "✓" : "✗"} ${escapeHtml(r.info || "")}</div>`).join("");
     const actions = p.status === "scheduled"
       ? `<button class="btn ghost" data-act="now">今すぐ投稿</button><button class="btn danger" data-act="cancel">取消</button>`
       : p.status === "posting" ? "" : `<button class="btn ghost" data-act="delete">削除</button>`;
     return `<div class="item" data-id="${p.id}">
       <div>
         <div class="when">${label(d)} ${hm(d)} <span class="status st-${p.status}">${STATUS[p.status]}</span></div>
-        <div>${p.platforms.map((k) => `<span class="dot ${k}"></span>${NAMES[k]}`).join("　")}</div>
-        ${p.title ? `<div class="body"><b>${escapeHtml(p.title)}</b></div>` : ""}
-        <div class="body">${escapeHtml(p.content)}</div>${res}
+        ${p.platforms.map((k) => pfBlock(p, k)).join("")}
       </div>
       <div class="actions">${actions}</div>
     </div>`;
@@ -364,7 +553,7 @@ async function loadStatus() {
   const s = state.status;
   $("badges").innerHTML = (s.dry_run ? `<span class="badge test">テストモード（実際には投稿しません）</span>` : "") +
     Object.values(s.platforms).map((p) => `<span class="badge ${p.configured ? "on" : ""}">${p.name}: ${p.configured ? "接続済" : "未設定"}</span>`).join("");
-  renderTargets(); updateCounter();
+  renderPanel();
 }
 
 // ---------- イベント ----------
@@ -381,10 +570,9 @@ $("next").addEventListener("click", () => {
   renderCalendar();
 });
 $("today").addEventListener("click", () => { state.cursor = startOfDay(new Date()); renderCalendar(); });
-$("content").addEventListener("input", updateCounter);
 $("submit").addEventListener("click", submit);
 
-renderTargets(); renderChips(); updateCounter(); renderCalendar();
+renderTabs(); renderPanel(); renderChips(); renderCalendar();
 loadStatus().catch((e) => showMsg("サーバーに接続できません: " + e.message, false));
 loadPosts().catch(() => {});
 setInterval(() => loadPosts().catch(() => {}), 30000);
