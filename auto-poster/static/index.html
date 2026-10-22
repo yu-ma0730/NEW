@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自動投稿スケジューラー</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e3e6eb;
+    --accent: #2563eb; --accent-soft: #e0e9fd; --danger: #dc2626; --ok: #16a34a; --warn: #d97706;
+    --x: #111827; --threads: #7c3aed; --blog: #0891b2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b1f27; --text: #e6e8ec; --muted: #9aa3b2; --line: #2b303a;
+      --accent: #5b8cff; --accent-soft: #23304d; --x: #d1d5db; --threads: #a78bfa; --blog: #22b8d4;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+         background: var(--bg); color: var(--text); font-size: 14px; }
+  header { padding: 16px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .badge.on { color: var(--ok); border-color: var(--ok); }
+  .badge.test { color: var(--warn); border-color: var(--warn); }
+  main { display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 0 20px 20px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 0 16px 16px; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  label.field { display: block; font-weight: 600; margin: 14px 0 6px; }
+  textarea, input[type=text], input[type=time] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 130px; resize: vertical; }
+  .counter { font-size: 12px; color: var(--muted); text-align: right; margin-top: 4px; }
+  .counter .over { color: var(--danger); font-weight: 700; }
+  .targets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .target { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line);
+            border-radius: 8px; cursor: pointer; user-select: none; }
+  .target input { margin: 0; }
+  .target:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 3px 10px; font-size: 12px;
+          display: inline-flex; gap: 6px; align-items: center; }
+  .chip button { border: 0; background: none; color: inherit; cursor: pointer; padding: 0; font-size: 14px; line-height: 1; }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .btn { border: 0; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: #fff; width: 100%; margin-top: 16px; }
+  .btn.ghost { background: none; border: 1px solid var(--line); color: var(--text); padding: 4px 10px; font-weight: 500; }
+  .btn.danger { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 4px 10px; font-weight: 500; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+  .msg.err { color: var(--danger); } .msg.ok { color: var(--ok); }
+
+  .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .cal-head .title { font-weight: 700; font-size: 15px; margin-right: auto; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: none; color: var(--text); padding: 5px 12px; cursor: pointer; font: inherit; }
+  .seg button.active { background: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .dow { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .dow.sun { color: var(--danger); } .dow.sat { color: var(--accent); }
+  .day { border: 1px solid var(--line); border-radius: 8px; padding: 4px; min-height: 90px; cursor: pointer;
+         display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .grid.week .day { min-height: 260px; }
+  .day:hover { border-color: var(--accent); }
+  .day.other { opacity: .4; }
+  .day.past { background: repeating-linear-gradient(45deg, transparent 0 6px, var(--line) 6px 7px); cursor: default; }
+  .day.selected { border: 2px solid var(--accent); background: var(--accent-soft); }
+  .day .num { font-size: 12px; font-weight: 600; }
+  .day.today .num { background: var(--accent); color: #fff; border-radius: 99px; padding: 0 6px; align-self: flex-start; }
+  .ev { font-size: 11px; border-radius: 4px; padding: 2px 4px; background: var(--bg); border-left: 3px solid var(--accent);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .ev.canceled { text-decoration: line-through; opacity: .5; }
+  .ev.failed, .ev.partial { border-left-color: var(--danger); }
+  .ev.done { border-left-color: var(--ok); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; margin-right: 2px; vertical-align: middle; }
+  .dot.x { background: var(--x); } .dot.threads { background: var(--threads); } .dot.blog { background: var(--blog); }
+
+  .list { margin-top: 16px; }
+  .item { border-top: 1px solid var(--line); padding: 10px 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .item .when { font-weight: 600; }
+  .item .body { color: var(--muted); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .item .res { font-size: 12px; margin-top: 4px; word-break: break-all; }
+  .item .actions { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+  .status { font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
+  .st-scheduled { color: var(--accent); } .st-posting { color: var(--warn); } .st-done { color: var(--ok); }
+  .st-failed, .st-partial { color: var(--danger); } .st-canceled { color: var(--muted); }
+  .filter { display: flex; gap: 6px; margin-bottom: 4px; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .item.flash { animation: flash 1.2s; }
+  @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>📅 自動投稿スケジューラー</h1>
+  <div class="badges" id="badges"></div>
+</header>
+
+<main>
+  <!-- 左：投稿フォーム -->
+  <section class="card">
+    <h2>① 内容</h2>
+    <div id="titleWrap" hidden>
+      <label class="field" for="title">ブログのタイトル（空欄なら1行目）</label>
+      <input type="text" id="title" maxlength="120">
+    </div>
+    <textarea id="content" placeholder="投稿する文章を入力"></textarea>
+    <div class="counter" id="counter"></div>
+
+    <label class="field">② どこに？</label>
+    <div class="targets" id="targets"></div>
+
+    <label class="field">③ いつ？（予定表で日付をクリック・複数可）</label>
+    <div class="chips" id="dateChips"></div>
+    <p class="hint" id="dateHint">まだ日付が選ばれていません</p>
+
+    <label class="field" for="time">④ 時間</label>
+    <input type="time" id="time" value="09:00" step="300">
+
+    <button class="btn primary" id="submit">予約する</button>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <!-- 右：予定表と予約一覧 -->
+  <section class="card">
+    <div class="cal-head">
+      <span class="title" id="calTitle"></span>
+      <button class="btn ghost" id="prev">‹</button>
+      <button class="btn ghost" id="today">今日</button>
+      <button class="btn ghost" id="next">›</button>
+      <div class="seg">
+        <button data-view="week">1週間</button>
+        <button data-view="month">1か月</button>
+      </div>
+    </div>
+    <div class="grid" id="dow"></div>
+    <div class="grid" id="grid"></div>
+
+    <div class="list">
+      <div class="cal-head">
+        <span class="title">予約一覧</span>
+        <div class="seg filter" id="filter">
+          <button data-f="scheduled">予約中</button>
+          <button data-f="history">履歴</button>
+          <button data-f="all">すべて</button>
+        </div>
+      </div>
+      <div id="items"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const NAMES = { x: "X", threads: "Threads", blog: "ブログ" };
+const STATUS = { scheduled: "予約中", posting: "投稿中", done: "投稿済", partial: "一部失敗", failed: "失敗", canceled: "取消" };
+const DOW = ["日", "月", "火", "水", "木", "金", "土"];
+
+const state = {
+  view: localGet("view") || "week",
+  filter: "scheduled",
+  cursor: startOfDay(new Date()),
+  selected: new Set(),   // "YYYY-MM-DD"
+  posts: [],
+  status: null,
+};
+const $ = (id) => document.getElementById(id);
+
+function localGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function localSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function hm(d) { return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
+function label(d) { return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]})`; }
+function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+// X の重み付き文字数（全角は 2）
+function xLength(t) {
+  let n = 0;
+  for (const ch of t) {
+    const cp = ch.codePointAt(0);
+    n += (cp <= 0x10ff || (cp >= 0x2000 && cp <= 0x200d) || (cp >= 0x2010 && cp <= 0x201f) || (cp >= 0x2032 && cp <= 0x2037)) ? 1 : 2;
+  }
+  return n;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `エラー (${res.status})`);
+  return data;
+}
+
+// ---------- 投稿フォーム ----------
+function renderTargets() {
+  $("targets").innerHTML = Object.entries(NAMES).map(([k, v]) => {
+    const conf = state.status?.platforms[k]?.configured;
+    const note = state.status && !conf && !state.status.dry_run ? " title='.env に認証情報が未設定です'" : "";
+    return `<label class="target"${note}><input type="checkbox" value="${k}"><span class="dot ${k}"></span>${v}${note ? " ⚠" : ""}</label>`;
+  }).join("");
+  $("targets").querySelectorAll("input").forEach((el) => el.addEventListener("change", updateCounter));
+}
+
+function selectedTargets() { return [...$("targets").querySelectorAll("input:checked")].map((el) => el.value); }
+
+function updateCounter() {
+  const t = $("content").value, targets = selectedTargets(), parts = [];
+  if (targets.includes("x")) { const n = xLength(t); parts.push(`X: <span class="${n > 280 ? "over" : ""}">${n}/280</span>（全角は2）`); }
+  if (targets.includes("threads")) { const n = [...t].length; parts.push(`Threads: <span class="${n > 500 ? "over" : ""}">${n}/500</span>`); }
+  if (!parts.length) parts.push(`${[...t].length} 文字`);
+  $("counter").innerHTML = parts.join("　");
+  $("titleWrap").hidden = !targets.includes("blog");
+}
+
+function renderChips() {
+  const days = [...state.selected].sort();
+  $("dateChips").innerHTML = days.map((s) => {
+    const d = new Date(s + "T00:00");
+    return `<span class="chip">${label(d)}<button data-d="${s}" aria-label="外す">×</button></span>`;
+  }).join("");
+  $("dateHint").hidden = days.length > 0;
+  $("dateChips").querySelectorAll("button").forEach((b) =>
+    b.addEventListener("click", () => { state.selected.delete(b.dataset.d); renderChips(); renderCalendar(); }));
+}
+
+function showMsg(text, ok) { $("msg").textContent = text; $("msg").className = "msg " + (ok ? "ok" : "err"); }
+
+async function submit() {
+  const time = $("time").value;
+  const times = [...state.selected].sort().map((s) => new Date(`${s}T${time}`));
+  if (times.some((d) => d < new Date())) return showMsg("過去の日時は予約できません", false);
+  $("submit").disabled = true;
+  try {
+    const created = await api("/api/posts", {
+      method: "POST",
+      body: JSON.stringify({
+        content: $("content").value,
+        title: $("title").value,
+        platforms: selectedTargets(),
+        scheduled_at: times.map((d) => d.toISOString()),
+      }),
+    });
+    showMsg(`${created.length}件 予約しました`, true);
+    $("content").value = ""; $("title").value = "";
+    state.selected.clear();
+    renderChips(); updateCounter();
+    await loadPosts();
+  } catch (e) {
+    showMsg(e.message, false);
+  } finally {
+    $("submit").disabled = false;
+  }
+}
+
+// ---------- 予定表 ----------
+function rangeStart() {
+  if (state.view === "week") return addDays(state.cursor, -state.cursor.getDay());
+  const first = new Date(state.cursor.getFullYear(), state.cursor.getMonth(), 1);
+  return addDays(first, -first.getDay());
+}
+
+function renderCalendar() {
+  document.querySelectorAll(".seg [data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === state.view));
+  const start = rangeStart();
+  const days = state.view === "week" ? 7 : 42;
+  const today = startOfDay(new Date());
+  const month = state.cursor.getMonth();
+
+  $("calTitle").textContent = state.view === "week"
+    ? `${label(start)} 〜 ${label(addDays(start, 6))}`
+    : `${state.cursor.getFullYear()}年 ${month + 1}月`;
+  $("dow").innerHTML = DOW.map((d, i) => `<div class="dow ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${d}</div>`).join("");
+  $("grid").className = "grid " + state.view;
+
+  const byDay = {};
+  for (const p of state.posts) (byDay[ymd(new Date(p.scheduled_at))] ||= []).push(p);
+
+  let html = "";
+  for (let i = 0; i < days; i++) {
+    const d = addDays(start, i), key = ymd(d);
+    const cls = ["day"];
+    if (d < today) cls.push("past");
+    if (+d === +today) cls.push("today");
+    if (state.view === "month" && d.getMonth() !== month) cls.push("other");
+    if (state.selected.has(key)) cls.push("selected");
+    const evs = (byDay[key] || []).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map((p) =>
+      `<div class="ev ${p.status}" data-id="${p.id}" title="${escapeHtml(p.content)}">${hm(new Date(p.scheduled_at))} ` +
+      p.platforms.map((k) => `<span class="dot ${k}"></span>`).join("") + ` ${escapeHtml(p.content.slice(0, 30))}</div>`).join("");
+    html += `<div class="${cls.join(" ")}" data-d="${key}"><span class="num">${state.view === "week" ? label(d) : d.getDate()}</span>${evs}</div>`;
+  }
+  $("grid").innerHTML = html;
+
+  $("grid").querySelectorAll(".day").forEach((el) => el.addEventListener("click", (e) => {
+    const ev = e.target.closest(".ev");
+    if (ev) return focusItem(ev.dataset.id);
+    if (el.classList.contains("past")) return;
+    const k = el.dataset.d;
+    state.selected.has(k) ? state.selected.delete(k) : state.selected.add(k);
+    renderChips(); renderCalendar();
+  }));
+}
+
+function focusItem(id) {
+  const p = state.posts.find((x) => x.id === id);
+  if (p && state.filter !== "all" && (p.status === "scheduled") !== (state.filter === "scheduled")) {
+    state.filter = "all"; renderList();
+  }
+  const el = document.querySelector(`.item[data-id="${id}"]`);
+  if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
+
+// ---------- 予約一覧 ----------
+function renderList() {
+  document.querySelectorAll("#filter button").forEach((b) => b.classList.toggle("active", b.dataset.f === state.filter));
+  let list = state.posts;
+  if (state.filter === "scheduled") list = list.filter((p) => p.status === "scheduled" || p.status === "posting");
+  if (state.filter === "history") list = list.filter((p) => p.status !== "scheduled" && p.status !== "posting");
+  list = [...list].sort((a, b) => state.filter === "scheduled"
+    ? a.scheduled_at.localeCompare(b.scheduled_at) : b.scheduled_at.localeCompare(a.scheduled_at));
+
+  if (!list.length) { $("items").innerHTML = `<div class="empty">該当する投稿はありません</div>`; return; }
+  $("items").innerHTML = list.map((p) => {
+    const d = new Date(p.scheduled_at);
+    const res = Object.entries(p.results || {}).map(([k, r]) =>
+      `<div class="res" style="color:var(--${r.ok ? "ok" : "danger"})">${NAMES[k]}: ${r.ok ? "✓" : "✗"} ${escapeHtml(r.info || "")}</div>`).join("");
+    const actions = p.status === "scheduled"
+      ? `<button class="btn ghost" data-act="now">今すぐ投稿</button><button class="btn danger" data-act="cancel">取消</button>`
+      : p.status === "posting" ? "" : `<button class="btn ghost" data-act="delete">削除</button>`;
+    return `<div class="item" data-id="${p.id}">
+      <div>
+        <div class="when">${label(d)} ${hm(d)} <span class="status st-${p.status}">${STATUS[p.status]}</span></div>
+        <div>${p.platforms.map((k) => `<span class="dot ${k}"></span>${NAMES[k]}`).join("　")}</div>
+        ${p.title ? `<div class="body"><b>${escapeHtml(p.title)}</b></div>` : ""}
+        <div class="body">${escapeHtml(p.content)}</div>${res}
+      </div>
+      <div class="actions">${actions}</div>
+    </div>`;
+  }).join("");
+
+  $("items").querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.closest(".item").dataset.id, act = b.dataset.act;
+    const confirmText = { cancel: "この予約を取り消しますか？", now: "今すぐ投稿しますか？", delete: "履歴から削除しますか？" }[act];
+    if (!confirm(confirmText)) return;
+    try {
+      if (act === "delete") await api(`/api/posts/${id}`, { method: "DELETE" });
+      else await api(`/api/posts/${id}/${act}`, { method: "POST" });
+      await loadPosts();
+      if (act === "now") setTimeout(loadPosts, 3000);
+    } catch (e) { alert(e.message); }
+  }));
+}
+
+async function loadPosts() {
+  state.posts = await api("/api/posts");
+  renderCalendar(); renderList();
+}
+
+async function loadStatus() {
+  state.status = await api("/api/status");
+  const s = state.status;
+  $("badges").innerHTML = (s.dry_run ? `<span class="badge test">テストモード（実際には投稿しません）</span>` : "") +
+    Object.values(s.platforms).map((p) => `<span class="badge ${p.configured ? "on" : ""}">${p.name}: ${p.configured ? "接続済" : "未設定"}</span>`).join("");
+  renderTargets(); updateCounter();
+}
+
+// ---------- イベント ----------
+document.querySelectorAll(".seg [data-view]").forEach((b) => b.addEventListener("click", () => {
+  state.view = b.dataset.view; localSet("view", state.view); renderCalendar();
+}));
+document.querySelectorAll("#filter button").forEach((b) => b.addEventListener("click", () => { state.filter = b.dataset.f; renderList(); }));
+$("prev").addEventListener("click", () => {
+  state.cursor = state.view === "week" ? addDays(state.cursor, -7) : new Date(state.cursor.getFullYear(), state.cursor.getMonth() - 1, 1);
+  renderCalendar();
+});
+$("next").addEventListener("click", () => {
+  state.cursor = state.view === "week" ? addDays(state.cursor, 7) : new Date(state.cursor.getFullYear(), state.cursor.getMonth() + 1, 1);
+  renderCalendar();
+});
+$("today").addEventListener("click", () => { state.cursor = startOfDay(new Date()); renderCalendar(); });
+$("content").addEventListener("input", updateCounter);
+$("submit").addEventListener("click", submit);
+
+renderTargets(); renderChips(); updateCounter(); renderCalendar();
+loadStatus().catch((e) => showMsg("サーバーに接続できません: " + e.message, false));
+loadPosts().catch(() => {});
+setInterval(() => loadPosts().catch(() => {}), 30000);
+</script>
+</body>
+</html>
