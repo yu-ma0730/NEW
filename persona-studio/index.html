@@ -1,0 +1,756 @@
+<title>ペルソナ工房</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow working column like an index-card notebook; tabs on top, cards stacked below. */
+:root {
+  --bg: #eef1f4;
+  --paper: #ffffff;
+  --ink: #17202b;
+  --muted: #5b6676;
+  --line: #d5dbe3;
+  --accent: #2346c4;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3e8fb;
+  --ok: #1d7a4a;
+  --ok-soft: #dff2e7;
+  --warn: #9a5a00;
+  --warn-soft: #fbecd2;
+  --bad: #b3261e;
+  --bad-soft: #fbe1df;
+  --font-display: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --paper: #1a212b; --ink: #e6eaf0; --muted: #9aa5b5; --line: #2d3744;
+    --accent: #8fa6ff; --accent-ink: #0f1525; --accent-soft: #232d4d;
+    --ok: #6fd39b; --ok-soft: #173326; --warn: #f0b45a; --warn-soft: #3a2b12; --bad: #ff8a80; --bad-soft: #3d1c1a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --paper: #1a212b; --ink: #e6eaf0; --muted: #9aa5b5; --line: #2d3744;
+  --accent: #8fa6ff; --accent-ink: #0f1525; --accent-soft: #232d4d;
+  --ok: #6fd39b; --ok-soft: #173326; --warn: #f0b45a; --warn-soft: #3a2b12; --bad: #ff8a80; --bad-soft: #3d1c1a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 18px; }
+header h1 { font-family: var(--font-display); font-weight: 900; font-size: 1.75rem; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+.mono { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+nav.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 4px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 700 .85rem var(--font-body); padding: 9px 4px; border-radius: 9px; cursor: pointer; }
+nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+nav.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+section.panel { display: grid; gap: 14px; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.card h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 900; margin: 0; }
+.card h3 { font-size: 1rem; margin: 0; font-weight: 700; }
+.hint { color: var(--muted); font-size: .85rem; margin: 0; }
+
+form.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+form.grid .full { grid-column: 1 / -1; }
+@media (max-width: 520px) { form.grid { grid-template-columns: 1fr; } }
+label { display: grid; gap: 4px; font-size: .82rem; font-weight: 700; color: var(--muted); }
+input, select, textarea { font: 400 15px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 44px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button.btn { font: 700 .9rem var(--font-body); border-radius: 9px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+button.btn.ghost { background: transparent; color: var(--accent); }
+button.btn.quiet { background: transparent; color: var(--muted); border-color: var(--line); }
+button.btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+button.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.status { font-size: .85rem; color: var(--muted); }
+.status.err { color: var(--bad); }
+.banner { font-size: .82rem; padding: 6px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); }
+
+.pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+
+dl.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+dl.facts dt { color: var(--muted); font-size: .82rem; font-weight: 700; padding-top: 2px; }
+dl.facts dd { margin: 0; min-width: 0; }
+
+.pain { border-left: 4px solid var(--line); padding-left: 12px; display: grid; gap: 6px; }
+.pain[data-verdict="good"] { border-left-color: var(--ok); }
+.pain[data-verdict="maybe"] { border-left-color: var(--warn); }
+.pain[data-verdict="no"] { border-left-color: var(--bad); opacity: .7; }
+.pain-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pain-head .num { font-family: var(--font-mono); color: var(--muted); font-size: .8rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips a { font-size: .8rem; color: var(--accent); background: var(--accent-soft); padding: 2px 9px; border-radius: 6px; text-decoration: none; }
+.meta { font-size: .85rem; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 700; }
+.verdict { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.verdict button { border: 0; background: transparent; color: var(--muted); font: 700 .9rem var(--font-body); padding: 4px 12px; cursor: pointer; }
+.verdict button + button { border-left: 1px solid var(--line); }
+.verdict button[aria-pressed="true"][data-v="good"] { background: var(--ok-soft); color: var(--ok); }
+.verdict button[aria-pressed="true"][data-v="maybe"] { background: var(--warn-soft); color: var(--warn); }
+.verdict button[aria-pressed="true"][data-v="no"] { background: var(--bad-soft); color: var(--bad); }
+.verify { font-size: .8rem; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.verify a { color: var(--muted); }
+
+details.spoiler { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+details.spoiler summary { cursor: pointer; font-weight: 700; color: var(--warn); }
+details.spoiler[open] summary { margin-bottom: 8px; }
+
+.chat { display: grid; gap: 10px; }
+.msg { max-width: 88%; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.client { background: var(--bg); border: 1px solid var(--line); justify-self: start; border-bottom-left-radius: 4px; }
+.msg.me { background: var(--accent); color: var(--accent-ink); justify-self: end; border-bottom-right-radius: 4px; }
+.msg.gm { justify-self: center; background: var(--warn-soft); color: var(--warn); font-size: .82rem; max-width: 100%; }
+.msg .who { display: block; font-size: .72rem; font-weight: 700; opacity: .75; }
+.report { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; background: var(--bg); border-radius: 10px; padding: 12px; }
+
+.saved-item { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; }
+.saved-item:first-of-type { border-top: 0; padding-top: 0; }
+.saved-item .t { min-width: 0; flex: 1 1 220px; }
+.saved-item .t b { display: block; }
+.saved-item .t span { font-size: .8rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="mono">Persona Studio · 自分用</div>
+    <h1>ペルソナ工房</h1>
+    <p>客層から悩みと案件を探し、仮想クライアントで案件対応を練習する道具です。</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="モード">
+    <button role="tab" id="tab-audience" aria-selected="true" data-tab="audience">客層</button>
+    <button role="tab" id="tab-client" aria-selected="false" data-tab="client">クライアント</button>
+    <button role="tab" id="tab-sim" aria-selected="false" data-tab="sim">練習</button>
+    <button role="tab" id="tab-saved" aria-selected="false" data-tab="saved">保存</button>
+  </nav>
+
+  <!-- 客層 -->
+  <section class="panel" id="panel-audience" role="tabpanel" aria-labelledby="tab-audience">
+    <div class="card">
+      <h2>客層ペルソナを作る</h2>
+      <p class="hint">客層を決めると、悩み・検索キーワード・商材ジャンルの候補が出ます。出た悩みは仮説なので、リンクから検索して需要を確かめてください。</p>
+      <form class="grid" id="audience-form">
+        <label>年代
+          <select id="a-age">
+            <option>10代</option><option selected>20代前半</option><option>20代後半</option><option>30代</option><option>40代</option><option>50代</option><option>60代以上</option>
+          </select>
+        </label>
+        <label>性別
+          <select id="a-gender"><option selected>男女どちらも</option><option>女性</option><option>男性</option></select>
+        </label>
+        <label class="full">ライフステージ
+          <input id="a-stage" value="新社会人（一人暮らし1〜2年目）" placeholder="例：子育て中、転職を考えている">
+        </label>
+        <label class="full">さらに絞る条件（任意）
+          <input id="a-extra" placeholder="例：地方から上京した、工場勤務、副業に興味あり">
+        </label>
+        <div class="row full">
+          <button class="btn" type="submit" id="a-run">悩みを洗い出す</button>
+          <button class="btn quiet" type="button" id="a-stop" hidden>止める</button>
+          <span class="status" id="a-status" role="status"></span>
+        </div>
+      </form>
+    </div>
+    <div id="audience-out"></div>
+  </section>
+
+  <!-- クライアント -->
+  <section class="panel" id="panel-client" role="tabpanel" aria-labelledby="tab-client" hidden>
+    <div class="card">
+      <h2>仮想クライアントを作る</h2>
+      <p class="hint">練習用の架空の依頼主を作ります。担当者の性格や本当の課題は伏せられていて、練習が終わったあとに答え合わせできます。</p>
+      <form class="grid" id="client-form">
+        <label>業種
+          <input id="c-industry" placeholder="空欄ならおまかせ">
+        </label>
+        <label>規模
+          <select id="c-size"><option selected>おまかせ</option><option>個人店</option><option>個人事業主・フリーランス</option><option>従業員10人前後</option><option>中小企業（50人前後）</option></select>
+        </label>
+        <label>依頼の種類
+          <select id="c-kind"><option selected>Webサイト</option><option>業務ツール</option><option>どちらでも</option></select>
+        </label>
+        <label>難しさ
+          <select id="c-level"><option>やさしい</option><option selected>ふつう</option><option>手強い</option></select>
+        </label>
+        <div class="row full">
+          <button class="btn" type="submit" id="c-run">クライアントを作る</button>
+          <button class="btn quiet" type="button" id="c-stop" hidden>止める</button>
+          <span class="status" id="c-status" role="status"></span>
+        </div>
+      </form>
+    </div>
+    <div id="client-out"></div>
+  </section>
+
+  <!-- 練習 -->
+  <section class="panel" id="panel-sim" role="tabpanel" aria-labelledby="tab-sim" hidden>
+    <div id="sim-out"></div>
+  </section>
+
+  <!-- 保存 -->
+  <section class="panel" id="panel-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
+    <div class="card" id="saved-card">
+      <h2>保存したもの</h2>
+      <div id="saved-list"><p class="hint">読み込み中…</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) n.append(kid.nodeType ? kid : String(kid));
+    return n;
+  }
+  const str = (v) => (v == null ? "" : String(v));
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const q = encodeURIComponent;
+  const fmtDate = (ms) => { const d = new Date(ms); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+
+  const ERR = {
+    not_granted: "Claudeの利用が許可されていません。ページ上部の許可ダイアログで許可すると使えます。",
+    sampling_disabled: "このアカウントではClaudeを呼び出せません。",
+    rate_limited: "呼び出しが多すぎるか、利用上限に達しました。少し時間をおいてもう一度押してください。",
+    session_expired: "ログインが切れています。claude.aiにログインし直してください。",
+    refused: "この内容では生成できませんでした。条件を変えて試してください。",
+    invalid_json: "結果の形式が崩れました。もう一度押してください。",
+    empty_completion: "結果が空でした。条件を少し変えて試してください。",
+    prompt_too_large: "会話が長くなりすぎました。評価に進むか、新しいクライアントで始めてください。",
+  };
+  const errText = (e) => ERR[e && e.code] || "通信エラーで止まりました。もう一度押してください。";
+
+  // ---------- capabilities ----------
+  let samplePromise = window.claude ? window.claude.use("sample") : Promise.resolve(null);
+  let dbPromise = window.claude ? window.claude.use("db") : Promise.resolve(null);
+  let userPromise = window.claude ? window.claude.use("user") : Promise.resolve(null);
+  async function getSample() {
+    const s = await samplePromise;
+    if (!s) throw { code: "not_available" };
+    return s;
+  }
+
+  // ---------- tabs ----------
+  const TABS = ["audience", "client", "sim", "saved"];
+  function showTab(name) {
+    for (const t of TABS) {
+      $("tab-" + t).setAttribute("aria-selected", String(t === name));
+      $("panel-" + t).hidden = t !== name;
+    }
+    try { localStorage.setItem("persona-tab", name); } catch (_) {}
+  }
+  document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+  // ---------- state ----------
+  const state = {
+    audience: null,   // {input, result, verdicts:{i:"good"|"maybe"|"no"}, memos:{i:""}, sample:bool, savedId}
+    client: null,     // {input, result, sample:bool, savedId}
+    sim: null,        // {client, turns:[{role, content, gm?}], report, savedId}
+  };
+
+  // ---------- sample data (shown on first open) ----------
+  const SAMPLE_AUDIENCE = {
+    input: { age: "20代前半", gender: "男女どちらも", stage: "新社会人（一人暮らし1〜2年目）", extra: "" },
+    result: {
+      persona: { label: "手取りに驚く新社会人", summary: "社会人1〜2年目で一人暮らし。仕事と生活の両方に慣れておらず、お金と将来に漠然とした不安がある。", daily: "平日は帰宅後にスマホで動画とSNS、休日は寝だめと買い出し。", values: "失敗したくない。損はしたくないが、調べるのは面倒。", media: ["YouTube", "Instagram", "TikTok", "Google検索"] },
+      pains: [
+        { title: "仕事を辞めたい", scene: "入社半年、上司と合わず日曜の夜が憂うつ。", keywords: ["新卒 辞めたい 半年", "第二新卒 転職", "退職代行"], basis: "根拠あり", basisNote: "大卒の約3割が3年以内に離職する傾向（厚労省統計）。", genre: "転職エージェント、退職代行", risk: "中", riskNote: "退職代行は運営形態によって弁護士法上の問題があり得る。" },
+        { title: "2年目に手取りが減った", scene: "6月の給与明細で住民税が引かれ始めて驚く。", keywords: ["2年目 手取り 減った", "住民税 いつから", "ふるさと納税 新社会人"], basis: "根拠あり", basisNote: "住民税は前年所得に課税され、2年目から本格的に引かれる制度。", genre: "ふるさと納税サイト", risk: "低", riskNote: "" },
+        { title: "退去費用が高い", scene: "更新や転勤で退去したら、想定外の請求が来た。", keywords: ["退去費用 高い", "原状回復 ガイドライン", "敷金 返ってこない"], basis: "根拠あり", basisNote: "国交省の原状回復ガイドラインが存在する。", genre: "引越し一括見積もり、不用品買取", risk: "中", riskNote: "法的な判断を断定しない。" },
+        { title: "貯金ができない", scene: "給料日前に口座がほぼ空になる。", keywords: ["一人暮らし 貯金できない", "新社会人 手取り 生活費", "家計簿アプリ おすすめ"], basis: "推測", basisNote: "需要は検索で要確認。", genre: "家計簿アプリ、ネット銀行", risk: "中", riskNote: "借入系は避ける。お金の悩みは評価が厳しい。" },
+        { title: "自炊が続かない", scene: "コンビニ飯が続き、食費もかさむ。", keywords: ["一人暮らし 自炊 めんどくさい", "宅食 安い", "作り置き 初心者"], basis: "推測", basisNote: "", genre: "宅食サービス、ミールキット", risk: "中", riskNote: "健康効果をうたう表現に注意。" },
+      ],
+    },
+    verdicts: { 1: "good", 2: "good" }, memos: {}, sample: true,
+  };
+  const SAMPLE_CLIENT = {
+    input: { industry: "", size: "個人店", kind: "Webサイト", level: "ふつう" },
+    result: {
+      title: "駅前の小さなパン屋のサイト相談",
+      public: { industry: "ベーカリー（駅から徒歩5分）", size: "個人店（家族経営・パート2名）", contact: "店主・50代・ITは苦手（LINEは使える）", request: "ホームページを作りたいです。お店の雰囲気が伝わる、おしゃれな感じにしたいと思っています。予算はあまりないのですが、どれくらいかかりますか？" },
+      hidden: { personality: "人当たりは良いが、決めるのに時間がかかる。家族（娘）の意見に左右されやすい。", budget: "10〜15万円（本音は10万円以内）", deadline: "3か月後の開店10周年までに", realIssue: "新規客はGoogleマップで店を探しているが、営業時間や定休日が古いままで機会を逃している。サイトより先にマップ情報の整備が効く。", customers: "近所の30〜40代の子育て世帯、通勤途中の会社員", troubles: ["途中で娘から『Instagramだけでいいのでは』と言われて迷い出す", "写真素材がほとんどなく、撮影の話になると予算が厳しくなる"] },
+    },
+    sample: true,
+  };
+
+  // ---------- 客層 ----------
+  let aCtl = null;
+  function audiencePrompt(inp) {
+    return `あなたはアフィリエイト戦略とペルソナ設計の担当者です。次の客層を分析し、JSONだけで答えてください。
+
+客層:
+- 年代: ${inp.age}
+- 性別: ${inp.gender}
+- ライフステージ: ${inp.stage || "指定なし"}
+- 追加条件: ${inp.extra || "なし"}
+
+JSONの形:
+{"persona":{"label":"15字以内の呼び名","summary":"2〜3文の人物像","daily":"1日の過ごし方を1文","values":"価値観を1文","media":["よく見る媒体を3〜5個"]},
+"pains":[{"title":"悩み（20字以内）","scene":"具体的な場面を1文","keywords":["実際に検索しそうな語句を3つ"],"basis":"根拠あり または 推測","basisNote":"根拠の中身、または検証で確かめるべき点を1文","genre":"解決に使える商材ジャンル","risk":"低 または 中 または 高","riskNote":"薬機法・景品表示法・金融系など表現の注意点（低なら空文字）"}]}
+
+条件:
+- pains はちょうど10個。この客層ならではの悩みを優先し、ありきたりなものばかりにしない。
+- 「根拠あり」は公的統計・制度など一般に確認できる事実がある場合だけ。数値は確かなものだけ書き、作らない。
+- 推測を事実のように書かない。
+- 大手が独占しがちなジャンル（保険、投資、借入）は risk を高めにし、riskNote にそう書く。`;
+  }
+
+  $("audience-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const inp = { age: $("a-age").value, gender: $("a-gender").value, stage: $("a-stage").value.trim(), extra: $("a-extra").value.trim() };
+    const status = $("a-status");
+    $("a-run").disabled = true; $("a-stop").hidden = false;
+    status.className = "status"; status.textContent = "考え中…（30秒〜1分ほどかかります）";
+    aCtl = new AbortController();
+    try {
+      const sample = await getSample();
+      const result = await sample.json(audiencePrompt(inp), { signal: aCtl.signal, cache: false });
+      if (!result || !Array.isArray(result.pains)) throw { code: "invalid_json" };
+      state.audience = { input: inp, result, verdicts: {}, memos: {}, sample: false };
+      renderAudience();
+      status.textContent = "できました。気になる悩みを検索で確かめて、○△×をつけてください。";
+    } catch (e) {
+      if (e && e.code === "cancelled") status.textContent = "止めました。";
+      else if (e && e.code === "not_available") { status.className = "status err"; status.textContent = "この表示ではClaudeを呼び出せません。claude.aiで開いてください。"; }
+      else { status.className = "status err"; status.textContent = errText(e); }
+    } finally {
+      $("a-run").disabled = false; $("a-stop").hidden = true;
+    }
+  });
+  $("a-stop").addEventListener("click", () => aCtl && aCtl.abort());
+
+  function riskPill(r) {
+    const v = str(r);
+    if (v.includes("高")) return el("span", { class: "pill bad" }, "規制・競合 高");
+    if (v.includes("中")) return el("span", { class: "pill warn" }, "表現注意");
+    return el("span", { class: "pill ok" }, "規制リスク低");
+  }
+
+  function renderAudience() {
+    const out = $("audience-out"); out.replaceChildren();
+    const s = state.audience; if (!s) return;
+    const p = s.result.persona || {};
+    const head = el("div", { class: "card" },
+      s.sample ? el("div", { class: "banner" }, "サンプル表示です。上のフォームで生成すると置き換わります。") : null,
+      el("div", { class: "mono" }, `${s.input.age} · ${s.input.gender} · ${s.input.stage}${s.input.extra ? " · " + s.input.extra : ""}`),
+      el("h2", null, str(p.label) || "ペルソナ"),
+      el("p", { style: "margin:0" }, str(p.summary)),
+      el("dl", { class: "facts" },
+        el("dt", null, "1日"), el("dd", null, str(p.daily)),
+        el("dt", null, "価値観"), el("dd", null, str(p.values)),
+        el("dt", null, "媒体"), el("dd", null, arr(p.media).join("、")),
+      ),
+    );
+    out.append(head);
+
+    const list = el("div", { class: "card" },
+      el("div", { class: "row", style: "justify-content:space-between" },
+        el("h2", null, "悩み・トラブル候補"),
+        el("span", { class: "meta" }, summaryCounts(s))),
+      el("p", { class: "hint" }, "キーワードを押すとGoogle検索が開きます。需要と競合を見て判定してください。"),
+    );
+    arr(s.result.pains).forEach((pn, i) => list.append(painCard(s, pn, i)));
+    out.append(list);
+
+    out.append(el("div", { class: "row" },
+      el("button", { class: "btn", type: "button", id: "a-save", onclick: () => saveAudience() }, s.savedId ? "上書き保存" : "保存する"),
+      el("button", { class: "btn ghost", type: "button", onclick: (e) => copyText(audienceText(s), e.currentTarget) }, "テキストでコピー"),
+      el("span", { class: "status", id: "a-save-status", role: "status" }),
+    ));
+  }
+
+  function summaryCounts(s) {
+    const v = Object.values(s.verdicts || {});
+    return `○ ${v.filter((x) => x === "good").length} ／ △ ${v.filter((x) => x === "maybe").length} ／ × ${v.filter((x) => x === "no").length}`;
+  }
+
+  function painCard(s, pn, i) {
+    const box = el("div", { class: "pain", "data-verdict": s.verdicts[i] || "" });
+    const kw = arr(pn.keywords);
+    const first = kw[0] || pn.title || "";
+    const verdict = el("div", { class: "verdict", role: "group", "aria-label": "判定" },
+      ...[["good", "○"], ["maybe", "△"], ["no", "×"]].map(([v, label]) =>
+        el("button", { type: "button", "data-v": v, "aria-pressed": String(s.verdicts[i] === v), onclick: () => {
+          s.verdicts[i] = s.verdicts[i] === v ? undefined : v;
+          if (!s.verdicts[i]) delete s.verdicts[i];
+          renderAudience();
+        } }, label)));
+    const memo = el("input", { id: "memo-" + i, placeholder: "メモ（例：知恵袋に質問多い、上位は大手のみ）", value: str(s.memos[i]) });
+    memo.addEventListener("input", () => { s.memos[i] = memo.value; });
+    box.append(
+      el("div", { class: "pain-head" },
+        el("span", { class: "num" }, String(i + 1).padStart(2, "0")),
+        el("h3", null, str(pn.title)),
+        el("span", { class: "pill " + (str(pn.basis).includes("根拠") ? "info" : "warn") }, str(pn.basis).includes("根拠") ? "根拠あり" : "推測")),
+      el("div", null, str(pn.scene)),
+      el("div", { class: "chips" }, kw.map((k) => el("a", { href: "https://www.google.com/search?q=" + q(k), target: "_blank", rel: "noopener" }, k))),
+      pn.basisNote ? el("div", { class: "meta" }, str(pn.basisNote)) : null,
+      el("div", { class: "meta" }, el("b", null, "商材："), str(pn.genre), " ", riskPill(pn.risk)),
+      pn.riskNote ? el("div", { class: "meta" }, "注意：" + str(pn.riskNote)) : null,
+      el("div", { class: "verify" },
+        el("span", { class: "meta" }, "確かめる："),
+        el("a", { href: "https://related-keywords.com/result/suggest?q=" + q(first), target: "_blank", rel: "noopener" }, "ラッコキーワード"),
+        el("a", { href: "https://chiebukuro.yahoo.co.jp/search?p=" + q(first), target: "_blank", rel: "noopener" }, "知恵袋"),
+        el("a", { href: "https://www.google.com/search?q=" + q(first), target: "_blank", rel: "noopener" }, "上位サイト")),
+      el("div", { class: "row" }, verdict, el("div", { style: "flex:1 1 200px;min-width:0" }, memo)),
+    );
+    return box;
+  }
+
+  function audienceText(s) {
+    const p = s.result.persona || {};
+    const mark = { good: "○", maybe: "△", no: "×" };
+    const lines = [`【客層】${s.input.age} / ${s.input.gender} / ${s.input.stage}${s.input.extra ? " / " + s.input.extra : ""}`, `【ペルソナ】${str(p.label)}：${str(p.summary)}`, ""];
+    arr(s.result.pains).forEach((pn, i) => {
+      lines.push(`${i + 1}. ${mark[s.verdicts[i]] || "-"} ${str(pn.title)}（${str(pn.basis)}）`);
+      lines.push(`   場面：${str(pn.scene)}`);
+      lines.push(`   KW：${arr(pn.keywords).join(" / ")}`);
+      lines.push(`   商材：${str(pn.genre)}　リスク：${str(pn.risk)}${pn.riskNote ? "（" + str(pn.riskNote) + "）" : ""}`);
+      if (s.memos[i]) lines.push(`   メモ：${s.memos[i]}`);
+    });
+    return lines.join("\n");
+  }
+
+  // ---------- クライアント ----------
+  let cCtl = null;
+  function clientPrompt(inp) {
+    return `あなたは制作者向けの案件対応トレーニングの出題者です。Webサイトや業務ツールの制作を依頼してくる、架空だが現実的なクライアントを1件作り、JSONだけで答えてください。
+
+条件:
+- 業種: ${inp.industry || "おまかせ（日本のよくある業種から選ぶ）"}
+- 規模: ${inp.size}
+- 依頼の種類: ${inp.kind}
+- 難しさ: ${inp.level}（やさしい＝要望が明確で協力的／ふつう＝少し曖昧／手強い＝曖昧で、依頼者の思い込みと本当の課題のずれが大きい）
+
+JSONの形:
+{"title":"案件の短い名前（20字以内）",
+"public":{"industry":"業種と立地など","size":"規模","contact":"担当者の立場・年代・ITの詳しさ","request":"最初の依頼文（担当者の口調で2〜4文。あえて少し曖昧に）"},
+"hidden":{"personality":"担当者の性格・意思決定のくせ","budget":"本当の予算感","deadline":"本当の納期と理由","realIssue":"依頼者が気づいていない本当の課題（2文）","customers":"このクライアントの客層","troubles":["途中で起こりうる現実的なトラブルを2つ"]}}
+
+極端に理不尽な人物にはしないこと。金額は日本の個人・中小の相場感に合わせること。`;
+  }
+
+  $("client-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const inp = { industry: $("c-industry").value.trim(), size: $("c-size").value, kind: $("c-kind").value, level: $("c-level").value };
+    const status = $("c-status");
+    $("c-run").disabled = true; $("c-stop").hidden = false;
+    status.className = "status"; status.textContent = "考え中…（30秒ほどかかります）";
+    cCtl = new AbortController();
+    try {
+      const sample = await getSample();
+      const result = await sample.json(clientPrompt(inp), { signal: cCtl.signal, cache: false });
+      if (!result || !result.public || !result.hidden) throw { code: "invalid_json" };
+      state.client = { input: inp, result, sample: false };
+      renderClient();
+      status.textContent = "できました。";
+    } catch (e) {
+      if (e && e.code === "cancelled") status.textContent = "止めました。";
+      else if (e && e.code === "not_available") { status.className = "status err"; status.textContent = "この表示ではClaudeを呼び出せません。claude.aiで開いてください。"; }
+      else { status.className = "status err"; status.textContent = errText(e); }
+    } finally {
+      $("c-run").disabled = false; $("c-stop").hidden = true;
+    }
+  });
+  $("c-stop").addEventListener("click", () => cCtl && cCtl.abort());
+
+  function hiddenFacts(h) {
+    return el("dl", { class: "facts" },
+      el("dt", null, "性格"), el("dd", null, str(h.personality)),
+      el("dt", null, "予算"), el("dd", null, str(h.budget)),
+      el("dt", null, "納期"), el("dd", null, str(h.deadline)),
+      el("dt", null, "本当の課題"), el("dd", null, str(h.realIssue)),
+      el("dt", null, "客層"), el("dd", null, str(h.customers)),
+      el("dt", null, "トラブル"), el("dd", null, arr(h.troubles).join(" ／ ")));
+  }
+
+  function renderClient() {
+    const out = $("client-out"); out.replaceChildren();
+    const s = state.client; if (!s) return;
+    const r = s.result, pb = r.public || {};
+    out.append(el("div", { class: "card" },
+      s.sample ? el("div", { class: "banner" }, "サンプル表示です。上のフォームで生成すると置き換わります。") : null,
+      el("div", { class: "mono" }, "想定案件"),
+      el("h2", null, str(r.title) || "仮想クライアント"),
+      el("dl", { class: "facts" },
+        el("dt", null, "業種"), el("dd", null, str(pb.industry)),
+        el("dt", null, "規模"), el("dd", null, str(pb.size)),
+        el("dt", null, "担当者"), el("dd", null, str(pb.contact))),
+      el("div", { class: "msg client" }, el("span", { class: "who" }, "最初の依頼"), str(pb.request)),
+      el("details", { class: "spoiler" }, el("summary", null, "隠し設定を見る（ネタバレ）"), hiddenFacts(r.hidden || {})),
+      el("div", { class: "row" },
+        el("button", { class: "btn", type: "button", onclick: () => startSim(s) }, "この案件で練習を始める"),
+        el("button", { class: "btn ghost", type: "button", onclick: () => saveClient() }, s.savedId ? "上書き保存" : "保存する"),
+        el("span", { class: "status", id: "c-save-status", role: "status" })),
+    ));
+  }
+
+  // ---------- 練習（シミュレーション） ----------
+  let sCtl = null;
+  function startSim(clientState) {
+    const r = clientState.result;
+    state.sim = { client: r, turns: [{ role: "assistant", content: str(r.public && r.public.request) }], report: "" };
+    renderSim(); showTab("sim");
+  }
+
+  function simRules(r) {
+    return `あなたは案件対応の練習用シミュレーターです。以下の設定の「担当者」になりきって、制作者（私）とチャットします。
+
+設定:
+${JSON.stringify(r, null, 1)}
+
+ルール:
+- 担当者のセリフだけを、1〜4文の自然なチャット口調で返す。ITの詳しさに合った言葉づかいにする。
+- 制作者が聞かない情報は自分から言わない。hidden の内容（本当の課題・本音の予算など）は直接明かさず、良い質問をされたら少しずつヒントを出す。
+- 「進行役より」で始まるメッセージは制作者ではなく進行役の指示。従って、担当者として自然にトラブルを切り出す。進行役には返事をしない。
+- 極端に理不尽にはしない。制作者の提案が良ければ素直に受け入れる。`;
+  }
+
+  function renderSim() {
+    const out = $("sim-out"); out.replaceChildren();
+    const s = state.sim;
+    if (!s) {
+      out.append(el("div", { class: "card" },
+        el("h2", null, "案件対応の練習"),
+        el("p", { class: "hint" }, "クライアントタブで仮想クライアントを作り、「この案件で練習を始める」を押すとここで会話できます。途中で「トラブルを起こす」を押すと、担当者が現実的なトラブルを切り出します。"),
+        el("button", { class: "btn ghost", type: "button", onclick: () => showTab("client") }, "クライアントを作る")));
+      return;
+    }
+    const pb = s.client.public || {};
+    const chat = el("div", { class: "chat", id: "chat" });
+    s.turns.forEach((t) => chat.append(msgEl(t)));
+    const box = el("textarea", { id: "sim-input", rows: "2", placeholder: "担当者への返信やヒアリングの質問を書く" });
+    box.value = s.draft || "";
+    box.addEventListener("input", () => { s.draft = box.value; });
+    const busy = !!sCtl;
+    out.append(el("div", { class: "card" },
+      el("div", { class: "mono" }, "想定案件 · 練習中"),
+      el("h2", null, str(s.client.title)),
+      el("div", { class: "meta" }, `${str(pb.industry)} ／ ${str(pb.contact)}`),
+      chat,
+      s.report ? null : el("div", { style: "display:grid;gap:8px" },
+        box,
+        el("div", { class: "row" },
+          el("button", { class: "btn", type: "button", id: "sim-send", disabled: busy, onclick: () => sendSim(box.value) }, "送る"),
+          el("button", { class: "btn ghost", type: "button", disabled: busy, onclick: () => sendSim("進行役より：このタイミングで、設定のトラブル候補などに沿った現実的なトラブルを1つ、担当者として自然に切り出してください。", true) }, "トラブルを起こす"),
+          el("button", { class: "btn quiet", type: "button", disabled: busy || s.turns.length < 3, onclick: () => finishSim() }, "終了して評価"),
+          busy ? el("button", { class: "btn quiet", type: "button", onclick: () => sCtl && sCtl.abort() }, "止める") : null),
+        el("span", { class: "status", id: "sim-status", role: "status" })),
+    ));
+    if (s.report) {
+      out.append(el("div", { class: "card" },
+        el("h2", null, "評価と答え合わせ"),
+        el("div", { class: "report" }, s.report),
+        el("details", { class: "spoiler" }, el("summary", null, "隠し設定"), hiddenFacts(s.client.hidden || {})),
+        el("div", { class: "row" },
+          el("button", { class: "btn", type: "button", onclick: () => saveSim() }, s.savedId ? "上書き保存" : "記録を保存"),
+          el("button", { class: "btn ghost", type: "button", onclick: (e) => copyText(simText(s), e.currentTarget) }, "記録をコピー"),
+          el("button", { class: "btn quiet", type: "button", onclick: () => { state.sim = null; renderSim(); showTab("client"); } }, "新しい案件へ"),
+          el("span", { class: "status", id: "s-save-status", role: "status" }))));
+    }
+  }
+
+  function msgEl(t) {
+    if (t.gm) return el("div", { class: "msg gm" }, "進行役：トラブルを起こしてもらいました");
+    if (t.role === "assistant") return el("div", { class: "msg client" }, el("span", { class: "who" }, "担当者"), t.content);
+    return el("div", { class: "msg me" }, t.content);
+  }
+
+  async function sendSim(text, gm) {
+    const s = state.sim; text = str(text).trim();
+    if (!s || !text || sCtl) return;
+    s.turns.push({ role: "user", content: text, gm: !!gm });
+    if (!gm) s.draft = "";
+    const pending = { role: "assistant", content: "…" };
+    s.turns.push(pending);
+    sCtl = new AbortController();
+    renderSim();
+    const bubble = $("chat").lastElementChild;
+    const turns = [{ role: "user", content: simRules(s.client) },
+      ...s.turns.slice(0, -1).map((t) => ({ role: t.role, content: t.content }))];
+    try {
+      const sample = await getSample();
+      const { text: reply } = await sample(turns, { cache: false, signal: sCtl.signal, modelTier: "quick",
+        onText: ({ text }) => { bubble.replaceChildren(el("span", { class: "who" }, "担当者"), text); } });
+      pending.content = reply;
+      sCtl = null; renderSim();
+    } catch (e) {
+      sCtl = null;
+      if (e && e.text) pending.content = e.text; else s.turns.pop();
+      renderSim();
+      if (!(e && e.code === "cancelled")) { const st = $("sim-status"); if (st) { st.className = "status err"; st.textContent = e && e.code === "not_available" ? "この表示ではClaudeを呼び出せません。" : errText(e); } }
+    }
+  }
+
+  async function finishSim() {
+    const s = state.sim; if (!s || sCtl) return;
+    const log = s.turns.map((t) => t.gm ? "（進行役がトラブルを指示）" : (t.role === "assistant" ? "担当者：" : "制作者：") + t.content).join("\n");
+    const prompt = `あなたは制作者向けの案件対応トレーニングの講評者です。以下の設定と会話ログを読み、制作者の対応を率直に評価してください。甘い評価はせず、具体的に書くこと。
+
+設定（制作者には隠していた部分を含む）:
+${JSON.stringify(s.client, null, 1)}
+
+会話ログ:
+${log}
+
+次の見出しで、プレーンテキスト（記号は「■」と「・」だけ）で書いてください。
+■答え合わせ：本当の課題に気づけていたか
+■良かった点（2〜3個）
+■まずかった点・聞き漏らし（2〜3個、次にどう聞くべきかも）
+■実務なら起きそうなリスク
+■ポートフォリオ用メモ：「想定案件」と明記した上で、案件概要／ヒアリングで分かったこと／起きたトラブルと対応／次ならどうするか を各1〜2文で`;
+    sCtl = new AbortController();
+    renderSim();
+    const st = $("sim-status"); if (st) st.textContent = "講評を書いています…（30秒〜1分）";
+    try {
+      const sample = await getSample();
+      const { text } = await sample(prompt, { cache: false, signal: sCtl.signal });
+      s.report = text; sCtl = null; renderSim();
+    } catch (e) {
+      sCtl = null; renderSim();
+      if (!(e && e.code === "cancelled")) { const st2 = $("sim-status"); if (st2) { st2.className = "status err"; st2.textContent = errText(e); } }
+    }
+  }
+
+  function simText(s) {
+    const log = s.turns.map((t) => t.gm ? "（トラブル発生）" : (t.role === "assistant" ? "担当者：" : "自分：") + t.content).join("\n");
+    return `【想定案件】${str(s.client.title)}\n\n${log}\n\n${s.report}`;
+  }
+
+  // ---------- 保存（db: data/users/<id>/<doc>） ----------
+  let col = null;
+  async function getCol() {
+    if (col) return col;
+    const [db, user] = await Promise.all([dbPromise, userPromise]);
+    if (!db || !user) return null;
+    const id = await user.id();
+    if (!id) return null;
+    col = db.collection("data/users/" + id);
+    return col;
+  }
+
+  async function saveDoc(kind, title, data, s, statusId) {
+    const st = $(statusId);
+    try {
+      const c = await getCol();
+      if (!c) { if (st) { st.className = "status err"; st.textContent = "保存できません（claude.aiにログインした状態で開いてください）。"; } return; }
+      const ref = s.savedId ? c.doc(s.savedId) : c.doc();
+      await ref.set({ kind, title, createdAt: s.createdAt || Date.now(), updatedAt: Date.now(), data: JSON.parse(JSON.stringify(data)) });
+      s.savedId = ref.id; s.createdAt = s.createdAt || Date.now();
+      if (st) { st.className = "status"; st.textContent = "保存しました。"; }
+    } catch (e) {
+      if (st) { st.className = "status err"; st.textContent = "保存に失敗しました。もう一度押してください。"; }
+    }
+  }
+  function saveAudience() {
+    const s = state.audience; if (!s) return;
+    const verdicts = {}; for (const [k, v] of Object.entries(s.verdicts)) if (v) verdicts[k] = v;
+    saveDoc("audience", `${s.input.age}・${s.input.stage}`, { input: s.input, result: s.result, verdicts, memos: s.memos }, s, "a-save-status").then(() => renderAudienceSaveLabel());
+  }
+  function renderAudienceSaveLabel() { const b = $("a-save"); if (b && state.audience && state.audience.savedId) b.textContent = "上書き保存"; }
+  function saveClient() {
+    const s = state.client; if (!s) return;
+    saveDoc("client", str(s.result.title) || "仮想クライアント", { input: s.input, result: s.result }, s, "c-save-status");
+  }
+  function saveSim() {
+    const s = state.sim; if (!s) return;
+    saveDoc("sim", "練習：" + str(s.client.title), { client: s.client, turns: s.turns, report: s.report }, s, "s-save-status");
+  }
+
+  const KIND = { audience: ["客層", "info"], client: ["クライアント", "ok"], sim: ["練習記録", "warn"] };
+  let armedDelete = null;
+  function renderSaved(docs) {
+    const list = $("saved-list"); list.replaceChildren();
+    if (docs === null) {
+      list.append(el("p", { class: "hint" }, "保存機能は、claude.aiにログインした状態でこのページを開くと使えます。"));
+      return;
+    }
+    if (!docs.length) {
+      list.append(el("p", { class: "hint" }, "まだ何も保存していません。客層の分析、仮想クライアント、練習の記録をそれぞれの画面で「保存する」と、ここに並びます。"));
+      return;
+    }
+    for (const d of docs) {
+      const v = d.data() || {};
+      const [label, tone] = KIND[v.kind] || ["その他", "info"];
+      const del = el("button", { class: "btn danger", type: "button" }, armedDelete === d.id ? "本当に削除" : "削除");
+      del.addEventListener("click", async () => {
+        if (armedDelete !== d.id) { armedDelete = d.id; renderSaved(docs); return; }
+        armedDelete = null;
+        try { await col.doc(d.id).delete(); } catch (_) {}
+      });
+      list.append(el("div", { class: "saved-item" },
+        el("div", { class: "t" }, el("b", null, str(v.title)), el("span", null, el("span", { class: "pill " + tone }, label), " ", fmtDate(v.updatedAt || v.createdAt || 0))),
+        el("div", { class: "row" },
+          el("button", { class: "btn ghost", type: "button", onclick: () => openSaved(d.id, v) }, "開く"),
+          del)));
+    }
+  }
+
+  function openSaved(id, v) {
+    const data = v.data || {};
+    if (v.kind === "audience") {
+      state.audience = { input: data.input || {}, result: data.result || {}, verdicts: data.verdicts || {}, memos: data.memos || {}, savedId: id, createdAt: v.createdAt };
+      renderAudience(); showTab("audience");
+    } else if (v.kind === "client") {
+      state.client = { input: data.input || {}, result: data.result || {}, savedId: id, createdAt: v.createdAt };
+      renderClient(); showTab("client");
+    } else if (v.kind === "sim") {
+      state.sim = { client: data.client || {}, turns: arr(data.turns), report: str(data.report), savedId: id, createdAt: v.createdAt };
+      renderSim(); showTab("sim");
+    }
+  }
+
+  (async () => {
+    const c = await getCol();
+    if (!c) { renderSaved(null); return; }
+    c.orderBy("updatedAt", "desc").limit(200).onSnapshot((snap) => renderSaved(snap.docs), () => renderSaved(null));
+  })();
+
+  // ---------- copy ----------
+  async function copyText(text, btn) {
+    const old = btn.textContent;
+    try { await navigator.clipboard.writeText(text); btn.textContent = "コピーしました"; }
+    catch (_) {
+      const ta = el("textarea", { class: "report", rows: "8", readonly: true }); ta.value = text;
+      btn.parentElement.after(ta); ta.focus(); ta.select();
+      btn.textContent = "選択してコピーしてください";
+    }
+    setTimeout(() => { btn.textContent = old; }, 2000);
+  }
+
+  // ---------- boot ----------
+  state.audience = SAMPLE_AUDIENCE; state.client = SAMPLE_CLIENT;
+  renderAudience(); renderClient(); renderSim();
+  let start = "audience";
+  try { const t = localStorage.getItem("persona-tab"); if (TABS.includes(t)) start = t; } catch (_) {}
+  showTab(start);
+})();
+</script>
