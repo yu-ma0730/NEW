@@ -420,7 +420,12 @@ def download_audio(info: dict, workdir: Path, log: Log = print) -> Path:
     }
     log("音声をダウンロードしています…")
     with yt_dlp.YoutubeDL(opts) as ydl:
-        ydl.download([url])
+        if info.get("formats"):
+            # 検出済みの情報からそのまま落とす。1 ページに複数動画があると webpage_url は
+            # ページ自体を指すため、URL から取り直すと毎回 1 本目の動画になってしまう。
+            ydl.process_ie_result(dict(info), download=True)
+        else:
+            ydl.download([url])
     files = sorted(workdir.glob("audio.*"))
     if not files:
         raise RuntimeError("音声ファイルを取得できませんでした")
