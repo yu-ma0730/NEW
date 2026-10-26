@@ -30,6 +30,13 @@ upwork-research/
 
 詳細は [UPWORK_RESEARCH_2026.md](./UPWORK_RESEARCH_2026.md) を参照してください。
 
+## 📝 ブログ市場調査テンプレート
+
+ブログのジャンル選定と市場調査を、ChatGPT / Claude にコピペして行うためのプロンプト集です。
+調査結果は JSON でも出力されるので、そのまま別のAIに渡して記事の企画に使えます。
+
+→ [market-research/blog-market-research-template.md](./market-research/blog-market-research-template.md)
+
 ## 🚀 開発ロードマップ
 
 - [ ] ツール1：データ抽出・可視化（優先度：高）
