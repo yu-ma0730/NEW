@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn>=0.24
+python-dotenv>=1.0
+requests>=2.31
+pydantic>=2.7
+anthropic>=2.3.0
+pytest>=8

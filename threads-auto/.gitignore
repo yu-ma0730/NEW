@@ -1,0 +1,4 @@
+.env
+threads_auto.db
+__pycache__/
+.pytest_cache/

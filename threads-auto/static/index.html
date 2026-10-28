@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threads 全自動モード</title>
+<style>
+:root{--bg:#f7f7fa;--card:#fff;--ink:#1a1825;--sub:#5d5970;--line:#e3e1ea;--accent:#4f46e5;--ok:#0f7a55;--ng:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#111017;--card:#1a1922;--ink:#f0eff5;--sub:#a5a1b6;--line:#2f2c3b;--accent:#8b8ff8;--ok:#4fd1a1;--ng:#f97066}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;line-height:1.6}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--sub);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+.card h2{font-size:1rem;margin:0 0 12px}
+.grid{display:grid;gap:12px}
+@media(min-width:640px){.grid.two{grid-template-columns:1fr 1fr}}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:80px}
+.check{display:flex;align-items:center;gap:8px;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.switch{font-size:1rem;padding:12px 22px}
+.switch.on{background:var(--ok)}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;border:1px solid var(--line)}
+.err{color:var(--ng)}
+.post{border-top:1px solid var(--line);padding:10px 0;white-space:pre-wrap;font-size:.92rem}
+.hint{color:var(--sub);font-size:.8rem;margin-top:4px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Threads 全自動モード</h1>
+  <div class="sub">テーマと投稿頻度を決めるだけ。AI が投稿を作り、決めた時刻に投稿し続けます。</div>
+
+  <div class="card">
+    <div class="row">
+      <button id="toggle" class="switch">全自動モード: OFF</button>
+      <span id="conn" class="pill"></span>
+      <a href="/oauth/login" class="pill">Threads と連携する（OAuth）</a>
+    </div>
+    <div id="statusLine" class="hint"></div>
+  </div>
+
+  <form id="f">
+    <div class="card"><h2>投稿スケジュール</h2>
+      <div class="grid two">
+        <div><label>1日の投稿数</label><select name="posts_per_day"><option>1</option><option>2</option><option>3</option></select></div>
+        <div><label>ゆらぎ幅（分）</label><input type="number" name="jitter_minutes" min="0" max="60">
+          <div class="hint">例: 12:30 ＋ ゆらぎ15分 → 12:15〜12:45 のどこかで投稿</div></div>
+        <div><label>投稿時刻（カンマ区切り HH:MM）</label><input type="text" name="times"></div>
+        <div><label>タイムゾーン</label><input type="text" name="timezone"></div>
+      </div>
+    </div>
+
+    <div class="card"><h2>投稿内容</h2>
+      <div class="grid">
+        <div><label>投稿のトーン</label><select name="tone">
+          <option value="casual">カジュアル</option><option value="business">ビジネス</option>
+          <option value="humor">ユーモア</option><option value="inspiration">インスピレーション</option></select></div>
+        <div><label>テーマ・トピック</label><input type="text" name="theme" placeholder="例: 副業初心者向けの時間術"></div>
+        <div><label>追加指示（オプション）</label><textarea name="extra_instructions"></textarea></div>
+        <div><label>お手本サンプル（うまくいった投稿・連投を貼る）</label><textarea name="example_posts"></textarea></div>
+        <div class="grid two">
+          <div><label class="check"><input type="checkbox" name="thread_mode"> スレッド形式（連投）で投稿する</label></div>
+          <div><label>最大スレッド数</label><input type="number" name="max_thread_parts" min="2" max="5"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><h2>伸ばすための機能</h2>
+      <div class="grid">
+        <div><label>CTA（公開の数分後に自分の投稿へ返信。最大500文字・空なら無効）</label><textarea name="cta_text" maxlength="500"></textarea></div>
+        <div class="grid two">
+          <div><label>CTA の遅延（分）</label><input type="number" name="cta_delay_minutes" min="1" max="60"></div>
+          <div><label>トピックタグ</label><select name="topic_tag_mode">
+            <option value="none">付けない</option><option value="fixed">固定のタグ</option><option value="ai">AI に選ばせる</option></select></div>
+          <div><label>固定タグ（50文字以内・「.」「&」不可）</label><input type="text" name="fixed_topic_tag"></div>
+        </div>
+        <div class="grid two">
+          <div><label class="check"><input type="checkbox" name="quality_gate"> 品質ゲート（AI 採点で作り直し）</label></div>
+          <div><label>合格点: <span id="thv"></span></label><input type="range" name="quality_threshold" min="0" max="100"></div>
+          <div><label>作り直し回数（最大）</label><input type="number" name="quality_max_retries" min="0" max="5"></div>
+        </div>
+        <div class="grid two">
+          <div><label class="check"><input type="checkbox" name="buzz_detection"> 初速バズを検知する（公開1〜6時間を30分ごとに確認）</label></div>
+          <div><label class="check"><input type="checkbox" name="recycle_buzz"> バズった投稿を言い換えて再投稿する</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><h2>アカウント保護 ・ AI</h2>
+      <div class="grid two">
+        <div><label>24時間あたりの最大投稿数</label><input type="number" name="max_posts_24h" min="1" max="250"></div>
+        <div><label>最低投稿間隔（分）</label><input type="number" name="min_interval_minutes" min="1"></div>
+        <div><label>Claude モデル</label><input type="text" name="model"></div>
+      </div>
+      <div class="hint">上限・間隔に達した場合はエラーにせず、投稿できる時刻まで待機します。</div>
+    </div>
+
+    <div class="card row">
+      <button type="submit">保存</button>
+      <button type="button" class="ghost" id="previewBtn">プレビュー</button>
+      <span id="msg" class="hint"></span>
+    </div>
+  </form>
+
+  <div class="card" id="previewCard" hidden><h2>プレビュー</h2>
+    <div id="previewBody"></div>
+    <div class="row" style="margin-top:10px"><button type="button" id="postNow">この内容で今すぐ投稿</button></div>
+  </div>
+
+  <div class="card"><h2>投稿履歴</h2><div id="posts" class="hint">まだありません</div></div>
+</main>
+
+<script>
+const f = document.getElementById('f');
+const NUM = ['posts_per_day','jitter_minutes','max_thread_parts','cta_delay_minutes','quality_threshold','quality_max_retries','max_posts_24h','min_interval_minutes'];
+let current = {}, lastPreview = null;
+
+function fill(s){
+  current = s;
+  for (const el of f.elements){
+    if (!el.name || !(el.name in s)) continue;
+    if (el.type === 'checkbox') el.checked = !!s[el.name];
+    else if (el.name === 'times') el.value = s.times.join(',');
+    else el.value = s[el.name];
+  }
+  document.getElementById('thv').textContent = s.quality_threshold;
+  renderToggle();
+}
+function read(){
+  const s = {...current};
+  for (const el of f.elements){
+    if (!el.name) continue;
+    if (el.type === 'checkbox') s[el.name] = el.checked;
+    else if (el.name === 'times') s.times = el.value.split(',').map(t => t.trim()).filter(Boolean);
+    else if (NUM.includes(el.name)) s[el.name] = Number(el.value);
+    else s[el.name] = el.value;
+  }
+  return s;
+}
+function renderToggle(){
+  const b = document.getElementById('toggle');
+  b.textContent = '全自動モード: ' + (current.enabled ? 'ON' : 'OFF');
+  b.classList.toggle('on', !!current.enabled);
+}
+async function api(path, opts={}){
+  const res = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || data));
+  return data;
+}
+function msg(t, bad){ const m = document.getElementById('msg'); m.textContent = t; m.className = bad ? 'hint err' : 'hint'; }
+function esc(t){ const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
+
+async function save(s){ fill(await api('/api/settings', {method:'PUT', body: JSON.stringify(s)})); }
+
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  try { await save(read()); msg('保存しました'); refresh(); } catch(err){ msg(err.message, true); }
+});
+f.quality_threshold.addEventListener('input', e => document.getElementById('thv').textContent = e.target.value);
+document.getElementById('toggle').addEventListener('click', async () => {
+  try { await save({...read(), enabled: !current.enabled}); refresh(); } catch(err){ msg(err.message, true); }
+});
+document.getElementById('previewBtn').addEventListener('click', async () => {
+  msg('生成中…');
+  try {
+    lastPreview = await api('/api/preview', {method:'POST', body: JSON.stringify(read())});
+    document.getElementById('previewBody').innerHTML = lastPreview.parts.map((p,i) =>
+      `<div class="post"><span class="pill">${i===0?'1本目':(i+1)+'本目（返信）'}</span>\n${esc(p)}</div>`).join('')
+      + (lastPreview.topic_tag ? `<div class="hint">トピックタグ: ${esc(lastPreview.topic_tag)}</div>` : '')
+      + (lastPreview.score != null ? `<div class="hint">品質スコア: ${lastPreview.score}</div>` : '');
+    document.getElementById('previewCard').hidden = false; msg('');
+  } catch(err){ msg(err.message, true); }
+});
+document.getElementById('postNow').addEventListener('click', async () => {
+  if (!lastPreview || !confirm('この内容で投稿しますか？')) return;
+  try { await api('/api/post-now', {method:'POST', body: JSON.stringify(lastPreview)}); msg('投稿しました'); refresh(); }
+  catch(err){ msg(err.message, true); }
+});
+
+async function refresh(){
+  const st = await api('/api/status');
+  document.getElementById('conn').textContent = st.connected ? (st.dry_run ? '連携済み（DRY_RUN）' : 'Threads 連携済み') : '未連携（DRY_RUN）';
+  const slots = st.today_slots.map(s => `${new Date(s.due_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} ${s.status}`).join(' / ');
+  document.getElementById('statusLine').innerHTML = (slots ? '今日の予定: ' + esc(slots) : '')
+    + (st.last_error ? `<div class="err">直近のエラー: ${esc(st.last_error)}</div>` : '');
+  const posts = await api('/api/posts');
+  if (posts.length) document.getElementById('posts').innerHTML = posts.map(p =>
+    `<div class="post">${p.buzz ? '🔥 ' : ''}<span class="pill">${new Date(p.published_at).toLocaleString('ja-JP')}</span>`
+    + (p.views != null ? ` <span class="pill">閲覧 ${p.views} ・ いいね ${p.likes ?? '-'} ・ 返信 ${p.replies ?? '-'}</span>` : '')
+    + `\n${esc(p.parts.join('\n―――\n'))}</div>`).join('');
+}
+
+api('/api/settings').then(fill).then(refresh).catch(err => msg(err.message, true));
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>
