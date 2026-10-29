@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "IPAGothic", sans-serif; color: #1f2933; }
+.slide { width: 1280px; height: 720px; padding: 60px 80px; position: relative; page-break-after: always; background: #fbfaf7; overflow: hidden; }
+.slide:last-child { page-break-after: auto; }
+h1 { font-size: 52px; line-height: 1.3; }
+h2 { font-size: 38px; margin-bottom: 36px; padding-left: 20px; border-left: 10px solid #2f6f8f; }
+p, li, td, th { font-size: 24px; line-height: 1.6; }
+.foot { position: absolute; bottom: 28px; right: 80px; font-size: 16px; color: #7b8794; }
+.title { background: #2f6f8f; color: #fff; display: flex; flex-direction: column; justify-content: center; }
+.title .sub { font-size: 26px; margin-top: 24px; opacity: .9; }
+.title .note { font-size: 18px; margin-top: 60px; opacity: .8; }
+.box { border-radius: 14px; padding: 24px 30px; }
+.warn { background: #fff4e5; border: 3px solid #e8a33d; }
+.flow { display: flex; align-items: center; gap: 10px; }
+.step { flex: 1; min-width: 0; background: #fff; border: 3px solid #2f6f8f; border-radius: 14px; padding: 18px 12px; height: 300px; text-align: center; }
+.step .n { display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background: #2f6f8f; color: #fff; font-size: 24px; font-weight: bold; margin-bottom: 12px; }
+.step b { display: block; font-size: 21px; margin-bottom: 8px; }
+.step span { font-size: 18px; line-height: 1.5; display: block; color: #3e4c59; }
+.arrow { font-size: 34px; color: #2f6f8f; }
+.cut { flex: 1; min-width: 0; border: 3px dashed #9aa5b1; border-radius: 14px; height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #7b8794; font-size: 18px; padding: 10px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 2px solid #cbd2d9; padding: 14px 18px; text-align: left; }
+th { background: #e4eef3; }
+.tag { display: inline-block; padding: 2px 12px; border-radius: 8px; font-size: 18px; }
+.ok { background: #dff3e4; color: #1f6b3a; }
+.ng { background: #fde2e1; color: #a12a24; }
+.grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.card { background: #fff; border: 2px solid #cbd2d9; border-radius: 14px; padding: 24px 28px; }
+.card .ic { font-size: 40px; color: #2f6f8f; font-weight: bold; }
+.card b { font-size: 26px; display: block; margin: 6px 0; }
+.card span { font-size: 20px; color: #52606d; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+.col { border-radius: 14px; padding: 24px; height: 380px; }
+.col h3 { font-size: 28px; margin-bottom: 16px; }
+.col li { font-size: 22px; margin-left: 28px; margin-bottom: 10px; }
+.c-ng { background: #fde2e1; border: 3px solid #d0453d; }
+.c-ok { background: #dff3e4; border: 3px solid #3a9a5b; }
+.c-gift { background: #e4eef3; border: 3px solid #2f6f8f; }
+.reason { margin-top: 24px; font-size: 21px; color: #3e4c59; }
+ul.plain li { margin-left: 30px; margin-bottom: 14px; }
+</style></head><body>
+
+<section class="slide title">
+  <h1>セミナー冒頭部分<br>要点まとめ</h1>
+  <p class="sub">文字起こし（開会挨拶・注意事項）の整理と図解</p>
+  <p class="note">出典：ユーザー提供の文字起こしのみ（外部情報は使用していません）</p>
+</section>
+
+<section class="slide">
+  <h2>はじめに：この資料の範囲</h2>
+  <div class="box warn">
+    <p><b>提供された文字起こしは「冒頭の挨拶と注意事項」のみ</b>で、本題に入る前に途切れています。</p>
+  </div>
+  <ul class="plain" style="margin-top:36px">
+    <li>セミナーのテーマ・ノウハウ・結論は<b>含まれていません</b></li>
+    <li>誤変換と思われる箇所は推測で補わず、「不明」と明記しています</li>
+    <li>解釈を含む箇所には「解釈」と表示しています</li>
+  </ul>
+  <div class="foot">2 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>全体の流れ</h2>
+  <div class="flow" style="margin-top:60px">
+    <div class="step"><div class="n">1</div><b>開会の挨拶</b><span>金曜夜（花金）の参加へのお礼</span></div>
+    <div class="arrow">▶</div>
+    <div class="step"><div class="n">2</div><b>講師紹介</b><span>代表の「松尾」氏</span></div>
+    <div class="arrow">▶</div>
+    <div class="step"><div class="n">3</div><b>参加姿勢</b><span>集中して視聴<br>できれば顔出し</span></div>
+    <div class="arrow">▶</div>
+    <div class="step"><div class="n">4</div><b>Zoomで交流</b><span>チャットに参加地域<br>リアクションで返事</span></div>
+    <div class="arrow">▶</div>
+    <div class="step"><div class="n">5</div><b>注意事項</b><span>録音・撮影の禁止<br>共有のルール</span></div>
+    <div class="arrow">▶</div>
+    <div class="cut">ここで<br>文字起こしが<br>途切れている</div>
+  </div>
+  <div class="foot">3 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>講師・開催情報</h2>
+  <table>
+    <tr><th style="width:18%">項目</th><th style="width:47%">文字起こしの記載</th><th>確実さ</th></tr>
+    <tr><td>講師名</td><td>松尾（代表）</td><td><span class="tag ok">本文に明記</span></td></tr>
+    <tr><td>会社名</td><td>「アイアウトサンニングパートナー」</td><td><span class="tag ng">誤変換の可能性が高い／正式名称は不明</span></td></tr>
+    <tr><td>開催日</td><td>金曜日の夜</td><td><span class="tag ok">「花金」の記載あり</span></td></tr>
+    <tr><td>形式</td><td>Zoomのオンラインセミナー</td><td><span class="tag ok">「ズームのチャット」等から判断</span></td></tr>
+  </table>
+  <div class="foot">4 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>参加者へのお願い</h2>
+  <div class="grid4">
+    <div class="card"><div class="ic">01</div><b>画面の前で集中する</b><span>話の流れを理解しやすくするため</span></div>
+    <div class="card"><div class="ic">02</div><b>できれば顔を出す</b><span>講師からのお願い（任意）</span></div>
+    <div class="card"><div class="ic">03</div><b>チャットに参加地域を書く</b><span>例：大阪、東京</span></div>
+    <div class="card"><div class="ic">04</div><b>リアクションで返事をする</b><span>「いいね」「拍手」ボタンを使う</span></div>
+  </div>
+  <div class="foot">5 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>注意事項（いちばん大事なポイント）</h2>
+  <div class="three">
+    <div class="col c-ng"><h3>✕ してはいけない</h3><ul>
+      <li>個人での録音・撮影</li>
+      <li>内容をすべて書き出して公開</li>
+      <li>第三者への転載（※途中で途切れている）</li></ul></div>
+    <div class="col c-ok"><h3>◯ 歓迎</h3><ul>
+      <li>感想のシェア</li>
+      <li>SNSへの投稿（感想レベル）</li></ul></div>
+    <div class="col c-gift"><h3>★ 特典</h3><ul>
+      <li>アーカイブ（録画）が後で配られる</li>
+      <li>そのため個人での録音は不要、との説明</li></ul></div>
+  </div>
+  <p class="reason">禁止の理由：「機密性の高い内容を扱うため」
+    （原文「人性がね高い」→「機密性」の誤変換と<b>解釈</b>）</p>
+  <div class="foot">6 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>確認できないこと</h2>
+  <ul class="plain">
+    <li>セミナーのテーマや本題の内容 —— 文字起こしに含まれていない</li>
+    <li>主催会社の正式名称 —— 誤変換のため分からない</li>
+    <li>文末「他のね 認定の3カ所の方の…」の意味 —— 途中で途切れている</li>
+  </ul>
+  <div class="foot">7 / 8</div>
+</section>
+
+<section class="slide">
+  <h2>まとめと次のステップ</h2>
+  <div class="box" style="background:#fff;border:2px solid #cbd2d9">
+    <p><b>まとめ：</b>冒頭部分は「お礼 → 講師紹介 → 参加姿勢 → Zoomでの交流 → 注意事項」の構成。<br>
+    特に重要なのは<b>録音・撮影の禁止</b>と<b>アーカイブが特典として配られること</b>。</p>
+  </div>
+  <div class="box" style="background:#e4eef3;margin-top:30px">
+    <p><b>次のステップ：</b>本題を含む文字起こしの全文を共有していただければ、主張・手順・数値を同じ形式で図解できます。数値や事実についての発言は、公的な情報源と照らし合わせ、出典を付けて確認します。</p>
+  </div>
+  <div class="foot">8 / 8</div>
+</section>
+</body></html>
