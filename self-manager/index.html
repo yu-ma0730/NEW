@@ -2,166 +2,330 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Self OS — 自分をマネジメントする</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Self OS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
 <style>
+  /* Layout: 上に固定ナビ、1カラムの作業面。今やる1件(Focus)を一番強く、他は静かに。 */
   :root {
-    --bg: #f6f4ef; --panel: #ffffff; --ink: #1f2328; --muted: #6b6f76;
-    --line: #e4e0d8; --accent: #2f6f5e; --accent-soft: #e3efe9;
-    --warn: #b4552d; --warn-soft: #f8e7df; --focus: #1d4e89;
+    --bg: #f1f4f3; --panel: #ffffff; --ink: #17201d; --muted: #5d6a66;
+    --line: #dbe3e0; --accent: #1d6b58; --accent-ink: #ffffff; --accent-soft: #dcede7;
+    --focus: #2a4d9b; --warn: #a8461f; --warn-soft: #f7e3da; --ok: #2f7a3e;
+    --purpose: #6b4c9a; --shadow: 0 1px 2px rgba(23, 32, 29, .06);
+    --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
     --radius: 12px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #15171a; --panel: #1e2125; --ink: #e8e6e1; --muted: #9a9ea5;
-      --line: #2e3238; --accent: #6fbfa5; --accent-soft: #23352f;
-      --warn: #e08a63; --warn-soft: #3a2a23; --focus: #7fb0ec;
+      --bg: #121816; --panel: #1a221f; --ink: #e6ece9; --muted: #98a6a1;
+      --line: #2b3632; --accent: #5cc0a2; --accent-ink: #0d1a16; --accent-soft: #1f3a32;
+      --focus: #86aef0; --warn: #ec9168; --warn-soft: #3d2a21; --ok: #7fcf8c;
+      --purpose: #b89be6; --shadow: none; color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121816; --panel: #1a221f; --ink: #e6ece9; --muted: #98a6a1;
+    --line: #2b3632; --accent: #5cc0a2; --accent-ink: #0d1a16; --accent-soft: #1f3a32;
+    --focus: #86aef0; --warn: #ec9168; --warn-soft: #3d2a21; --ok: #7fcf8c;
+    --purpose: #b89be6; --shadow: none; color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.6 system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
-  header { position: sticky; top: 0; z-index: 5; background: var(--bg);
+    font: 15px/1.7 var(--font-body); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+    z-index: 10; background: var(--bg); }
+  .wrap { max-width: 960px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
     border-bottom: 1px solid var(--line); }
-  .bar { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex;
-    align-items: center; gap: 16px; flex-wrap: wrap; }
-  .logo { font-weight: 700; letter-spacing: .02em; }
+  .bar { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding-block: 10px; }
+  .logo { font: 700 18px/1 var(--font-display); letter-spacing: .02em; }
   .logo span { color: var(--accent); }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; }
-  nav button { background: none; border: 0; color: var(--muted); padding: 6px 12px;
-    border-radius: 999px; cursor: pointer; font: inherit; }
-  nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  main { max-width: 960px; margin: 0 auto; padding: 20px 16px 80px; }
-  h2 { font-size: 18px; margin: 0 0 12px; }
+  nav { display: flex; gap: 2px; order: 3; flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; }
+  nav::-webkit-scrollbar { display: none; }
+  nav a { color: var(--muted); padding: 5px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; flex: none; }
+  .sync { margin-left: auto; }
+  @media (min-width: 880px) { nav { order: 0; flex: 1 1 auto; margin-inline: 0; } }
+  nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  nav a:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+  textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sync { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.cloud { background: var(--ok); } .dot.local { background: var(--focus); } .dot.none { background: var(--warn); }
+  main { padding-block: 20px 80px; display: flex; flex-direction: column; gap: 16px; }
+  h1, h2 { font-family: var(--font-display); text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  p { margin: 0; }
   .muted { color: var(--muted); font-size: 13px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 16px; margin-bottom: 16px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
   input, textarea, select { font: inherit; color: inherit; background: var(--bg);
-    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
   textarea { min-height: 72px; resize: vertical; }
-  button.btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-    border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
-  button.btn:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.ghost { border-color: transparent; background: none; color: var(--muted); padding: 4px 8px; }
+  .btn { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .btn.danger { color: var(--warn); }
+  .btn.danger.primary { background: var(--warn); border-color: var(--warn); color: var(--panel); }
+  .ghost { font: inherit; font-size: 13px; border: 0; background: none; color: var(--muted); padding: 4px 6px;
+    cursor: pointer; border-radius: 6px; }
+  .ghost:hover { color: var(--ink); background: var(--bg); }
   button:disabled { opacity: .5; cursor: default; }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .row > input { flex: 1; min-width: 0; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > input, .row > .grow { flex: 1 1 180px; min-width: 0; }
+  .end { justify-content: flex-end; }
+  .between { justify-content: space-between; }
   .focus-card { border: 2px solid var(--focus); }
-  .focus-title { font-size: 22px; font-weight: 700; margin: 6px 0 4px; word-break: break-word; }
-  .crumb { color: var(--muted); font-size: 13px; }
-  .empty { color: var(--muted); padding: 12px 0; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--focus); font-weight: 700; }
+  .focus-title { font: 700 clamp(20px, 4.5vw, 26px)/1.4 var(--font-display); word-break: break-word; }
+  .crumb { color: var(--muted); font-size: 12px; word-break: break-word; }
+  .empty { color: var(--muted); }
   ul.list { list-style: none; padding: 0; margin: 0; }
   ul.list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
   ul.list li:first-child { border-top: 0; }
   .grow { flex: 1; min-width: 0; word-break: break-word; }
-  .done .grow { text-decoration: line-through; color: var(--muted); }
-  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .done .grow, .done .title { text-decoration: line-through; color: var(--muted); }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; padding: 0; }
   .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft);
-    color: var(--accent); white-space: nowrap; }
+    color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .tag.warn { background: var(--warn-soft); color: var(--warn); }
   .progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
   .progress > i { display: block; height: 100%; background: var(--accent); }
+  .stats { display: flex; gap: 12px 40px; flex-wrap: wrap; }
+  .stat { font: 700 28px/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
   /* tree */
-  .node { margin-left: 18px; border-left: 1px dashed var(--line); padding-left: 12px; }
+  .node { margin-left: 14px; border-left: 1px dashed var(--line); padding-left: 10px; }
   .node.root { margin-left: 0; border-left: 0; padding-left: 0; }
-  .nrow { display: flex; align-items: center; gap: 8px; padding: 5px 0; flex-wrap: wrap; }
-  .nrow .title { flex: 1; min-width: 140px; word-break: break-word; }
+  .node.root + .node.root { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+  .nrow { display: flex; align-items: center; gap: 6px 8px; padding: 4px 0; flex-wrap: wrap; }
+  .nrow .title { flex: 1 1 160px; min-width: 0; word-break: break-word; }
   .type { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex: none; }
-  .type.purpose { background: #6a4c93; color: #fff; }
-  .type.goal { background: var(--focus); color: #fff; }
+  .type.purpose { background: var(--purpose); color: var(--panel); }
+  .type.goal { background: var(--focus); color: var(--panel); }
   .type.todo { background: var(--line); color: var(--ink); }
-  .nrow .pbar { width: 80px; }
-  .actions { display: flex; gap: 2px; }
-  .chat { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; margin-bottom: 12px; }
+  .pbar { width: 72px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .twisty { width: 24px; flex: none; }
+  .addchild { margin: 4px 0 8px 24px; }
+  .addchild select { width: auto; }
+  /* coach */
+  .chat { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; }
   .msg { padding: 10px 12px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; }
   .msg.user { background: var(--accent-soft); align-self: flex-end; max-width: 85%; }
   .msg.ai { background: var(--bg); border: 1px solid var(--line); max-width: 92%; }
-  .stat { font-size: 28px; font-weight: 700; }
+  label { display: block; font-size: 13px; color: var(--muted); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .check { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+  /* help */
+  details { border-top: 1px solid var(--line); padding: 10px 0; }
+  details:first-of-type { border-top: 0; }
+  summary { cursor: pointer; font-weight: 700; }
+  details > div { padding-top: 6px; color: var(--ink); }
+  details ol, details ul { margin: 6px 0 0; padding-left: 20px; }
+  table.diag { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.diag th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 12px 6px 0; white-space: nowrap; vertical-align: top; width: 1%; }
+  table.diag td { padding: 6px 0; word-break: break-word; }
+  table.diag tr + tr { border-top: 1px solid var(--line); }
+  .ok { color: var(--ok); } .ng { color: var(--warn); }
+  pre.report { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+    white-space: pre-wrap; word-break: break-word; font-size: 12px; margin: 0; max-height: 240px; overflow: auto; }
+  .notice { background: var(--warn-soft); color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
   dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
     color: var(--ink); width: min(520px, calc(100% - 32px)); padding: 20px; }
-  dialog::backdrop { background: rgba(0,0,0,.35); }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink);
-    color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  dialog::backdrop { background: rgba(0, 0, 0, .4); }
+  dialog form { display: flex; flex-direction: column; gap: 10px; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink);
+    color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; opacity: 0;
+    transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
   .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 </head>
 <body>
 <header>
-  <div class="bar">
+  <div class="wrap bar">
     <div class="logo">Self<span>OS</span></div>
-    <nav id="nav">
-      <button data-view="today" aria-current="page">今日</button>
-      <button data-view="tree">ゴールツリー</button>
-      <button data-view="coach">壁打ち・振り返り</button>
-      <button data-view="settings">設定</button>
+    <nav id="nav" aria-label="画面">
+      <a href="#today">今日</a>
+      <a href="#goals">ゴールツリー</a>
+      <a href="#review">壁打ち・振り返り</a>
+      <a href="#prefs">設定</a>
+      <a href="#help">ヘルプ・お問い合わせ</a>
     </nav>
+    <a class="sync" id="syncBadge" href="#help" title="保存の状態（ヘルプで詳しく見られます）"><span class="dot" id="syncDot"></span><span id="syncText">読み込み中</span></a>
   </div>
 </header>
 
-<main id="app"></main>
+<main class="wrap" id="app"></main>
 
 <dialog id="editDlg">
   <form method="dialog" id="editForm">
-    <h2 id="editHead">編集</h2>
-    <label for="fTitle">タイトル</label>
-    <input id="fTitle" required>
-    <label for="fType">種類</label>
-    <select id="fType">
-      <option value="purpose">目的（なぜやるか）</option>
-      <option value="goal">ゴール（何を達成するか）</option>
-      <option value="todo">ToDo（具体的な行動）</option>
-    </select>
-    <label for="fDue">期限</label>
-    <input id="fDue" type="date">
-    <label for="fNote">メモ</label>
-    <textarea id="fNote"></textarea>
-    <div class="row" style="justify-content:flex-end;margin-top:16px">
+    <h2>編集</h2>
+    <div class="field"><label for="fTitle">タイトル</label><input id="fTitle" required></div>
+    <div class="field"><label for="fType">種類</label>
+      <select id="fType">
+        <option value="purpose">目的（なぜやるか）</option>
+        <option value="goal">ゴール（何を達成するか）</option>
+        <option value="todo">ToDo（具体的な行動）</option>
+      </select></div>
+    <div class="field"><label for="fDue">期限</label><input id="fDue" type="date"></div>
+    <div class="field"><label for="fNote">メモ</label><textarea id="fNote"></textarea></div>
+    <div class="row end">
       <button class="btn" value="cancel" formnovalidate>キャンセル</button>
       <button class="btn primary" value="ok">保存</button>
     </div>
   </form>
 </dialog>
 
-<div class="toast" id="toast"></div>
+<dialog id="askDlg">
+  <form method="dialog">
+    <p id="askMsg"></p>
+    <div class="row end">
+      <button class="btn" value="no">やめる</button>
+      <button class="btn danger primary" value="yes" id="askOk">削除する</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 'use strict';
+const APP_VERSION = '1.1.0';
 const STORE_KEY = 'selfos.v1';
 const DAILY_LIMIT = 3;
-const MODEL = 'claude-sonnet-5-5';
+const CHAT_KEEP = 40; // クラウド保存の容量を超えないよう、会話は直近だけ残す
+const API_MODEL = 'claude-sonnet-5-5';
+const REPO_URL = 'https://github.com/yu-ma0730/NEW';
+const VIEWS = ['today', 'goals', 'review', 'prefs', 'help'];
+const TYPE_LABEL = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' };
 
-// ---------- state ----------
-const blank = () => ({ nodes: [], journal: [], chat: [], settings: { apiKey: '' } });
-let state = load();
-let view = 'today';
+// ---------- 環境 ----------
+// claude.ai 上で開いたときだけ window.claude.use がある。通常のブラウザでは無い。
+const hasClaude = !!(window.claude && typeof window.claude.use === 'function');
+const caps = { db: null, user: null, sample: null, downloads: null, comments: null };
 
-function load() {
+// ---------- 状態 ----------
+const blank = () => ({ nodes: [], journal: [], chat: [], updatedAt: 0 });
+let localOk = true;
+let apiKey = '';
+let state = loadLocal();
+let view = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'today';
+const sync = { mode: 'local', lastSaved: 0, error: '' }; // mode: connecting | cloud | local | none
+
+function loadLocal() {
   try {
+    apiKey = localStorage.getItem(STORE_KEY + '.key') || '';
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return Object.assign(blank(), JSON.parse(raw));
-  } catch (e) { /* storage unavailable */ }
+    if (raw) {
+      const s = Object.assign(blank(), JSON.parse(raw));
+      delete s.settings; // 旧版はAPIキーを本体に入れていた
+      return s;
+    }
+  } catch (e) { localOk = false; }
   return blank();
 }
+function saveLocal() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }
+  catch (e) { localOk = false; return false; }
+}
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  state.updatedAt = Date.now();
+  state.chat = state.chat.slice(-CHAT_KEEP);
+  const ok = saveLocal();
+  if (cloud.ref && cloud.writable) scheduleCloudWrite();
+  else { sync.mode = ok ? 'local' : 'none'; if (ok) sync.lastSaved = Date.now(); }
+  renderSync();
 }
 
+// ---------- クラウド保存（claude.ai 上で、サインインして書き込める人だけ） ----------
+const cloud = { ref: null, writable: true, timer: 0, writing: null, dirty: false, gotFirst: false };
+
+async function initCloud() {
+  if (!hasClaude) return;
+  sync.mode = 'connecting'; renderSync();
+  const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+  caps.db = db; caps.user = user;
+  const id = user ? await user.id() : null;
+  if (!db || !id) { sync.mode = localOk ? 'local' : 'none'; renderSync(); return; }
+  if (user && (await user.can('data.write')) === false) cloud.writable = false;
+  cloud.ref = db.doc('data/users/' + id + '/selfos');
+  const timeout = setTimeout(() => {
+    if (!cloud.gotFirst) { sync.error = 'クラウドに接続できません。このブラウザに保存しています。'; sync.mode = localOk ? 'local' : 'none'; renderSync(); }
+  }, 10000);
+  cloud.ref.onSnapshot(snap => {
+    if (snap.metadata.fromCache && !snap.exists) return;
+    if (!snap.metadata.fromCache) { clearTimeout(timeout); cloud.gotFirst = true; sync.error = ''; }
+    const remote = snap.exists ? snap.data() : null;
+    if (remote && !snap.metadata.hasPendingWrites && !cloud.dirty && (remote.updatedAt || 0) > state.updatedAt) {
+      state = Object.assign(blank(), JSON.parse(JSON.stringify(remote)));
+      saveLocal();
+      if (!isTyping()) render();
+    } else if (!snap.metadata.fromCache && cloud.writable && (!remote || (remote.updatedAt || 0) < state.updatedAt) && hasData()) {
+      scheduleCloudWrite(); // 手元のほうが新しい（または初回）ならクラウドへ送る
+    }
+    if (cloud.writable) { sync.mode = 'cloud'; if (!sync.lastSaved) sync.lastSaved = (remote && remote.updatedAt) || Date.now(); }
+    else sync.mode = localOk ? 'local' : 'none';
+    renderSync();
+  }, err => {
+    clearTimeout(timeout);
+    sync.error = 'クラウド保存が止まりました（' + err.code + '）。このブラウザに保存しています。';
+    cloud.ref = null; sync.mode = localOk ? 'local' : 'none'; renderSync();
+  });
+}
+const hasData = () => state.nodes.length || state.journal.length || state.chat.length;
+
+function scheduleCloudWrite() {
+  cloud.dirty = true;
+  sync.mode = 'cloud';
+  clearTimeout(cloud.timer);
+  cloud.timer = setTimeout(writeCloud, 700);
+}
+async function writeCloud() {
+  if (cloud.writing) { await cloud.writing; }
+  if (!cloud.ref || !cloud.dirty) return;
+  cloud.dirty = false;
+  const body = JSON.parse(JSON.stringify(state));
+  cloud.writing = cloud.ref.set(body).then(() => {
+    sync.lastSaved = Date.now(); sync.error = '';
+  }).catch(err => {
+    if (err.code === 'unavailable') { cloud.dirty = true; setTimeout(writeCloud, 1500 + Math.random() * 1500); return; }
+    cloud.writable = false;
+    sync.mode = localOk ? 'local' : 'none';
+    sync.error = err.code === 'quota_exceeded'
+      ? 'クラウドの容量がいっぱいです。古い振り返りや壁打ちの履歴を消してください。今はこのブラウザに保存しています。'
+      : 'クラウドに保存できません（' + err.code + '）。このブラウザに保存しています。';
+    toast(sync.error);
+  }).finally(() => { cloud.writing = null; renderSync(); });
+}
+function isTyping() {
+  const a = document.activeElement;
+  return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox';
+}
+
+// ---------- データ操作 ----------
 let orderSeq = 0;
 const nextOrder = () => (orderSeq = Math.max(Date.now(), orderSeq + 1)); // 単調増加（同じミリ秒でも順序を保つ）
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-const today = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD in local time
+const dateStr = d => d.toLocaleDateString('sv-SE'); // ローカル時刻の YYYY-MM-DD
+const today = () => dateStr(new Date());
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const byId = id => state.nodes.find(n => n.id === id);
 const children = id => state.nodes.filter(n => n.parentId === id).sort((a, b) => a.order - b.order);
-const roots = () => children(null);
 
 function addNode(parentId, title, type, extra = {}) {
-  const n = { id: uid(), parentId, title: title.trim(), type, done: false, due: '', note: '',
+  const n = { id: uid(), parentId, title: String(title).trim(), type, done: false, due: '', note: '',
     focusDate: '', order: nextOrder(), created: nextOrder(), doneAt: 0, ...extra };
   state.nodes.push(n);
   return n;
@@ -194,76 +358,96 @@ function path(node) {
   while (cur) { p.unshift(cur.title); cur = byId(cur.parentId); }
   return p.join(' › ');
 }
-function setDone(node, done) {
-  node.done = done;
-  node.doneAt = done ? Date.now() : 0;
-}
+function setDone(node, done) { node.done = done; node.doneAt = done ? Date.now() : 0; }
 
-// ---------- focus logic ----------
+// ---------- フォーカスの決め方 ----------
 const openTodos = () => state.nodes.filter(n => n.type === 'todo' && !n.done);
 const isOverdue = n => n.due && n.due < today();
-
 function rank(a, b) {
-  // 今日のフォーカス > 期限切れ > 期限が近い > 期限なし > 作成順
+  // 今日やると決めたもの > 期限が早いもの（期限切れ含む） > 期限なし > 古いもの
   const fa = a.focusDate === today() ? 0 : 1, fb = b.focusDate === today() ? 0 : 1;
   if (fa !== fb) return fa - fb;
   const da = a.due || '9999', db = b.due || '9999';
   if (da !== db) return da < db ? -1 : 1;
   return a.created - b.created;
 }
+const sessionSkip = new Set();
 function focusTodo() {
-  const skipped = sessionSkip;
   const list = openTodos().sort(rank);
-  return list.find(n => !skipped.has(n.id)) || list[0] || null;
+  return list.find(n => !sessionSkip.has(n.id)) || list[0] || null;
 }
-let sessionSkip = new Set();
-
 const dailyList = () => state.nodes.filter(n => n.type === 'todo' && n.focusDate === today()).sort(rank);
-
 function autoPickDaily() {
   const cur = dailyList().filter(n => !n.done);
-  const pool = openTodos().filter(n => n.focusDate !== today()).sort(rank);
-  for (const n of pool) {
+  for (const n of openTodos().filter(n => n.focusDate !== today()).sort(rank)) {
     if (cur.length >= DAILY_LIMIT) break;
     n.focusDate = today();
     cur.push(n);
   }
-  return cur.length;
+}
+function streak() {
+  const days = new Set(state.nodes.filter(n => n.doneAt).map(n => dateStr(new Date(n.doneAt))));
+  let count = 0;
+  const d = new Date();
+  if (!days.has(dateStr(d))) d.setDate(d.getDate() - 1);
+  while (days.has(dateStr(d))) { count++; d.setDate(d.getDate() - 1); }
+  return count;
 }
 
-// ---------- AI (optional) ----------
-async function askClaude(system, messages, maxTokens = 1500) {
-  const key = state.settings.apiKey;
-  if (!key) throw new Error('NO_KEY');
+// ---------- AI ----------
+// claude.ai 上: sample 機能（APIキー不要）。通常のブラウザ: 設定したAPIキーで直接呼ぶ。
+const aiMode = () => caps.sample ? 'claude' : (!hasClaude && apiKey ? 'apikey' : 'none');
+
+async function askAI(turns, { json = false, onText } = {}) {
+  if (caps.sample) {
+    try {
+      if (json) return await caps.sample.json(turns, { modelTier: 'default' });
+      const { text } = await caps.sample(turns, { cache: false, onText: onText ? ({ text }) => onText(text) : undefined });
+      return text;
+    } catch (e) {
+      if (e.code === 'not_granted') { caps.sample = null; throw new Error('AIの利用が許可されていません。ヘルプの「AIが動かない」を見てください'); }
+      if (e.code === 'rate_limited') throw new Error('AIへの問い合わせが多すぎます。少し待ってからもう一度押してください');
+      throw new Error(e.message || e.code || 'AIでエラーが起きました');
+    }
+  }
+  if (!apiKey) throw new Error('AIが使えない状態です');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages })
+    headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: API_MODEL, max_tokens: 2000, messages: mergeTurns(turns) })
   });
-  if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
+  if (!res.ok) throw new Error(res.status === 401 ? 'APIキーが正しくありません（401）' : 'APIエラー ' + res.status);
   const data = await res.json();
-  return data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+  const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+  if (!json) return text;
+  const m = text.match(/[[{][\s\S]*[\]}]/);
+  if (!m) throw new Error('AIの返事を読み取れませんでした。もう一度押してください');
+  return JSON.parse(m[0]);
+}
+// Messages API は user/assistant が交互である必要があるので、連続する同じ役割をまとめる
+function mergeTurns(turns) {
+  const out = [];
+  for (const t of typeof turns === 'string' ? [{ role: 'user', content: turns }] : turns) {
+    const last = out[out.length - 1];
+    if (last && last.role === t.role) last.content += '\n\n' + t.content;
+    else out.push({ role: t.role, content: t.content });
+  }
+  return out;
 }
 
 function treeOutline() {
   const lines = [];
   const walk = (id, depth) => {
     for (const n of children(id)) {
-      const label = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' }[n.type];
-      lines.push('  '.repeat(depth) + `- [${label}${n.type === 'todo' ? (n.done ? '/完了' : '/未完') : ''}] ${n.title}${n.due ? ' (期限 ' + n.due + ')' : ''}`);
+      lines.push('  '.repeat(depth) + `- [${TYPE_LABEL[n.type]}${n.type === 'todo' ? (n.done ? '/完了' : '/未完') : ''}] ${n.title}${n.due ? '（期限 ' + n.due + '）' : ''}`);
       walk(n.id, depth + 1);
     }
   };
   walk(null, 0);
-  return lines.join('\n') || '(まだ何も登録されていません)';
+  return lines.join('\n') || '（まだ何も登録されていません）';
 }
 
-// AI なしの場合のテンプレート分解（汎用的な段取りの型）
 function templateBreakdown(title) {
   return [
     { title: `「${title}」の現状と完成形をはっきりさせる`, todos: ['達成できた状態を1文で書く', '今の自分との差を3つ書き出す', '使える時間・お金・人を棚卸しする'] },
@@ -271,45 +455,59 @@ function templateBreakdown(title) {
     { title: '続ける仕組みを作り、振り返る', todos: ['毎週の振り返り日時を決める', '進捗を測る指標を1つ決める', '1週間後に計画を見直す'] }
   ];
 }
-
 async function breakdown(node) {
-  let plan;
-  if (state.settings.apiKey) {
-    const sys = 'あなたは目標達成コーチです。ユーザーの目標を、達成に必要な中間ゴール（3〜5個）と、それぞれの具体的なToDo（各2〜4個、1つ30分〜2時間で終わる粒度、動詞で始める）に分解してください。出力はJSONのみ: [{"title":"中間ゴール","todos":["ToDo",...]}, ...]';
-    const ctx = `分解する対象: ${node.title}\n上位: ${path(node) || 'なし'}\nメモ: ${node.note || 'なし'}\n既存のツリー:\n${treeOutline()}`;
-    const text = await askClaude(sys, [{ role: 'user', content: ctx }]);
-    const m = text.match(/\[[\s\S]*\]/);
-    if (!m) throw new Error('AIの応答を解釈できませんでした');
-    plan = JSON.parse(m[0]);
+  let plan, usedAI = false;
+  if (aiMode() !== 'none') {
+    const prompt = 'あなたは目標達成コーチです。次の目標を、達成に必要な中間ゴール（3〜5個）と、それぞれの具体的なToDo（各2〜4個、1つ30分〜2時間で終わる粒度、動詞で終わる日本語）に分解してください。\n'
+      + '出力はJSONの配列だけ: [{"title":"中間ゴール","todos":["ToDo", "..."]}]\n\n'
+      + `分解する目標: ${node.title}\n上位の目的・ゴール: ${path(node) || 'なし'}\nメモ: ${node.note || 'なし'}\n今のゴールツリー:\n${treeOutline()}`;
+    const out = await askAI(prompt, { json: true });
+    if (!Array.isArray(out) || !out.length) throw new Error('AIの返事を読み取れませんでした。もう一度押してください');
+    plan = out; usedAI = true;
   } else {
     plan = templateBreakdown(node.title);
   }
-  for (const g of plan) {
-    const sub = addNode(node.id, String(g.title), 'goal');
-    for (const t of g.todos || []) addNode(sub.id, String(t), 'todo');
+  for (const g of plan.slice(0, 6)) {
+    if (!g || !g.title) continue;
+    const sub = addNode(node.id, String(g.title).slice(0, 200), 'goal');
+    for (const t of (Array.isArray(g.todos) ? g.todos : []).slice(0, 6)) addNode(sub.id, String(t).slice(0, 200), 'todo');
   }
   save();
+  return usedAI;
 }
 
-// ---------- rendering ----------
+// ---------- 表示 ----------
 const app = document.getElementById('app');
+let collapsed = new Set();
+let addingTo = null;
+let busy = new Set();
+let chatPending = '';
 
 function render() {
-  document.querySelectorAll('#nav button').forEach(b => {
-    if (b.dataset.view === view) b.setAttribute('aria-current', 'page');
-    else b.removeAttribute('aria-current');
+  document.querySelectorAll('#nav a').forEach(a => {
+    if (a.getAttribute('href') === '#' + view) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
   });
-  ({ today: renderToday, tree: renderTree, coach: renderCoach, settings: renderSettings })[view]();
+  ({ today: renderToday, goals: renderTree, review: renderCoach, prefs: renderPrefs, help: renderHelp })[view]();
+  renderSync();
+}
+
+function syncLabel() {
+  return { connecting: 'クラウドに接続中', cloud: 'クラウドに保存', local: 'このブラウザに保存', none: '保存できていません' }[sync.mode];
+}
+function renderSync() {
+  document.getElementById('syncDot').className = 'dot ' + (sync.mode === 'connecting' ? '' : sync.mode);
+  document.getElementById('syncText').textContent = syncLabel() + (sync.error ? '（注意）' : '');
+  if (view === 'help') { const d = document.getElementById('diagBody'); if (d) d.innerHTML = diagRows(); updateReport(); }
 }
 
 function todoItem(n, opts = {}) {
-  const tags = [];
-  if (n.due) tags.push(`<span class="tag ${isOverdue(n) && !n.done ? 'warn' : ''}">${isOverdue(n) && !n.done ? '期限切れ ' : ''}${esc(n.due)}</span>`);
+  const late = isOverdue(n) && !n.done;
   return `<li class="${n.done ? 'done' : ''}">
-    <input type="checkbox" data-act="toggle" data-id="${n.id}" ${n.done ? 'checked' : ''} aria-label="完了">
-    <div class="grow">${esc(n.title)}<div class="crumb">${esc(path(n))}</div></div>
-    ${tags.join('')}
-    ${opts.unfocus ? `<button class="ghost" data-act="unfocus" data-id="${n.id}" title="今日から外す">✕</button>` : ''}
+    <input type="checkbox" data-act="toggle" data-id="${n.id}" ${n.done ? 'checked' : ''} aria-label="「${esc(n.title)}」を完了にする">
+    <div class="grow">${esc(n.title)}${path(n) ? `<div class="crumb">${esc(path(n))}</div>` : ''}</div>
+    ${n.due ? `<span class="tag ${late ? 'warn' : ''}">${late ? '期限切れ ' : ''}${esc(n.due.slice(5).replace('-', '/'))}</span>` : ''}
+    ${opts.unfocus ? `<button class="ghost" data-act="unfocus" data-id="${n.id}" aria-label="今日から外す">外す</button>` : ''}
     ${opts.focus ? `<button class="btn" data-act="focus" data-id="${n.id}">今日やる</button>` : ''}
   </li>`;
 }
@@ -317,122 +515,109 @@ function todoItem(n, opts = {}) {
 function renderToday() {
   const f = focusTodo();
   const daily = dailyList();
-  const doneToday = state.nodes.filter(n => n.type === 'todo' && n.done && new Date(n.doneAt).toLocaleDateString('sv-SE') === today()).length;
+  const doneToday = state.nodes.filter(n => n.type === 'todo' && n.done && dateStr(new Date(n.doneAt)) === today()).length;
   const candidates = openTodos().filter(n => n.focusDate !== today()).sort(rank).slice(0, 8);
-  const d = new Date();
+  const first = !state.nodes.length;
   app.innerHTML = `
-    <p class="muted">${d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
-
-    <section class="card focus-card">
-      <div class="muted">Focus ToDo — 今この瞬間にやること</div>
+    <p class="muted">${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
+    ${first ? `<section class="card">
+      <h2>はじめに</h2>
+      <ol class="steps">
+        <li>「ゴールツリー」でやりたいことを1つ書く</li>
+        <li>「分解」を押して、中間ゴールとToDoを作る</li>
+        <li>毎日はこの画面で「今やること」を1つずつ片付ける</li>
+      </ol>
+      <div class="row"><a class="btn primary" href="#goals">やりたいことを書く</a><button class="btn" data-act="sample">例を入れて試す</button><a class="btn" href="#help">使い方を詳しく見る</a></div>
+    </section>` : ''}
+    <section class="card focus-card" aria-labelledby="focusHead">
+      <div class="eyebrow" id="focusHead">いま、やること</div>
       ${f ? `
         <div class="focus-title">${esc(f.title)}</div>
-        <div class="crumb">${esc(path(f)) || 'ゴールなし'}</div>
+        <div class="crumb">${esc(path(f)) || 'ゴールに属さないToDo'}</div>
         ${f.note ? `<p>${esc(f.note)}</p>` : ''}
-        <div class="row" style="margin-top:12px">
+        <div class="row">
           <button class="btn primary" data-act="done-focus" data-id="${f.id}">完了した</button>
           <button class="btn" data-act="skip" data-id="${f.id}">あとで</button>
-        </div>` : `
-        <div class="empty">未完了のToDoはありません。ゴールツリーで目標を追加して、分解してみましょう。</div>
-        <button class="btn primary" data-go="tree">ゴールを追加する</button>`}
+        </div>` : `<p class="empty">未完了のToDoはありません。ゴールツリーで目標を追加して、分解してみましょう。</p>`}
     </section>
 
     <div class="grid">
       <section class="card">
-        <div class="row" style="justify-content:space-between">
-          <h2>Daily Focus（今日の${DAILY_LIMIT}つ）</h2>
-          <button class="btn" data-act="autopick">自動で選ぶ</button>
-        </div>
+        <div class="row between"><h2>今日の${DAILY_LIMIT}つ</h2><button class="btn" data-act="autopick">自動で選ぶ</button></div>
         ${daily.length ? `<ul class="list">${daily.map(n => todoItem(n, { unfocus: true })).join('')}</ul>`
-          : `<div class="empty">まだ選ばれていません。「自動で選ぶ」で期限が近い順に${DAILY_LIMIT}つ選びます。</div>`}
-        <form class="row" id="quickAdd" style="margin-top:12px">
-          <input name="t" placeholder="今日やることを直接追加" aria-label="今日やることを追加">
+          : `<p class="empty">まだ選ばれていません。「自動で選ぶ」を押すと、期限が近い順に${DAILY_LIMIT}つ選びます。</p>`}
+        <form class="row" data-form="quick">
+          <input name="t" id="quickInput" placeholder="今日やることを直接追加" aria-label="今日やることを追加" maxlength="200">
           <button class="btn">追加</button>
         </form>
       </section>
-
       <section class="card">
-        <h2>候補</h2>
+        <h2>次の候補</h2>
         ${candidates.length ? `<ul class="list">${candidates.map(n => todoItem(n, { focus: true })).join('')}</ul>`
-          : `<div class="empty">候補はありません。</div>`}
+          : `<p class="empty">候補はありません。</p>`}
       </section>
     </div>
 
     <section class="card">
       <h2>今日の記録</h2>
-      <div class="row" style="gap:32px;flex-wrap:wrap">
+      <div class="stats">
         <div><div class="stat">${doneToday}</div><div class="muted">今日完了したToDo</div></div>
         <div><div class="stat">${openTodos().length}</div><div class="muted">残りのToDo</div></div>
-        <div><div class="stat">${streak()}</div><div class="muted">連続達成日数</div></div>
+        <div><div class="stat">${streak()}<small style="font-size:14px">日</small></div><div class="muted">連続で何か完了した日数</div></div>
       </div>
     </section>`;
-
-  app.querySelector('#quickAdd').onsubmit = e => {
-    e.preventDefault();
-    const t = e.target.t.value.trim();
-    if (!t) return;
-    addNode(null, t, 'todo', { focusDate: today() });
-    save(); render();
-  };
 }
-
-function streak() {
-  const days = new Set(state.nodes.filter(n => n.doneAt).map(n => new Date(n.doneAt).toLocaleDateString('sv-SE')));
-  let count = 0;
-  const d = new Date();
-  if (!days.has(d.toLocaleDateString('sv-SE'))) d.setDate(d.getDate() - 1);
-  while (days.has(d.toLocaleDateString('sv-SE'))) { count++; d.setDate(d.getDate() - 1); }
-  return count;
-}
-
-let collapsed = new Set();
 
 function renderTree() {
-  const ai = !!state.settings.apiKey;
+  const ai = aiMode();
+  const roots = children(null);
   app.innerHTML = `
     <section class="card">
-      <h2>やりたいことを入力</h2>
-      <p class="muted">目的 → ゴール → ToDo の順に分解します。「分解」ボタンで${ai ? 'AI（Claude）' : 'テンプレート'}が中間ゴールとToDoを作ります${ai ? '' : '（設定でAPIキーを入れるとAIで分解）'}。</p>
-      <form class="row" id="addRoot">
+      <h2>やりたいことを書く</h2>
+      <p class="muted">目的（なぜ）→ ゴール（何を）→ ToDo（具体的な行動）の順に分けます。
+        「分解」を押すと${ai === 'none' ? '決まった型（テンプレート）で' : 'AIが'}中間ゴールとToDoを作ります。${ai === 'none' ? (hasClaude ? 'AIはこのページで許可されていないため使えません。' : '設定でAPIキーを入れるとAIで分解します。') : ''}</p>
+      <form class="row" data-form="root">
         <select name="type" style="width:auto" aria-label="種類">
           <option value="purpose">目的</option>
           <option value="goal" selected>ゴール</option>
           <option value="todo">ToDo</option>
         </select>
-        <input name="t" placeholder="例：半年で英語の会議に参加できるようになる" aria-label="タイトル">
+        <input name="t" id="rootInput" placeholder="例：半年で英語の会議に参加できるようになる" aria-label="タイトル" maxlength="200">
         <button class="btn primary">追加</button>
       </form>
     </section>
-    <section class="card" id="tree">${roots().length ? roots().map(n => nodeHtml(n, true)).join('') : '<div class="empty">まだ何もありません。</div>'}</section>`;
-
-  app.querySelector('#addRoot').onsubmit = e => {
-    e.preventDefault();
-    const t = e.target.t.value.trim();
-    if (!t) return;
-    addNode(null, t, e.target.type.value);
-    save(); render();
-  };
+    <section class="card" aria-label="ゴールツリー">
+      ${roots.length ? roots.map(n => nodeHtml(n, true)).join('') : '<p class="empty">まだ何もありません。上の欄に書いて「追加」を押してください。</p>'}
+    </section>`;
+  const add = app.querySelector('.addchild input');
+  if (add) add.focus();
 }
 
 function nodeHtml(n, root = false) {
   const kids = children(n.id);
-  const label = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' }[n.type];
   const pct = Math.round(progress(n) * 100);
   const isCol = collapsed.has(n.id);
+  const late = isOverdue(n) && !n.done;
+  const defType = n.type === 'purpose' ? 'goal' : 'todo';
   return `<div class="node ${root ? 'root' : ''}">
     <div class="nrow ${n.done ? 'done' : ''}">
-      ${kids.length ? `<button class="ghost" data-act="collapse" data-id="${n.id}" aria-label="開閉">${isCol ? '▸' : '▾'}</button>` : '<span style="width:24px"></span>'}
+      ${kids.length ? `<button class="ghost twisty" data-act="collapse" data-id="${n.id}" aria-expanded="${!isCol}" aria-label="開閉">${isCol ? '▸' : '▾'}</button>` : '<span class="twisty"></span>'}
       ${n.type === 'todo' ? `<input type="checkbox" data-act="toggle" data-id="${n.id}" ${n.done ? 'checked' : ''} aria-label="完了">` : ''}
-      <span class="type ${n.type}">${label}</span>
-      <span class="title grow">${esc(n.title)}${n.focusDate === today() && !n.done ? ' <span class="tag">今日</span>' : ''}${n.due ? ` <span class="tag ${isOverdue(n) && !n.done ? 'warn' : ''}">${esc(n.due)}</span>` : ''}</span>
-      ${n.type !== 'todo' ? `<div class="pbar"><div class="progress"><i style="width:${pct}%"></i></div><div class="muted">${pct}%</div></div>` : ''}
-      <span class="actions">
-        ${n.type !== 'todo' ? `<button class="ghost" data-act="breakdown" data-id="${n.id}" title="AIで分解">分解</button>` : ''}
-        <button class="ghost" data-act="addchild" data-id="${n.id}" title="子を追加">＋</button>
-        <button class="ghost" data-act="edit" data-id="${n.id}" title="編集">編集</button>
-        <button class="ghost" data-act="delete" data-id="${n.id}" title="削除">削除</button>
+      <span class="type ${n.type}">${TYPE_LABEL[n.type]}</span>
+      <span class="title">${esc(n.title)}${n.focusDate === today() && !n.done ? ' <span class="tag">今日</span>' : ''}${n.due ? ` <span class="tag ${late ? 'warn' : ''}">${esc(n.due)}</span>` : ''}</span>
+      ${n.type !== 'todo' ? `<div class="pbar"><div class="progress"><i style="width:${pct}%"></i></div>${pct}%</div>` : ''}
+      <span class="row" style="gap:0">
+        ${n.type !== 'todo' ? `<button class="ghost" data-act="breakdown" data-id="${n.id}" ${busy.has(n.id) ? 'disabled' : ''}>${busy.has(n.id) ? '分解中…' : '分解'}</button>` : ''}
+        <button class="ghost" data-act="addchild" data-id="${n.id}" aria-label="この下に追加">＋追加</button>
+        <button class="ghost" data-act="edit" data-id="${n.id}">編集</button>
+        <button class="ghost" data-act="delete" data-id="${n.id}">削除</button>
       </span>
     </div>
+    ${addingTo === n.id ? `<form class="row addchild" data-form="child" data-parent="${n.id}">
+      <select name="type" aria-label="種類">${['goal', 'todo'].map(t => `<option value="${t}" ${t === defType ? 'selected' : ''}>${TYPE_LABEL[t]}</option>`).join('')}</select>
+      <input name="t" placeholder="「${esc(n.title).slice(0, 20)}」の下に追加" aria-label="追加する内容" maxlength="200">
+      <button class="btn primary">追加</button><button type="button" class="ghost" data-act="canceladd">やめる</button>
+    </form>` : ''}
     ${isCol ? '' : kids.map(k => nodeHtml(k)).join('')}
   </div>`;
 }
@@ -443,35 +628,37 @@ const REFLECTION_QUESTIONS = [
   '今日できた小さな前進は？',
   '詰まっている原因は「やり方が分からない」「時間がない」「気が進まない」のどれ？',
   'やめても困らないことは何？',
-  '明日の最初の一手を15分でできる形にすると？'
+  '明日の最初の一手を、15分でできる形にすると？'
 ];
 
 function renderCoach() {
-  const ai = !!state.settings.apiKey;
-  const todayEntry = state.journal.find(j => j.date === today()) || { good: '', stuck: '', next: '' };
+  const ai = aiMode();
+  const entry = state.journal.find(j => j.date === today()) || { good: '', stuck: '', next: '' };
+  const msgs = state.chat.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'ai'}">${esc(m.content)}</div>`).join('');
   app.innerHTML = `
     <div class="grid">
       <section class="card">
         <h2>壁打ち</h2>
-        ${ai ? `<p class="muted">あなたのゴールツリーを踏まえてClaudeが相談に乗ります。</p>
-          <div class="chat" id="chat">${state.chat.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'ai'}">${esc(m.content)}</div>`).join('') || '<div class="empty">例：「今週やることが多すぎる。何から手をつけるべき？」</div>'}</div>
-          <form id="chatForm"><textarea name="t" placeholder="考えていることを書く" aria-label="メッセージ"></textarea>
-          <div class="row" style="justify-content:space-between;margin-top:8px">
-            <button type="button" class="ghost" data-act="clearchat">履歴を消す</button>
-            <button class="btn primary">送る</button></div></form>`
-        : `<p class="muted">設定でAnthropic APIキーを入れるとAIと壁打ちできます。キーがなくても、次の問いで自問できます。</p>
-          <ul class="list">${REFLECTION_QUESTIONS.map(q => `<li><span class="grow">${esc(q)}</span></li>`).join('')}</ul>
-          <button class="btn" data-go="settings" style="margin-top:12px">APIキーを設定する</button>`}
+        ${ai !== 'none' ? `<p class="muted">あなたのゴールツリーを踏まえて、AIが考えの整理を手伝います。</p>
+          <div class="chat" id="chat">${msgs || '<p class="empty">例：「今週やることが多すぎる。何から手をつけるべき？」</p>'}${chatPending ? `<div class="msg ai" id="pending">${esc(chatPending)}</div>` : ''}</div>
+          <form data-form="chat" class="stack">
+            <textarea name="t" id="chatInput" placeholder="考えていることを書く" aria-label="AIに送る内容"></textarea>
+            <div class="row between">
+              <button type="button" class="ghost" data-act="clearchat">会話を消す</button>
+              <button class="btn primary" ${chatPending ? 'disabled' : ''}>送る</button>
+            </div>
+          </form>`
+        : `<p class="muted">${hasClaude ? 'このページではAIが許可されていないため、' : '設定でAPIキーを入れるとAIと話せます。今は'}次の問いで自分に問いかけてみてください。</p>
+          <ul class="list">${REFLECTION_QUESTIONS.map(q => `<li><span class="grow">${esc(q)}</span></li>`).join('')}</ul>`}
       </section>
-
       <section class="card">
         <h2>今日の振り返り</h2>
-        <form id="journalForm">
-          <label for="jg">できたこと</label><textarea id="jg" name="good">${esc(todayEntry.good)}</textarea>
-          <label for="js">詰まったこと</label><textarea id="js" name="stuck">${esc(todayEntry.stuck)}</textarea>
-          <label for="jn">明日の最初の一手</label><textarea id="jn" name="next">${esc(todayEntry.next)}</textarea>
-          <div class="row" style="justify-content:flex-end;margin-top:10px">
-            <label style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" name="mk" checked> 「一手」をToDoにして明日やる</label>
+        <form data-form="journal" class="stack">
+          <div class="field"><label for="jg">できたこと</label><textarea id="jg" name="good">${esc(entry.good)}</textarea></div>
+          <div class="field"><label for="js">詰まったこと</label><textarea id="js" name="stuck">${esc(entry.stuck)}</textarea></div>
+          <div class="field"><label for="jn">明日の最初の一手</label><textarea id="jn" name="next">${esc(entry.next)}</textarea></div>
+          <div class="row between">
+            <label class="check"><input type="checkbox" name="mk" checked> 「一手」を明日のToDoにする</label>
             <button class="btn primary">保存</button>
           </div>
         </form>
@@ -482,87 +669,167 @@ function renderCoach() {
       ${state.journal.length ? `<ul class="list">${[...state.journal].sort((a, b) => b.date.localeCompare(a.date)).map(j => `
         <li><div class="grow"><strong>${esc(j.date)}</strong><br>
         ${j.good ? '✓ ' + esc(j.good) + '<br>' : ''}${j.stuck ? '△ ' + esc(j.stuck) + '<br>' : ''}${j.next ? '→ ' + esc(j.next) : ''}</div></li>`).join('')}</ul>`
-        : '<div class="empty">まだ記録がありません。</div>'}
+        : '<p class="empty">まだ記録がありません。</p>'}
     </section>`;
-
-  const jf = app.querySelector('#journalForm');
-  jf.onsubmit = e => {
-    e.preventDefault();
-    const entry = { date: today(), good: jf.good.value.trim(), stuck: jf.stuck.value.trim(), next: jf.next.value.trim() };
-    const i = state.journal.findIndex(j => j.date === entry.date);
-    const prevNext = i >= 0 ? state.journal[i].next : '';
-    if (i >= 0) state.journal[i] = entry; else state.journal.push(entry);
-    if (jf.mk.checked && entry.next && entry.next !== prevNext) {
-      const t = new Date(); t.setDate(t.getDate() + 1);
-      addNode(null, entry.next, 'todo', { focusDate: t.toLocaleDateString('sv-SE'), due: t.toLocaleDateString('sv-SE') });
-    }
-    save(); toast('保存しました'); render();
-  };
-
-  const cf = app.querySelector('#chatForm');
-  if (cf) {
-    const box = app.querySelector('#chat');
-    box.scrollTop = box.scrollHeight;
-    cf.onsubmit = async e => {
-      e.preventDefault();
-      const t = cf.t.value.trim();
-      if (!t) return;
-      state.chat.push({ role: 'user', content: t });
-      save(); render();
-      const sys = `あなたはユーザー専属の思考整理パートナー兼コーチです。日本語で、簡潔に、具体的な次の一手を示してください。必要なら質問で考えを引き出してください。今日は${today()}。ユーザーのゴールツリー:\n${treeOutline()}`;
-      try {
-        const reply = await askClaude(sys, state.chat.slice(-20).map(m => ({ role: m.role, content: m.content })));
-        state.chat.push({ role: 'assistant', content: reply });
-      } catch (err) {
-        state.chat.push({ role: 'assistant', content: 'エラー: ' + err.message });
-      }
-      save(); if (view === 'coach') render();
-    };
-  }
+  const box = app.querySelector('#chat');
+  if (box) box.scrollTop = box.scrollHeight;
 }
 
-function renderSettings() {
+function renderPrefs() {
   app.innerHTML = `
     <section class="card">
+      <h2>保存について</h2>
+      <p>${hasClaude
+        ? 'claude.ai 上で開いています。サインインしていて書き込める人は、データがクラウドに保存され、別の端末でも同じ内容が見られます。それ以外の人は、このブラウザだけに保存されます。'
+        : '通常のWebサイトとして開いています。データはこのブラウザだけに保存されます（サーバーには送りません）。'}</p>
+      <p class="muted">今の保存先：<strong>${syncLabel()}</strong></p>
+    </section>
+    ${hasClaude ? `<section class="card">
+      <h2>AI</h2>
+      <p>${caps.sample ? 'このページではAIが使えます。最初に使うとき、許可を求める画面が出ることがあります。APIキーは必要ありません。' : 'このページではAIが使えません。「分解」はテンプレートで動きます。'}</p>
+    </section>` : `<section class="card">
       <h2>AI連携（任意）</h2>
-      <p class="muted">Anthropic APIキーを入れると「分解」と「壁打ち」がClaude（${MODEL}）で動きます。キーはこのブラウザのlocalStorageにだけ保存され、api.anthropic.com への送信以外には使いません。共有PCでは入れないでください。</p>
-      <form class="row" id="keyForm">
-        <input name="k" type="password" placeholder="sk-ant-..." value="${esc(state.settings.apiKey)}" aria-label="APIキー" autocomplete="off">
+      <p class="muted">Anthropic のAPIキーを入れると、「分解」と「壁打ち」でAIを使います。キーはこのブラウザだけに保存され、api.anthropic.com への送信以外には使いません。共有のパソコンでは入れないでください。</p>
+      <form class="row" data-form="key">
+        <input name="k" id="keyInput" type="password" placeholder="sk-ant-..." value="${esc(apiKey)}" aria-label="APIキー" autocomplete="off">
         <button class="btn primary">保存</button>
       </form>
+    </section>`}
+    <section class="card">
+      <h2>データのバックアップ</h2>
+      <p class="muted">念のため、ときどき書き出しておくと安心です。別の端末に移すときも使えます。</p>
+      <div class="row">
+        <button class="btn" data-act="export">ファイルに書き出す</button>
+        <button class="btn" data-act="copyjson">中身をコピー</button>
+        <label class="btn" for="importFile">ファイルから読み込む</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <details><summary>コピーした中身から戻す</summary><div class="stack">
+        <textarea id="pasteJson" placeholder="「中身をコピー」で写した内容を貼り付け" aria-label="バックアップの中身"></textarea>
+        <div class="row end"><button class="btn" data-act="pastejson">この内容で戻す</button></div>
+      </div></details>
     </section>
     <section class="card">
-      <h2>データ</h2>
-      <p class="muted">データはすべてこのブラウザ内に保存されます。別の端末に移すときはエクスポート/インポートを使ってください。</p>
-      <div class="row" style="flex-wrap:wrap">
-        <button class="btn" data-act="export">JSONをエクスポート</button>
-        <label class="btn" style="margin:0;color:inherit;font-size:inherit">JSONをインポート<input type="file" id="importFile" accept="application/json" hidden></label>
-        <button class="btn" data-act="sample">サンプルを読み込む</button>
-        <button class="btn" data-act="reset" style="color:var(--warn)">すべて削除</button>
+      <h2>お試し・リセット</h2>
+      <div class="row">
+        <button class="btn" data-act="sample">例のデータを追加</button>
+        <button class="btn danger" data-act="reset">すべて削除</button>
       </div>
     </section>`;
-
-  app.querySelector('#keyForm').onsubmit = e => {
-    e.preventDefault();
-    state.settings.apiKey = e.target.k.value.trim();
-    save(); toast(state.settings.apiKey ? 'APIキーを保存しました' : 'APIキーを削除しました');
-  };
-  app.querySelector('#importFile').onchange = async e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const data = JSON.parse(await f.text());
-      if (!Array.isArray(data.nodes)) throw new Error('形式が違います');
-      const key = state.settings.apiKey;
-      state = Object.assign(blank(), data);
-      state.settings.apiKey = key;
-      save(); toast('インポートしました'); render();
-    } catch (err) { toast('読み込めませんでした: ' + err.message); }
-  };
 }
 
+// ---------- ヘルプ・お問い合わせ ----------
+function diagRows() {
+  const goals = state.nodes.filter(n => n.type !== 'todo').length;
+  const todos = state.nodes.filter(n => n.type === 'todo');
+  const ai = aiMode();
+  const rows = [
+    ['保存先', `<span class="${sync.mode === 'none' ? 'ng' : 'ok'}">${syncLabel()}</span>${sync.error ? `<br><span class="ng">${esc(sync.error)}</span>` : ''}`],
+    ['最後に保存', sync.lastSaved ? new Date(sync.lastSaved).toLocaleString('ja-JP') : 'まだ保存していません'],
+    ['AI', ai === 'claude' ? '<span class="ok">使えます（claude.ai）</span>' : ai === 'apikey' ? '<span class="ok">使えます（APIキー）</span>' : '使えません（分解はテンプレート）'],
+    ['登録数', `目的・ゴール ${goals} / ToDo ${todos.length}（完了 ${todos.filter(t => t.done).length}）/ 振り返り ${state.journal.length}日分`],
+    ['開いている場所', hasClaude ? 'claude.ai のページ' : '通常のWebサイト・ファイル'],
+    ['アプリの版', APP_VERSION]
+  ];
+  return rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+}
+function diagText() {
+  const todos = state.nodes.filter(n => n.type === 'todo');
+  return [
+    `アプリの版: ${APP_VERSION}`,
+    `開いている場所: ${hasClaude ? 'claude.ai' : '通常のWebサイト'}`,
+    `保存先: ${syncLabel()}${sync.error ? '（' + sync.error + '）' : ''}`,
+    `最後に保存: ${sync.lastSaved ? new Date(sync.lastSaved).toLocaleString('ja-JP') : 'なし'}`,
+    `AI: ${aiMode()}`,
+    `登録数: 目的・ゴール ${state.nodes.length - todos.length} / ToDo ${todos.length} / 振り返り ${state.journal.length}`,
+    `ブラウザ: ${navigator.userAgent}`,
+    `画面幅: ${window.innerWidth}px`,
+    `日時: ${new Date().toLocaleString('ja-JP')}`
+  ].join('\n');
+}
+function reportText() {
+  const kind = document.getElementById('rKind')?.value || '';
+  const what = document.getElementById('rWhat')?.value.trim() || '（ここに起きたことを書いてください）';
+  const steps = document.getElementById('rSteps')?.value.trim() || '（未記入）';
+  return `【種類】${kind}\n\n【起きたこと】\n${what}\n\n【その前にした操作】\n${steps}\n\n【状態チェック（自動）】\n${diagText()}`;
+}
+function updateReport() {
+  const pre = document.getElementById('rPreview');
+  if (!pre) return;
+  const text = reportText();
+  pre.textContent = text;
+  const kind = document.getElementById('rKind').value;
+  const what = document.getElementById('rWhat').value.trim().split('\n')[0].slice(0, 50);
+  const url = `${REPO_URL}/issues/new?title=${encodeURIComponent(`[Self OS] ${kind}: ${what || '問題の報告'}`)}&body=${encodeURIComponent(text)}`;
+  document.getElementById('rGithub').href = url;
+}
+
+function renderHelp() {
+  app.innerHTML = `
+    <section class="card">
+      <h2>困ったときの順番</h2>
+      <ol class="steps">
+        <li>下の「よくある困りごと」に当てはまるものがないか見る</li>
+        <li>「状態チェック」で、保存先とAIが正常か確認する</li>
+        <li>解決しなければ、いちばん下の「問題を報告する」から知らせる（状態チェックの結果は自動で付きます）</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>よくある困りごと</h2>
+      <div>
+        <details><summary>入力した内容が消えた・見当たらない</summary><div>
+          画面右上の保存先を確認してください。
+          <ul>
+            <li><strong>このブラウザに保存</strong>：別のブラウザ、別の端末、シークレットウィンドウでは見えません。閲覧履歴やサイトデータを消すと消えます。</li>
+            <li><strong>クラウドに保存</strong>：同じアカウントでサインインすれば、どの端末でも同じ内容です。少し待ってから再読み込みしてください。</li>
+          </ul>
+          消える前に書き出したファイルがあれば、「設定」→「ファイルから読み込む」で戻せます。</div></details>
+        <details><summary>スマホとパソコンで同じデータを使いたい</summary><div>
+          claude.ai 上のページを、同じアカウントでサインインして開くとクラウドに保存され、自動でそろいます。
+          通常のWebサイトで使っている場合は、「設定」→「ファイルに書き出す」（または「中身をコピー」）→ もう一方の端末で読み込んでください。</div></details>
+        <details><summary>「分解」がいつも同じ内容になる</summary><div>
+          AIが使えない状態のため、決まった型（テンプレート）で分解しています。下の「状態チェック」のAI欄を見てください。
+          ${hasClaude ? 'claude.ai 上では、最初にAIを使うときの許可画面で「許可しない」を選ぶと、再読み込みするまで使えません。ページを再読み込みしてもう一度試してください。' : '通常のWebサイトでは、「設定」でAPIキーを入れるとAIで分解します。'}
+          作られた項目は「編集」「削除」で自由に直せます。</div></details>
+        <details><summary>AIの返事がエラーになる</summary><div>
+          少し時間をおいてから、もう一度押してください。短時間に何度も押すと、一時的に止まることがあります。
+          ${hasClaude ? '' : 'APIキーを使っている場合は、キーが正しいか、Anthropicのアカウントに残高があるかを確認してください。'}</div></details>
+        <details><summary>ボタンを押しても何も起きない</summary><div>
+          ページを再読み込みしてください。データは保存されているので消えません。直らない場合は、下の報告フォームで「どのボタンを押したか」を書いて知らせてください。</div></details>
+        <details><summary>間違えて完了・削除してしまった</summary><div>
+          完了はチェックを外せば元に戻ります。削除は元に戻せません（確認画面が出ます）。大事なデータは、ときどき書き出しておくと安心です。</div></details>
+        <details><summary>「今やること」に出る順番は？</summary><div>
+          ①今日やると決めたもの ②期限が早いもの（期限切れを含む）③期限なし ④古いもの、の順です。「あとで」を押すと、再読み込みするまで次の候補が出ます。</div></details>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row between"><h2>状態チェック</h2><button class="btn" data-act="recheck">もう一度調べる</button></div>
+      <div style="overflow-x:auto"><table class="diag"><tbody id="diagBody">${diagRows()}</tbody></table></div>
+    </section>
+
+    <section class="card" id="reportCard">
+      <h2>問題を報告する（お問い合わせ窓口）</h2>
+      <p class="muted">書いた内容と状態チェックの結果をまとめた報告文を作ります。ゴールやToDoの中身は含まれません。</p>
+      <div class="field"><label for="rKind">種類</label>
+        <select id="rKind"><option>うまく動かない</option><option>データが消えた・おかしい</option><option>使い方が分からない</option><option>こうしてほしい（要望）</option><option>その他</option></select></div>
+      <div class="field"><label for="rWhat">起きたこと</label><textarea id="rWhat" placeholder="例：「分解」を押すと「エラー」と出て、何も追加されない"></textarea></div>
+      <div class="field"><label for="rSteps">その前にした操作（分かる範囲で）</label><textarea id="rSteps" placeholder="例：ゴールを追加 → 分解を押した"></textarea></div>
+      <div class="field"><label>送られる報告文</label><pre class="report" id="rPreview"></pre></div>
+      <div class="row">
+        <a class="btn primary" id="rGithub" href="${REPO_URL}/issues/new" target="_blank" rel="noopener">GitHubで報告する</a>
+        <button class="btn" data-act="copyreport">報告文をコピー</button>
+        ${caps.comments ? '<button class="btn" data-act="commentreport">このページにコメントで知らせる</button>' : ''}
+      </div>
+      <p class="muted">「GitHubで報告する」は、報告文が入った状態で GitHub の課題（Issue）作成画面を開きます（GitHubアカウントが必要です）。アカウントがない場合は「報告文をコピー」して、このツールを教えてくれた人に送ってください。</p>
+    </section>`;
+  updateReport();
+}
+
+// ---------- 例データ ----------
 function loadSample() {
-  const p = addNode(null, '自分の力で稼げる人になる', 'purpose');
+  const p = addNode(null, '（例）自分の力で稼げる人になる', 'purpose');
   const g1 = addNode(p.id, '3か月でポートフォリオを3つ公開する', 'goal');
   const s1 = addNode(g1.id, '1つ目：データ可視化ツール', 'goal');
   addNode(s1.id, '扱うデータを決める', 'todo', { focusDate: today() });
@@ -573,54 +840,171 @@ function loadSample() {
   addNode(g2.id, '朝15分だけ計画を見直す', 'todo');
 }
 
-// ---------- events ----------
-document.getElementById('nav').onclick = e => {
-  const b = e.target.closest('button[data-view]');
-  if (b) { view = b.dataset.view; render(); }
-};
+// ---------- 確認ダイアログ（ブラウザ標準の confirm は使わない） ----------
+function ask(message, okLabel = '削除する') {
+  const dlg = document.getElementById('askDlg');
+  document.getElementById('askMsg').textContent = message;
+  document.getElementById('askOk').textContent = okLabel;
+  dlg.returnValue = '';
+  return new Promise(res => {
+    dlg.addEventListener('close', () => res(dlg.returnValue === 'yes'), { once: true });
+    dlg.showModal();
+  });
+}
+
+// ---------- 書き出し・読み込み ----------
+const exportJson = () => JSON.stringify({ app: 'selfos', version: APP_VERSION, ...state }, null, 2);
+function importData(data) {
+  if (!data || !Array.isArray(data.nodes)) throw new Error('Self OS のデータではありません');
+  state = Object.assign(blank(), { nodes: data.nodes, journal: data.journal || [], chat: data.chat || [] });
+  save();
+}
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (e) { toast('コピーできませんでした。表示された文を長押し（右クリック）でコピーしてください'); return false; }
+  return true;
+}
+
+// ---------- イベント ----------
+window.addEventListener('hashchange', () => {
+  const v = location.hash.slice(1);
+  if (VIEWS.includes(v) && v !== view) { view = v; addingTo = null; render(); window.scrollTo(0, 0); }
+});
+
+app.addEventListener('input', e => { if (e.target.closest('#reportCard')) updateReport(); });
+app.addEventListener('change', async e => {
+  if (e.target.closest('#reportCard')) { updateReport(); return; }
+  if (e.target.id !== 'importFile') return;
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!(await ask('今のデータを、読み込んだファイルの内容で置き換えます。よろしいですか？', '置き換える'))) return;
+    importData(data); toast('読み込みました'); render();
+  } catch (err) { toast('読み込めませんでした：' + err.message); }
+  e.target.value = '';
+});
+
+app.addEventListener('submit', async e => {
+  const form = e.target;
+  e.preventDefault();
+  const t = form.t ? form.t.value.trim() : '';
+  switch (form.dataset.form) {
+    case 'quick':
+      if (!t) return;
+      addNode(null, t, 'todo', { focusDate: today() });
+      save(); render(); document.getElementById('quickInput').focus(); return;
+    case 'root':
+      if (!t) return;
+      addNode(null, t, form.type.value);
+      save(); render(); document.getElementById('rootInput').focus(); return;
+    case 'child':
+      if (!t) return;
+      addNode(form.dataset.parent, t, form.type.value);
+      collapsed.delete(form.dataset.parent);
+      save(); render(); return; // 入力欄は開いたままにして、続けて追加できるようにする
+    case 'key':
+      apiKey = form.k.value.trim();
+      try { apiKey ? localStorage.setItem(STORE_KEY + '.key', apiKey) : localStorage.removeItem(STORE_KEY + '.key'); } catch (err) { /* 保存できなくても今回は使える */ }
+      toast(apiKey ? 'APIキーを保存しました' : 'APIキーを削除しました'); return;
+    case 'journal': {
+      const entry = { date: today(), good: form.good.value.trim(), stuck: form.stuck.value.trim(), next: form.next.value.trim() };
+      const i = state.journal.findIndex(j => j.date === entry.date);
+      const prevNext = i >= 0 ? state.journal[i].next : '';
+      if (i >= 0) state.journal[i] = entry; else state.journal.push(entry);
+      if (form.mk.checked && entry.next && entry.next !== prevNext) {
+        const d = new Date(); d.setDate(d.getDate() + 1);
+        addNode(null, entry.next, 'todo', { focusDate: dateStr(d), due: dateStr(d) });
+      }
+      save(); toast('保存しました'); render(); return;
+    }
+    case 'chat': {
+      if (!t || chatPending) return;
+      state.chat.push({ role: 'user', content: t });
+      chatPending = '考え中…';
+      save(); render();
+      const rules = `あなたはユーザー専属の思考整理パートナー兼コーチです。日本語で、簡潔に、具体的な次の一手を示してください。必要なら質問で考えを引き出してください。今日は${today()}です。ユーザーのゴールツリー:\n${treeOutline()}`;
+      try {
+        const reply = await askAI([{ role: 'user', content: rules }, ...state.chat.slice(-20)], {
+          onText: text => { chatPending = text; const p = document.getElementById('pending'); if (p) p.textContent = text; }
+        });
+        state.chat.push({ role: 'assistant', content: reply });
+      } catch (err) {
+        state.chat.push({ role: 'assistant', content: 'エラー：' + err.message });
+      }
+      chatPending = '';
+      save(); if (view === 'review') render();
+      return;
+    }
+  }
+});
 
 app.addEventListener('click', async e => {
-  const go = e.target.closest('[data-go]');
-  if (go) { view = go.dataset.go; render(); return; }
   const el = e.target.closest('[data-act]');
   if (!el) return;
-  const n = el.dataset.id && byId(el.dataset.id);
+  const n = el.dataset.id ? byId(el.dataset.id) : null;
+  if (el.dataset.id && !n) { render(); return; }
   switch (el.dataset.act) {
     case 'toggle': setDone(n, el.checked); break;
     case 'done-focus': setDone(n, true); toast('おつかれさま！'); break;
-    case 'skip': sessionSkip.add(n.id); break;
+    case 'skip': sessionSkip.add(n.id); render(); return;
     case 'focus':
-      if (dailyList().filter(x => !x.done).length >= DAILY_LIMIT) toast(`今日の${DAILY_LIMIT}つを超えています。絞り込むのも大事です`);
+      if (dailyList().filter(x => !x.done).length >= DAILY_LIMIT) toast(`今日の${DAILY_LIMIT}つを超えました。絞り込むのも大事です`);
       n.focusDate = today(); break;
     case 'unfocus': n.focusDate = ''; break;
     case 'autopick': autoPickDaily(); break;
-    case 'collapse': collapsed.has(n.id) ? collapsed.delete(n.id) : collapsed.add(n.id); break;
-    case 'addchild': {
-      const t = prompt(`「${n.title}」の下に追加（ToDoとして作成）`);
-      if (!t || !t.trim()) return;
-      addNode(n.id, t, 'todo'); collapsed.delete(n.id); break;
-    }
+    case 'collapse': collapsed.has(n.id) ? collapsed.delete(n.id) : collapsed.add(n.id); render(); return;
+    case 'addchild': addingTo = addingTo === n.id ? null : n.id; collapsed.delete(n.id); render(); return;
+    case 'canceladd': addingTo = null; render(); return;
     case 'edit': openEdit(n); return;
-    case 'delete':
-      if (!confirm(`「${n.title}」と、その下の項目をすべて削除しますか？`)) return;
-      removeNode(n.id); break;
+    case 'delete': {
+      const count = descendantTodos(n.id).length + children(n.id).filter(c => c.type !== 'todo').length;
+      if (!(await ask(`「${n.title}」${count ? 'と、その下の項目すべて' : ''}を削除します。元に戻せません。`))) return;
+      removeNode(n.id); if (addingTo === n.id) addingTo = null; break;
+    }
     case 'breakdown':
-      el.disabled = true; el.textContent = '分解中…';
-      try { await breakdown(n); collapsed.delete(n.id); toast('分解しました'); }
-      catch (err) { toast(err.message === 'NO_KEY' ? 'APIキーがありません' : 'エラー: ' + err.message); }
-      break;
-    case 'clearchat': state.chat = []; break;
+      busy.add(n.id); render();
+      try { const usedAI = await breakdown(n); collapsed.delete(n.id); toast(usedAI ? 'AIで分解しました' : 'テンプレートで分解しました'); }
+      catch (err) { toast(err.message); }
+      busy.delete(n.id); render(); return;
+    case 'clearchat':
+      if (!(await ask('壁打ちの会話をすべて消します。', '消す'))) return;
+      state.chat = []; break;
     case 'export': {
-      const copy = JSON.parse(JSON.stringify(state)); copy.settings.apiKey = '';
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' }));
-      a.download = `selfos-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
+      const name = `selfos-${today()}.json`;
+      if (caps.downloads) {
+        try { await caps.downloads.save({ filename: name, data: exportJson() }); }
+        catch (err) { if (err.code !== 'declined') toast('書き出せませんでした。「中身をコピー」を使ってください'); }
+      } else if (!hasClaude) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([exportJson()], { type: 'application/json' }));
+        a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      } else toast('このページではファイルに書き出せません。「中身をコピー」を使ってください');
       return;
     }
-    case 'sample': loadSample(); toast('サンプルを追加しました'); break;
+    case 'copyjson': copyText(exportJson(), 'コピーしました。メモ帳などに貼って保管してください'); return;
+    case 'pastejson': {
+      try {
+        const data = JSON.parse(document.getElementById('pasteJson').value);
+        if (!(await ask('今のデータを、貼り付けた内容で置き換えます。よろしいですか？', '置き換える'))) return;
+        importData(data); toast('戻しました');
+      } catch (err) { toast('読み取れませんでした：' + err.message); return; }
+      break;
+    }
+    case 'sample': loadSample(); toast('例のデータを追加しました（「（例）」が付いています）'); break;
     case 'reset':
-      if (!confirm('すべてのデータを削除します。元に戻せません。よろしいですか？')) return;
-      state = Object.assign(blank(), { settings: state.settings }); break;
+      if (!(await ask('すべてのデータを削除します。元に戻せません。先に「ファイルに書き出す」で保存しておくことをおすすめします。'))) return;
+      state = blank(); sessionSkip.clear(); break;
+    case 'recheck': renderSync(); toast('調べ直しました'); return;
+    case 'copyreport': copyText(reportText(), '報告文をコピーしました'); return;
+    case 'commentreport': {
+      try {
+        const r = await caps.comments.openComposer({ element: document.getElementById('reportCard') });
+        if (!r.opened) toast('コメント欄を開けませんでした。「報告文をコピー」を使ってください');
+        else copyText(reportText(), '報告文をコピーしました。コメント欄に貼り付けてください');
+      } catch (err) { toast('コメント欄を開けませんでした。「報告文をコピー」を使ってください'); }
+      return;
+    }
     default: return;
   }
   save(); render();
@@ -634,10 +1018,11 @@ function openEdit(n) {
   document.getElementById('fType').value = n.type;
   document.getElementById('fDue').value = n.due;
   document.getElementById('fNote').value = n.note;
+  dlg.returnValue = '';
   dlg.showModal();
 }
 dlg.addEventListener('close', () => {
-  if (dlg.returnValue === 'ok' && editing) {
+  if (dlg.returnValue === 'ok' && editing && byId(editing.id)) {
     editing.title = document.getElementById('fTitle').value.trim() || editing.title;
     editing.type = document.getElementById('fType').value;
     editing.due = document.getElementById('fDue').value;
@@ -651,10 +1036,17 @@ let toastTimer;
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
+// ---------- 起動 ----------
+if (!localOk) { sync.mode = 'none'; sync.error = 'このブラウザでは保存が許可されていません（シークレットウィンドウなど）。'; }
 render();
+if (hasClaude) {
+  initCloud();
+  Promise.all([window.claude.use('sample'), window.claude.use('downloads'), window.claude.use('comments')])
+    .then(([s, d, c]) => { caps.sample = s; caps.downloads = d; caps.comments = c; if (!isTyping()) render(); });
+}
 </script>
 </body>
 </html>
