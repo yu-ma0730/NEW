@@ -201,12 +201,11 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const STORE_KEY = 'selfos.v1';
 const DAILY_LIMIT = 3;
 const CHAT_KEEP = 40; // クラウド保存の容量を超えないよう、会話は直近だけ残す
 const API_MODEL = 'claude-sonnet-5-5';
-const REPO_URL = 'https://github.com/yu-ma0730/NEW';
 const VIEWS = ['today', 'goals', 'review', 'prefs', 'help'];
 const TYPE_LABEL = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' };
 
@@ -758,10 +757,6 @@ function updateReport() {
   if (!pre) return;
   const text = reportText();
   pre.textContent = text;
-  const kind = document.getElementById('rKind').value;
-  const what = document.getElementById('rWhat').value.trim().split('\n')[0].slice(0, 50);
-  const url = `${REPO_URL}/issues/new?title=${encodeURIComponent(`[Self OS] ${kind}: ${what || '問題の報告'}`)}&body=${encodeURIComponent(text)}`;
-  document.getElementById('rGithub').href = url;
 }
 
 function renderHelp() {
@@ -818,11 +813,12 @@ function renderHelp() {
       <div class="field"><label for="rSteps">その前にした操作（分かる範囲で）</label><textarea id="rSteps" placeholder="例：ゴールを追加 → 分解を押した"></textarea></div>
       <div class="field"><label>送られる報告文</label><pre class="report" id="rPreview"></pre></div>
       <div class="row">
-        <a class="btn primary" id="rGithub" href="${REPO_URL}/issues/new" target="_blank" rel="noopener">GitHubで報告する</a>
-        <button class="btn" data-act="copyreport">報告文をコピー</button>
-        ${caps.comments ? '<button class="btn" data-act="commentreport">このページにコメントで知らせる</button>' : ''}
+        ${caps.comments ? '<button class="btn primary" data-act="commentreport">コメントで管理者に知らせる</button>' : ''}
+        <button class="btn ${caps.comments ? '' : 'primary'}" data-act="copyreport">報告文をコピー</button>
       </div>
-      <p class="muted">「GitHubで報告する」は、報告文が入った状態で GitHub の課題（Issue）作成画面を開きます（GitHubアカウントが必要です）。アカウントがない場合は「報告文をコピー」して、このツールを教えてくれた人に送ってください。</p>
+      <p class="muted">${caps.comments
+        ? '「コメントで管理者に知らせる」を押すと、報告文がコピーされ、このページのコメント欄が開きます。貼り付けて送ってください。コメントは、このページを共有されている人だけが見られます（一般には公開されません）。'
+        : '「報告文をコピー」して、このツールを教えてくれた人（管理者）に直接送ってください。報告文はどこにも自動送信されません。'}</p>
     </section>`;
   updateReport();
 }
@@ -834,7 +830,7 @@ function loadSample() {
   const s1 = addNode(g1.id, '1つ目：データ可視化ツール', 'goal');
   addNode(s1.id, '扱うデータを決める', 'todo', { focusDate: today() });
   addNode(s1.id, '画面のラフを描く', 'todo');
-  addNode(s1.id, 'GitHubに公開してREADMEを書く', 'todo');
+  addNode(s1.id, 'READMEを書いて完成させる', 'todo');
   const g2 = addNode(p.id, '毎朝の習慣を固める', 'goal');
   addNode(g2.id, '6:30に起きる', 'todo', { focusDate: today() });
   addNode(g2.id, '朝15分だけ計画を見直す', 'todo');
