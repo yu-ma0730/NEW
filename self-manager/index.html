@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self OS — 自分をマネジメントする</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --panel: #ffffff; --ink: #1f2328; --muted: #6b6f76;
+    --line: #e4e0d8; --accent: #2f6f5e; --accent-soft: #e3efe9;
+    --warn: #b4552d; --warn-soft: #f8e7df; --focus: #1d4e89;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171a; --panel: #1e2125; --ink: #e8e6e1; --muted: #9a9ea5;
+      --line: #2e3238; --accent: #6fbfa5; --accent-soft: #23352f;
+      --warn: #e08a63; --warn-soft: #3a2a23; --focus: #7fb0ec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg);
+    border-bottom: 1px solid var(--line); }
+  .bar { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex;
+    align-items: center; gap: 16px; flex-wrap: wrap; }
+  .logo { font-weight: 700; letter-spacing: .02em; }
+  .logo span { color: var(--accent); }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; color: var(--muted); padding: 6px 12px;
+    border-radius: 999px; cursor: pointer; font: inherit; }
+  nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { max-width: 960px; margin: 0 auto; padding: 20px 16px 80px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  input, textarea, select { font: inherit; color: inherit; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  textarea { min-height: 72px; resize: vertical; }
+  button.btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+  button.btn:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.ghost { border-color: transparent; background: none; color: var(--muted); padding: 4px 8px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; min-width: 0; }
+  .focus-card { border: 2px solid var(--focus); }
+  .focus-title { font-size: 22px; font-weight: 700; margin: 6px 0 4px; word-break: break-word; }
+  .crumb { color: var(--muted); font-size: 13px; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  ul.list { list-style: none; padding: 0; margin: 0; }
+  ul.list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  ul.list li:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; word-break: break-word; }
+  .done .grow { text-decoration: line-through; color: var(--muted); }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft);
+    color: var(--accent); white-space: nowrap; }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: var(--accent); }
+  /* tree */
+  .node { margin-left: 18px; border-left: 1px dashed var(--line); padding-left: 12px; }
+  .node.root { margin-left: 0; border-left: 0; padding-left: 0; }
+  .nrow { display: flex; align-items: center; gap: 8px; padding: 5px 0; flex-wrap: wrap; }
+  .nrow .title { flex: 1; min-width: 140px; word-break: break-word; }
+  .type { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex: none; }
+  .type.purpose { background: #6a4c93; color: #fff; }
+  .type.goal { background: var(--focus); color: #fff; }
+  .type.todo { background: var(--line); color: var(--ink); }
+  .nrow .pbar { width: 80px; }
+  .actions { display: flex; gap: 2px; }
+  .chat { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; margin-bottom: 12px; }
+  .msg { padding: 10px 12px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { background: var(--accent-soft); align-self: flex-end; max-width: 85%; }
+  .msg.ai { background: var(--bg); border: 1px solid var(--line); max-width: 92%; }
+  .stat { font-size: 28px; font-weight: 700; }
+  dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+    color: var(--ink); width: min(520px, calc(100% - 32px)); padding: 20px; }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink);
+    color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo">Self<span>OS</span></div>
+    <nav id="nav">
+      <button data-view="today" aria-current="page">今日</button>
+      <button data-view="tree">ゴールツリー</button>
+      <button data-view="coach">壁打ち・振り返り</button>
+      <button data-view="settings">設定</button>
+    </nav>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<dialog id="editDlg">
+  <form method="dialog" id="editForm">
+    <h2 id="editHead">編集</h2>
+    <label for="fTitle">タイトル</label>
+    <input id="fTitle" required>
+    <label for="fType">種類</label>
+    <select id="fType">
+      <option value="purpose">目的（なぜやるか）</option>
+      <option value="goal">ゴール（何を達成するか）</option>
+      <option value="todo">ToDo（具体的な行動）</option>
+    </select>
+    <label for="fDue">期限</label>
+    <input id="fDue" type="date">
+    <label for="fNote">メモ</label>
+    <textarea id="fNote"></textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn" value="cancel" formnovalidate>キャンセル</button>
+      <button class="btn primary" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const STORE_KEY = 'selfos.v1';
+const DAILY_LIMIT = 3;
+const MODEL = 'claude-sonnet-5-5';
+
+// ---------- state ----------
+const blank = () => ({ nodes: [], journal: [], chat: [], settings: { apiKey: '' } });
+let state = load();
+let view = 'today';
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return Object.assign(blank(), JSON.parse(raw));
+  } catch (e) { /* storage unavailable */ }
+  return blank();
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+}
+
+let orderSeq = 0;
+const nextOrder = () => (orderSeq = Math.max(Date.now(), orderSeq + 1)); // 単調増加（同じミリ秒でも順序を保つ）
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const today = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD in local time
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const byId = id => state.nodes.find(n => n.id === id);
+const children = id => state.nodes.filter(n => n.parentId === id).sort((a, b) => a.order - b.order);
+const roots = () => children(null);
+
+function addNode(parentId, title, type, extra = {}) {
+  const n = { id: uid(), parentId, title: title.trim(), type, done: false, due: '', note: '',
+    focusDate: '', order: nextOrder(), created: nextOrder(), doneAt: 0, ...extra };
+  state.nodes.push(n);
+  return n;
+}
+function removeNode(id) {
+  const kill = new Set([id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const n of state.nodes) if (!kill.has(n.id) && kill.has(n.parentId)) { kill.add(n.id); grew = true; }
+  }
+  state.nodes = state.nodes.filter(n => !kill.has(n.id));
+}
+function descendantTodos(id) {
+  const out = [];
+  for (const c of children(id)) {
+    if (c.type === 'todo') out.push(c);
+    out.push(...descendantTodos(c.id));
+  }
+  return out;
+}
+function progress(node) {
+  if (node.type === 'todo') return node.done ? 1 : 0;
+  const t = descendantTodos(node.id);
+  return t.length ? t.filter(x => x.done).length / t.length : 0;
+}
+function path(node) {
+  const p = [];
+  let cur = node && byId(node.parentId);
+  while (cur) { p.unshift(cur.title); cur = byId(cur.parentId); }
+  return p.join(' › ');
+}
+function setDone(node, done) {
+  node.done = done;
+  node.doneAt = done ? Date.now() : 0;
+}
+
+// ---------- focus logic ----------
+const openTodos = () => state.nodes.filter(n => n.type === 'todo' && !n.done);
+const isOverdue = n => n.due && n.due < today();
+
+function rank(a, b) {
+  // 今日のフォーカス > 期限切れ > 期限が近い > 期限なし > 作成順
+  const fa = a.focusDate === today() ? 0 : 1, fb = b.focusDate === today() ? 0 : 1;
+  if (fa !== fb) return fa - fb;
+  const da = a.due || '9999', db = b.due || '9999';
+  if (da !== db) return da < db ? -1 : 1;
+  return a.created - b.created;
+}
+function focusTodo() {
+  const skipped = sessionSkip;
+  const list = openTodos().sort(rank);
+  return list.find(n => !skipped.has(n.id)) || list[0] || null;
+}
+let sessionSkip = new Set();
+
+const dailyList = () => state.nodes.filter(n => n.type === 'todo' && n.focusDate === today()).sort(rank);
+
+function autoPickDaily() {
+  const cur = dailyList().filter(n => !n.done);
+  const pool = openTodos().filter(n => n.focusDate !== today()).sort(rank);
+  for (const n of pool) {
+    if (cur.length >= DAILY_LIMIT) break;
+    n.focusDate = today();
+    cur.push(n);
+  }
+  return cur.length;
+}
+
+// ---------- AI (optional) ----------
+async function askClaude(system, messages, maxTokens = 1500) {
+  const key = state.settings.apiKey;
+  if (!key) throw new Error('NO_KEY');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages })
+  });
+  if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
+  const data = await res.json();
+  return data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+}
+
+function treeOutline() {
+  const lines = [];
+  const walk = (id, depth) => {
+    for (const n of children(id)) {
+      const label = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' }[n.type];
+      lines.push('  '.repeat(depth) + `- [${label}${n.type === 'todo' ? (n.done ? '/完了' : '/未完') : ''}] ${n.title}${n.due ? ' (期限 ' + n.due + ')' : ''}`);
+      walk(n.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  return lines.join('\n') || '(まだ何も登録されていません)';
+}
+
+// AI なしの場合のテンプレート分解（汎用的な段取りの型）
+function templateBreakdown(title) {
+  return [
+    { title: `「${title}」の現状と完成形をはっきりさせる`, todos: ['達成できた状態を1文で書く', '今の自分との差を3つ書き出す', '使える時間・お金・人を棚卸しする'] },
+    { title: '最初の一歩を実行する', todos: ['15分でできる最小の行動を決めて実行する', '参考になる人・情報を1つ調べる', '今週の作業時間をカレンダーに確保する'] },
+    { title: '続ける仕組みを作り、振り返る', todos: ['毎週の振り返り日時を決める', '進捗を測る指標を1つ決める', '1週間後に計画を見直す'] }
+  ];
+}
+
+async function breakdown(node) {
+  let plan;
+  if (state.settings.apiKey) {
+    const sys = 'あなたは目標達成コーチです。ユーザーの目標を、達成に必要な中間ゴール（3〜5個）と、それぞれの具体的なToDo（各2〜4個、1つ30分〜2時間で終わる粒度、動詞で始める）に分解してください。出力はJSONのみ: [{"title":"中間ゴール","todos":["ToDo",...]}, ...]';
+    const ctx = `分解する対象: ${node.title}\n上位: ${path(node) || 'なし'}\nメモ: ${node.note || 'なし'}\n既存のツリー:\n${treeOutline()}`;
+    const text = await askClaude(sys, [{ role: 'user', content: ctx }]);
+    const m = text.match(/\[[\s\S]*\]/);
+    if (!m) throw new Error('AIの応答を解釈できませんでした');
+    plan = JSON.parse(m[0]);
+  } else {
+    plan = templateBreakdown(node.title);
+  }
+  for (const g of plan) {
+    const sub = addNode(node.id, String(g.title), 'goal');
+    for (const t of g.todos || []) addNode(sub.id, String(t), 'todo');
+  }
+  save();
+}
+
+// ---------- rendering ----------
+const app = document.getElementById('app');
+
+function render() {
+  document.querySelectorAll('#nav button').forEach(b => {
+    if (b.dataset.view === view) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  ({ today: renderToday, tree: renderTree, coach: renderCoach, settings: renderSettings })[view]();
+}
+
+function todoItem(n, opts = {}) {
+  const tags = [];
+  if (n.due) tags.push(`<span class="tag ${isOverdue(n) && !n.done ? 'warn' : ''}">${isOverdue(n) && !n.done ? '期限切れ ' : ''}${esc(n.due)}</span>`);
+  return `<li class="${n.done ? 'done' : ''}">
+    <input type="checkbox" data-act="toggle" data-id="${n.id}" ${n.done ? 'checked' : ''} aria-label="完了">
+    <div class="grow">${esc(n.title)}<div class="crumb">${esc(path(n))}</div></div>
+    ${tags.join('')}
+    ${opts.unfocus ? `<button class="ghost" data-act="unfocus" data-id="${n.id}" title="今日から外す">✕</button>` : ''}
+    ${opts.focus ? `<button class="btn" data-act="focus" data-id="${n.id}">今日やる</button>` : ''}
+  </li>`;
+}
+
+function renderToday() {
+  const f = focusTodo();
+  const daily = dailyList();
+  const doneToday = state.nodes.filter(n => n.type === 'todo' && n.done && new Date(n.doneAt).toLocaleDateString('sv-SE') === today()).length;
+  const candidates = openTodos().filter(n => n.focusDate !== today()).sort(rank).slice(0, 8);
+  const d = new Date();
+  app.innerHTML = `
+    <p class="muted">${d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
+
+    <section class="card focus-card">
+      <div class="muted">Focus ToDo — 今この瞬間にやること</div>
+      ${f ? `
+        <div class="focus-title">${esc(f.title)}</div>
+        <div class="crumb">${esc(path(f)) || 'ゴールなし'}</div>
+        ${f.note ? `<p>${esc(f.note)}</p>` : ''}
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" data-act="done-focus" data-id="${f.id}">完了した</button>
+          <button class="btn" data-act="skip" data-id="${f.id}">あとで</button>
+        </div>` : `
+        <div class="empty">未完了のToDoはありません。ゴールツリーで目標を追加して、分解してみましょう。</div>
+        <button class="btn primary" data-go="tree">ゴールを追加する</button>`}
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2>Daily Focus（今日の${DAILY_LIMIT}つ）</h2>
+          <button class="btn" data-act="autopick">自動で選ぶ</button>
+        </div>
+        ${daily.length ? `<ul class="list">${daily.map(n => todoItem(n, { unfocus: true })).join('')}</ul>`
+          : `<div class="empty">まだ選ばれていません。「自動で選ぶ」で期限が近い順に${DAILY_LIMIT}つ選びます。</div>`}
+        <form class="row" id="quickAdd" style="margin-top:12px">
+          <input name="t" placeholder="今日やることを直接追加" aria-label="今日やることを追加">
+          <button class="btn">追加</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>候補</h2>
+        ${candidates.length ? `<ul class="list">${candidates.map(n => todoItem(n, { focus: true })).join('')}</ul>`
+          : `<div class="empty">候補はありません。</div>`}
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>今日の記録</h2>
+      <div class="row" style="gap:32px;flex-wrap:wrap">
+        <div><div class="stat">${doneToday}</div><div class="muted">今日完了したToDo</div></div>
+        <div><div class="stat">${openTodos().length}</div><div class="muted">残りのToDo</div></div>
+        <div><div class="stat">${streak()}</div><div class="muted">連続達成日数</div></div>
+      </div>
+    </section>`;
+
+  app.querySelector('#quickAdd').onsubmit = e => {
+    e.preventDefault();
+    const t = e.target.t.value.trim();
+    if (!t) return;
+    addNode(null, t, 'todo', { focusDate: today() });
+    save(); render();
+  };
+}
+
+function streak() {
+  const days = new Set(state.nodes.filter(n => n.doneAt).map(n => new Date(n.doneAt).toLocaleDateString('sv-SE')));
+  let count = 0;
+  const d = new Date();
+  if (!days.has(d.toLocaleDateString('sv-SE'))) d.setDate(d.getDate() - 1);
+  while (days.has(d.toLocaleDateString('sv-SE'))) { count++; d.setDate(d.getDate() - 1); }
+  return count;
+}
+
+let collapsed = new Set();
+
+function renderTree() {
+  const ai = !!state.settings.apiKey;
+  app.innerHTML = `
+    <section class="card">
+      <h2>やりたいことを入力</h2>
+      <p class="muted">目的 → ゴール → ToDo の順に分解します。「分解」ボタンで${ai ? 'AI（Claude）' : 'テンプレート'}が中間ゴールとToDoを作ります${ai ? '' : '（設定でAPIキーを入れるとAIで分解）'}。</p>
+      <form class="row" id="addRoot">
+        <select name="type" style="width:auto" aria-label="種類">
+          <option value="purpose">目的</option>
+          <option value="goal" selected>ゴール</option>
+          <option value="todo">ToDo</option>
+        </select>
+        <input name="t" placeholder="例：半年で英語の会議に参加できるようになる" aria-label="タイトル">
+        <button class="btn primary">追加</button>
+      </form>
+    </section>
+    <section class="card" id="tree">${roots().length ? roots().map(n => nodeHtml(n, true)).join('') : '<div class="empty">まだ何もありません。</div>'}</section>`;
+
+  app.querySelector('#addRoot').onsubmit = e => {
+    e.preventDefault();
+    const t = e.target.t.value.trim();
+    if (!t) return;
+    addNode(null, t, e.target.type.value);
+    save(); render();
+  };
+}
+
+function nodeHtml(n, root = false) {
+  const kids = children(n.id);
+  const label = { purpose: '目的', goal: 'ゴール', todo: 'ToDo' }[n.type];
+  const pct = Math.round(progress(n) * 100);
+  const isCol = collapsed.has(n.id);
+  return `<div class="node ${root ? 'root' : ''}">
+    <div class="nrow ${n.done ? 'done' : ''}">
+      ${kids.length ? `<button class="ghost" data-act="collapse" data-id="${n.id}" aria-label="開閉">${isCol ? '▸' : '▾'}</button>` : '<span style="width:24px"></span>'}
+      ${n.type === 'todo' ? `<input type="checkbox" data-act="toggle" data-id="${n.id}" ${n.done ? 'checked' : ''} aria-label="完了">` : ''}
+      <span class="type ${n.type}">${label}</span>
+      <span class="title grow">${esc(n.title)}${n.focusDate === today() && !n.done ? ' <span class="tag">今日</span>' : ''}${n.due ? ` <span class="tag ${isOverdue(n) && !n.done ? 'warn' : ''}">${esc(n.due)}</span>` : ''}</span>
+      ${n.type !== 'todo' ? `<div class="pbar"><div class="progress"><i style="width:${pct}%"></i></div><div class="muted">${pct}%</div></div>` : ''}
+      <span class="actions">
+        ${n.type !== 'todo' ? `<button class="ghost" data-act="breakdown" data-id="${n.id}" title="AIで分解">分解</button>` : ''}
+        <button class="ghost" data-act="addchild" data-id="${n.id}" title="子を追加">＋</button>
+        <button class="ghost" data-act="edit" data-id="${n.id}" title="編集">編集</button>
+        <button class="ghost" data-act="delete" data-id="${n.id}" title="削除">削除</button>
+      </span>
+    </div>
+    ${isCol ? '' : kids.map(k => nodeHtml(k)).join('')}
+  </div>`;
+}
+
+const REFLECTION_QUESTIONS = [
+  '今いちばん気になっていることは何？',
+  'そのゴールを達成すると、何が手に入る？（目的は？）',
+  '今日できた小さな前進は？',
+  '詰まっている原因は「やり方が分からない」「時間がない」「気が進まない」のどれ？',
+  'やめても困らないことは何？',
+  '明日の最初の一手を15分でできる形にすると？'
+];
+
+function renderCoach() {
+  const ai = !!state.settings.apiKey;
+  const todayEntry = state.journal.find(j => j.date === today()) || { good: '', stuck: '', next: '' };
+  app.innerHTML = `
+    <div class="grid">
+      <section class="card">
+        <h2>壁打ち</h2>
+        ${ai ? `<p class="muted">あなたのゴールツリーを踏まえてClaudeが相談に乗ります。</p>
+          <div class="chat" id="chat">${state.chat.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'ai'}">${esc(m.content)}</div>`).join('') || '<div class="empty">例：「今週やることが多すぎる。何から手をつけるべき？」</div>'}</div>
+          <form id="chatForm"><textarea name="t" placeholder="考えていることを書く" aria-label="メッセージ"></textarea>
+          <div class="row" style="justify-content:space-between;margin-top:8px">
+            <button type="button" class="ghost" data-act="clearchat">履歴を消す</button>
+            <button class="btn primary">送る</button></div></form>`
+        : `<p class="muted">設定でAnthropic APIキーを入れるとAIと壁打ちできます。キーがなくても、次の問いで自問できます。</p>
+          <ul class="list">${REFLECTION_QUESTIONS.map(q => `<li><span class="grow">${esc(q)}</span></li>`).join('')}</ul>
+          <button class="btn" data-go="settings" style="margin-top:12px">APIキーを設定する</button>`}
+      </section>
+
+      <section class="card">
+        <h2>今日の振り返り</h2>
+        <form id="journalForm">
+          <label for="jg">できたこと</label><textarea id="jg" name="good">${esc(todayEntry.good)}</textarea>
+          <label for="js">詰まったこと</label><textarea id="js" name="stuck">${esc(todayEntry.stuck)}</textarea>
+          <label for="jn">明日の最初の一手</label><textarea id="jn" name="next">${esc(todayEntry.next)}</textarea>
+          <div class="row" style="justify-content:flex-end;margin-top:10px">
+            <label style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" name="mk" checked> 「一手」をToDoにして明日やる</label>
+            <button class="btn primary">保存</button>
+          </div>
+        </form>
+      </section>
+    </div>
+    <section class="card">
+      <h2>振り返りの履歴</h2>
+      ${state.journal.length ? `<ul class="list">${[...state.journal].sort((a, b) => b.date.localeCompare(a.date)).map(j => `
+        <li><div class="grow"><strong>${esc(j.date)}</strong><br>
+        ${j.good ? '✓ ' + esc(j.good) + '<br>' : ''}${j.stuck ? '△ ' + esc(j.stuck) + '<br>' : ''}${j.next ? '→ ' + esc(j.next) : ''}</div></li>`).join('')}</ul>`
+        : '<div class="empty">まだ記録がありません。</div>'}
+    </section>`;
+
+  const jf = app.querySelector('#journalForm');
+  jf.onsubmit = e => {
+    e.preventDefault();
+    const entry = { date: today(), good: jf.good.value.trim(), stuck: jf.stuck.value.trim(), next: jf.next.value.trim() };
+    const i = state.journal.findIndex(j => j.date === entry.date);
+    const prevNext = i >= 0 ? state.journal[i].next : '';
+    if (i >= 0) state.journal[i] = entry; else state.journal.push(entry);
+    if (jf.mk.checked && entry.next && entry.next !== prevNext) {
+      const t = new Date(); t.setDate(t.getDate() + 1);
+      addNode(null, entry.next, 'todo', { focusDate: t.toLocaleDateString('sv-SE'), due: t.toLocaleDateString('sv-SE') });
+    }
+    save(); toast('保存しました'); render();
+  };
+
+  const cf = app.querySelector('#chatForm');
+  if (cf) {
+    const box = app.querySelector('#chat');
+    box.scrollTop = box.scrollHeight;
+    cf.onsubmit = async e => {
+      e.preventDefault();
+      const t = cf.t.value.trim();
+      if (!t) return;
+      state.chat.push({ role: 'user', content: t });
+      save(); render();
+      const sys = `あなたはユーザー専属の思考整理パートナー兼コーチです。日本語で、簡潔に、具体的な次の一手を示してください。必要なら質問で考えを引き出してください。今日は${today()}。ユーザーのゴールツリー:\n${treeOutline()}`;
+      try {
+        const reply = await askClaude(sys, state.chat.slice(-20).map(m => ({ role: m.role, content: m.content })));
+        state.chat.push({ role: 'assistant', content: reply });
+      } catch (err) {
+        state.chat.push({ role: 'assistant', content: 'エラー: ' + err.message });
+      }
+      save(); if (view === 'coach') render();
+    };
+  }
+}
+
+function renderSettings() {
+  app.innerHTML = `
+    <section class="card">
+      <h2>AI連携（任意）</h2>
+      <p class="muted">Anthropic APIキーを入れると「分解」と「壁打ち」がClaude（${MODEL}）で動きます。キーはこのブラウザのlocalStorageにだけ保存され、api.anthropic.com への送信以外には使いません。共有PCでは入れないでください。</p>
+      <form class="row" id="keyForm">
+        <input name="k" type="password" placeholder="sk-ant-..." value="${esc(state.settings.apiKey)}" aria-label="APIキー" autocomplete="off">
+        <button class="btn primary">保存</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>データ</h2>
+      <p class="muted">データはすべてこのブラウザ内に保存されます。別の端末に移すときはエクスポート/インポートを使ってください。</p>
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn" data-act="export">JSONをエクスポート</button>
+        <label class="btn" style="margin:0;color:inherit;font-size:inherit">JSONをインポート<input type="file" id="importFile" accept="application/json" hidden></label>
+        <button class="btn" data-act="sample">サンプルを読み込む</button>
+        <button class="btn" data-act="reset" style="color:var(--warn)">すべて削除</button>
+      </div>
+    </section>`;
+
+  app.querySelector('#keyForm').onsubmit = e => {
+    e.preventDefault();
+    state.settings.apiKey = e.target.k.value.trim();
+    save(); toast(state.settings.apiKey ? 'APIキーを保存しました' : 'APIキーを削除しました');
+  };
+  app.querySelector('#importFile').onchange = async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (!Array.isArray(data.nodes)) throw new Error('形式が違います');
+      const key = state.settings.apiKey;
+      state = Object.assign(blank(), data);
+      state.settings.apiKey = key;
+      save(); toast('インポートしました'); render();
+    } catch (err) { toast('読み込めませんでした: ' + err.message); }
+  };
+}
+
+function loadSample() {
+  const p = addNode(null, '自分の力で稼げる人になる', 'purpose');
+  const g1 = addNode(p.id, '3か月でポートフォリオを3つ公開する', 'goal');
+  const s1 = addNode(g1.id, '1つ目：データ可視化ツール', 'goal');
+  addNode(s1.id, '扱うデータを決める', 'todo', { focusDate: today() });
+  addNode(s1.id, '画面のラフを描く', 'todo');
+  addNode(s1.id, 'GitHubに公開してREADMEを書く', 'todo');
+  const g2 = addNode(p.id, '毎朝の習慣を固める', 'goal');
+  addNode(g2.id, '6:30に起きる', 'todo', { focusDate: today() });
+  addNode(g2.id, '朝15分だけ計画を見直す', 'todo');
+}
+
+// ---------- events ----------
+document.getElementById('nav').onclick = e => {
+  const b = e.target.closest('button[data-view]');
+  if (b) { view = b.dataset.view; render(); }
+};
+
+app.addEventListener('click', async e => {
+  const go = e.target.closest('[data-go]');
+  if (go) { view = go.dataset.go; render(); return; }
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const n = el.dataset.id && byId(el.dataset.id);
+  switch (el.dataset.act) {
+    case 'toggle': setDone(n, el.checked); break;
+    case 'done-focus': setDone(n, true); toast('おつかれさま！'); break;
+    case 'skip': sessionSkip.add(n.id); break;
+    case 'focus':
+      if (dailyList().filter(x => !x.done).length >= DAILY_LIMIT) toast(`今日の${DAILY_LIMIT}つを超えています。絞り込むのも大事です`);
+      n.focusDate = today(); break;
+    case 'unfocus': n.focusDate = ''; break;
+    case 'autopick': autoPickDaily(); break;
+    case 'collapse': collapsed.has(n.id) ? collapsed.delete(n.id) : collapsed.add(n.id); break;
+    case 'addchild': {
+      const t = prompt(`「${n.title}」の下に追加（ToDoとして作成）`);
+      if (!t || !t.trim()) return;
+      addNode(n.id, t, 'todo'); collapsed.delete(n.id); break;
+    }
+    case 'edit': openEdit(n); return;
+    case 'delete':
+      if (!confirm(`「${n.title}」と、その下の項目をすべて削除しますか？`)) return;
+      removeNode(n.id); break;
+    case 'breakdown':
+      el.disabled = true; el.textContent = '分解中…';
+      try { await breakdown(n); collapsed.delete(n.id); toast('分解しました'); }
+      catch (err) { toast(err.message === 'NO_KEY' ? 'APIキーがありません' : 'エラー: ' + err.message); }
+      break;
+    case 'clearchat': state.chat = []; break;
+    case 'export': {
+      const copy = JSON.parse(JSON.stringify(state)); copy.settings.apiKey = '';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' }));
+      a.download = `selfos-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
+      return;
+    }
+    case 'sample': loadSample(); toast('サンプルを追加しました'); break;
+    case 'reset':
+      if (!confirm('すべてのデータを削除します。元に戻せません。よろしいですか？')) return;
+      state = Object.assign(blank(), { settings: state.settings }); break;
+    default: return;
+  }
+  save(); render();
+});
+
+const dlg = document.getElementById('editDlg');
+let editing = null;
+function openEdit(n) {
+  editing = n;
+  document.getElementById('fTitle').value = n.title;
+  document.getElementById('fType').value = n.type;
+  document.getElementById('fDue').value = n.due;
+  document.getElementById('fNote').value = n.note;
+  dlg.showModal();
+}
+dlg.addEventListener('close', () => {
+  if (dlg.returnValue === 'ok' && editing) {
+    editing.title = document.getElementById('fTitle').value.trim() || editing.title;
+    editing.type = document.getElementById('fType').value;
+    editing.due = document.getElementById('fDue').value;
+    editing.note = document.getElementById('fNote').value;
+    save(); render();
+  }
+  editing = null;
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+render();
+</script>
+</body>
+</html>
