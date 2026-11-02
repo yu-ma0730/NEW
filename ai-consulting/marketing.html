@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI × マーケティング・SNS | AIコンサルティング</title>
+  <meta name="description" content="SNS投稿や広告文づくりにAIを取り入れ、発信を続けやすくします。">
+  <link rel="stylesheet" href="style.css">
+</head>
+<!-- data-genre は script.js の GENRES の id と同じにしてください -->
+<body data-genre="marketing">
+
+  <!-- ヘッダー（全ページ共通。ジャンルのリンクは script.js の GENRES から自動で作られます） -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">AI</span><span class="logo-text">Consulting</span></a>
+      <nav class="genre-nav" aria-label="ご相談ジャンル"><ul id="genre-nav-list"></ul></nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============================================
+         ページ上部（タイトルとメイン画像）
+         ★画像を差し替えるには★
+           1. 好きな画像を images フォルダに入れる（例: images/marketing.jpg）
+           2. 下の src="images/marketing.svg" を src="images/marketing.jpg" に書き換える
+           3. alt="..." も画像の内容に合わせて書き換える
+         ============================================ -->
+    <section class="hero">
+      <div class="hero-text">
+        <p class="breadcrumb"><a href="index.html">トップ</a> ／ AI × マーケティング・SNS</p>
+        <p class="page-icon" aria-hidden="true">📣</p>
+        <h1>AI × マーケティング・SNS</h1>
+        <p class="hero-lead">SNS投稿や広告文づくりにAIを取り入れ、発信を続けやすくします。</p>
+        <a href="#contact" class="btn btn-primary">このジャンルで相談する</a>
+      </div>
+      <div class="hero-image">
+        <!-- ▼▼▼ メイン画像はここ ▼▼▼ -->
+        <img src="images/marketing.svg" alt="AI × マーケティング・SNSのイメージ画像">
+        <!-- ▲▲▲ メイン画像はここ ▲▲▲ -->
+      </div>
+    </section>
+
+    <!-- 説明（文章はここで直接編集できます） -->
+    <section class="section">
+      <div class="detail-grid">
+        <div class="detail-box">
+          <h2>こんなお悩みに</h2>
+          <ul class="check-list">
+          <li>SNSの投稿ネタがすぐに尽きてしまう</li>
+          <li>発信を続ける時間がない</li>
+          <li>広告文やキャッチコピーの案がほしい</li>
+          </ul>
+        </div>
+        <div class="detail-box">
+          <h2>できること</h2>
+          <ul class="check-list">
+          <li>SNS投稿の企画・文章のたたき台づくり</li>
+          <li>広告文・キャッチコピーの案出し</li>
+          <li>投稿作業のルール化・時短</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 相談フォーム（お名前・メールアドレス・チャットボット） -->
+    <section id="contact" class="section">
+      <div class="contact-box">
+        <div class="contact-text">
+          <h2>一度お話をうかがいたいです</h2>
+          <p>お名前とメールアドレスをお送りください。こちらからご連絡し、オンラインでお話をうかがいます。<br>
+            先に聞きたいことがあれば、チャットでも質問できます。</p>
+          <button type="button" class="btn btn-ghost chat-open">💬 チャットで質問する</button>
+        </div>
+        <form class="consult-form" novalidate>
+          <label><span>お名前<span class="req">必須</span></span>
+            <input type="text" name="name" autocomplete="name" placeholder="山田 太郎" required>
+          </label>
+          <label><span>メールアドレス<span class="req">必須</span></span>
+            <input type="email" name="email" autocomplete="email" placeholder="example@mail.com" required>
+          </label>
+          <p class="form-error" role="alert"></p>
+          <button type="submit" class="btn btn-primary">相談を申し込む</button>
+          <p class="form-done" role="status"></p>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer"><p>&copy; <span id="year"></span> AI Consulting</p></footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

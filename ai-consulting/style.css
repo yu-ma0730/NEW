@@ -84,16 +84,7 @@ a { color: inherit; }
   color: var(--color-sub);
 }
 .genre-nav a:hover { background: #eef2ff; color: var(--color-main); }
-.header-cta {
-  flex-shrink: 0;
-  background: var(--color-main);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 14px;
-}
+.genre-nav a[aria-current="page"] { background: var(--color-main); color: #fff; }
 
 /* ---------- メイン画像（ヒーロー） ---------- */
 .hero {
@@ -117,13 +108,14 @@ a { color: inherit; }
   background: #e9eefb;
 }
 
-/* ---------- ジャンル一覧 ---------- */
-.genres { max-width: 1200px; margin: 0 auto; padding: 32px 16px 80px; }
+/* ---------- セクション共通 ---------- */
+.section { max-width: 1200px; margin: 0 auto; padding: 32px 16px 64px; }
 .section-head { text-align: center; margin-bottom: 36px; }
 .section-head h2 { font-size: 28px; margin: 0 0 8px; }
 .section-head p { color: var(--color-sub); margin: 0; }
 
-.genre-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+/* ---------- トップページのジャンルカード（リンク） ---------- */
+.genre-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 .genre-card {
   background: var(--color-card);
   border: 1px solid var(--color-line);
@@ -131,25 +123,51 @@ a { color: inherit; }
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  text-decoration: none;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
 }
+.genre-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(30, 63, 176, .12); border-color: var(--color-main); }
 .genre-icon { font-size: 32px; line-height: 1; }
-.genre-card h3 { margin: 8px 0 4px; font-size: 20px; }
-.genre-summary { margin: 0 0 8px; color: var(--color-sub); }
-.genre-points { margin: 0; padding-left: 1.2em; font-size: 14px; }
+.genre-card h3 { margin: 12px 0 4px; font-size: 20px; }
+.genre-summary { margin: 0 0 16px; color: var(--color-sub); }
+.genre-more { margin-top: auto; color: var(--color-main); font-weight: 700; font-size: 14px; }
 
-.genre-form {
-  margin-top: auto;
-  border-top: 1px dashed var(--color-line);
-  padding-top: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* ---------- ジャンルページ ---------- */
+.breadcrumb { font-size: 13px; color: var(--color-sub); margin: 0 0 12px; }
+.breadcrumb a { color: var(--color-main); }
+.page-icon { font-size: 44px; line-height: 1; margin: 0 0 8px; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.detail-box { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius); padding: 28px; }
+.detail-box h2 { margin: 0 0 16px; font-size: 22px; }
+.check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.check-list li { position: relative; padding-left: 28px; }
+.check-list li::before {
+  content: "✓";
+  position: absolute; left: 0; top: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #eef2ff; color: var(--color-main);
+  font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
 }
-.form-title { margin: 0; font-weight: 700; font-size: 14px; }
-.genre-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-sub); }
-.req { display: inline-block; margin-left: 6px; font-size: 11px; color: #fff; background: var(--color-error); border-radius: 4px; padding: 0 5px; width: fit-content; }
-.genre-form input {
+
+/* ---------- 相談フォーム ---------- */
+.contact-box {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+.contact-text h2 { margin: 0 0 12px; font-size: 24px; }
+.contact-text p { color: var(--color-sub); margin: 0 0 20px; }
+.consult-form { display: flex; flex-direction: column; gap: 12px; }
+.consult-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-sub); }
+.req { display: inline-block; margin-left: 6px; font-size: 11px; color: #fff; background: var(--color-error); border-radius: 4px; padding: 0 5px; }
+.consult-form input {
   font: inherit;
   font-size: 16px; /* スマホで勝手に拡大されないように16px */
   padding: 10px 12px;
@@ -157,8 +175,8 @@ a { color: inherit; }
   border-radius: 8px;
   color: var(--color-text);
 }
-.genre-form input:focus { outline: 2px solid var(--color-main); outline-offset: 1px; border-color: transparent; }
-.form-error { color: var(--color-error); font-size: 13px; margin: 0; min-height: 0; }
+.consult-form input:focus { outline: 2px solid var(--color-main); outline-offset: 1px; border-color: transparent; }
+.form-error { color: var(--color-error); font-size: 13px; margin: 0; }
 .form-error:empty, .form-done:empty { display: none; }
 .form-done { color: var(--color-ok); font-size: 13px; margin: 0; background: #ebf8f1; padding: 10px; border-radius: 8px; }
 
@@ -219,9 +237,9 @@ a { color: inherit; }
   .hero { grid-template-columns: 1fr; padding: 32px 16px; gap: 24px; }
   .hero-image { order: -1; }
   .pc-only { display: none; }
-  .genre-list { grid-template-columns: 1fr; }
+  .genre-list, .detail-grid, .contact-box { grid-template-columns: 1fr; }
+  .contact-box { padding: 24px; gap: 20px; }
   .header-inner { flex-wrap: wrap; gap: 8px; }
-  .genre-nav { order: 3; flex-basis: 100%; }
-  .header-cta { margin-left: auto; }
+  .genre-nav { flex-basis: 100%; }
   .chat-panel { right: 16px; bottom: 16px; height: 70vh; }
 }

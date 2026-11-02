@@ -7,35 +7,23 @@
   <meta name="description" content="AI×Webデザイン、AI×データなど、AI活用のご相談を受け付けています。まずはお気軽にお話をお聞かせください。">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-genre="">
 
-  <!-- ============================================
-       ヘッダー（上部メニュー）
-       ジャンルのボタンは script.js の GENRES から自動で作られます
-       ============================================ -->
+  <!-- ヘッダー（全ページ共通。ジャンルのリンクは script.js の GENRES から自動で作られます） -->
   <header class="site-header">
     <div class="header-inner">
-      <a href="#top" class="logo">
-        <span class="logo-mark">AI</span>
-        <span class="logo-text">Consulting</span>
-      </a>
-      <nav class="genre-nav" aria-label="ご相談ジャンル">
-        <ul id="genre-nav-list">
-          <!-- script.js が自動でジャンルを並べます -->
-        </ul>
-      </nav>
-      <a href="#genres" class="header-cta">相談する</a>
+      <a href="index.html" class="logo"><span class="logo-mark">AI</span><span class="logo-text">Consulting</span></a>
+      <nav class="genre-nav" aria-label="ご相談ジャンル"><ul id="genre-nav-list"></ul></nav>
     </div>
   </header>
 
-  <main id="top">
+  <main>
 
     <!-- ============================================
          メイン画像（ヒーロー）エリア
          ★画像を差し替えるには★
            1. 好きな画像を images フォルダに入れる（例: images/hero.jpg）
-           2. 下の <img src="images/hero.svg"> の部分を
-              <img src="images/hero.jpg"> に書き換える
+           2. 下の src="images/hero.svg" を src="images/hero.jpg" に書き換える
            3. alt="..." も画像の内容に合わせて書き換える
          ============================================ -->
     <section class="hero">
@@ -56,46 +44,18 @@
       </div>
     </section>
 
-    <!-- ============================================
-         ジャンル一覧
-         各カードに「説明・お名前・メールアドレス・チャットボット」が入ります
-         カードの中身は script.js の GENRES で編集できます
-         ============================================ -->
-    <section id="genres" class="genres">
+    <!-- ジャンル一覧（カードは script.js の GENRES から自動で作られます） -->
+    <section id="genres" class="section">
       <div class="section-head">
         <h2>ご相談ジャンル</h2>
-        <p>気になるジャンルを選んで、お名前とメールアドレスをお送りください。<br>
-          質問があれば、各ジャンルのチャットで先にお試しいただけます。</p>
+        <p>気になるジャンルを選ぶと、詳しい説明とご相談フォームのページに移動します。</p>
       </div>
-      <div id="genre-list" class="genre-list">
-        <!-- script.js が自動でカードを並べます -->
-      </div>
+      <div id="genre-list" class="genre-list"></div>
     </section>
 
   </main>
 
-  <footer class="site-footer">
-    <p>&copy; <span id="year"></span> AI Consulting</p>
-  </footer>
-
-  <!-- ============================================
-       チャットボットの画面（普段は隠れていて、ボタンを押すと開きます）
-       ============================================ -->
-  <div id="chat-panel" class="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-title" hidden>
-    <div class="chat-header">
-      <div>
-        <p class="chat-sub">チャットで質問する</p>
-        <p id="chat-title" class="chat-title">AI×〇〇</p>
-      </div>
-      <button type="button" id="chat-close" class="chat-close" aria-label="チャットを閉じる">×</button>
-    </div>
-    <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
-    <div id="chat-quick" class="chat-quick"></div>
-    <form id="chat-form" class="chat-form">
-      <input type="text" id="chat-input" placeholder="質問を入力（例：料金は？）" autocomplete="off" aria-label="チャットへの質問">
-      <button type="submit">送信</button>
-    </form>
-  </div>
+  <footer class="site-footer"><p>&copy; <span id="year"></span> AI Consulting</p></footer>
 
   <script src="script.js"></script>
 </body>
