@@ -1,0 +1,227 @@
+/* =========================================================
+   色の設定：ここを変えるとサイト全体の色が変わります
+   ========================================================= */
+:root {
+  --color-main: #2f5bea;      /* メインの色（ボタンなど） */
+  --color-main-dark: #1e3fb0;
+  --color-accent: #13b5a6;    /* アクセントの色 */
+  --color-text: #1d2433;
+  --color-sub: #5b6475;
+  --color-bg: #f6f8fc;
+  --color-card: #ffffff;
+  --color-line: #e2e7f0;
+  --color-error: #d4343f;
+  --color-ok: #14865c;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+body {
+  margin: 0;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.7;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+
+/* ---------- ボタン ---------- */
+.btn {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: center;
+}
+.btn-primary { background: var(--color-main); color: #fff; }
+.btn-primary:hover { background: var(--color-main-dark); }
+.btn-primary:disabled { opacity: .6; cursor: wait; }
+.btn-ghost { background: transparent; color: var(--color-main); border-color: var(--color-main); }
+.btn-ghost:hover { background: #eef2ff; }
+
+/* ---------- ヘッダー ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-line);
+}
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.logo { display: flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 800; flex-shrink: 0; }
+.logo-mark {
+  background: linear-gradient(135deg, var(--color-main), var(--color-accent));
+  color: #fff;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+.genre-nav { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.genre-nav::-webkit-scrollbar { display: none; }
+.genre-nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; white-space: nowrap; }
+.genre-nav a {
+  display: block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--color-sub);
+}
+.genre-nav a:hover { background: #eef2ff; color: var(--color-main); }
+.header-cta {
+  flex-shrink: 0;
+  background: var(--color-main);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ---------- メイン画像（ヒーロー） ---------- */
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+.hero-eyebrow { color: var(--color-accent); font-weight: 800; letter-spacing: .15em; margin: 0 0 8px; font-size: 13px; }
+.hero h1 { font-size: clamp(28px, 4vw, 44px); line-height: 1.35; margin: 0 0 16px; }
+.hero-lead { color: var(--color-sub); margin: 0 0 28px; }
+.hero-image img {
+  width: 100%;
+  aspect-ratio: 4 / 3;     /* 画像の縦横比。差し替える画像に合わせて変えてもOK */
+  object-fit: cover;       /* 比率が違う画像でも枠に合わせて切り抜き */
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(30, 63, 176, .15);
+  background: #e9eefb;
+}
+
+/* ---------- ジャンル一覧 ---------- */
+.genres { max-width: 1200px; margin: 0 auto; padding: 32px 16px 80px; }
+.section-head { text-align: center; margin-bottom: 36px; }
+.section-head h2 { font-size: 28px; margin: 0 0 8px; }
+.section-head p { color: var(--color-sub); margin: 0; }
+
+.genre-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+.genre-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.genre-icon { font-size: 32px; line-height: 1; }
+.genre-card h3 { margin: 8px 0 4px; font-size: 20px; }
+.genre-summary { margin: 0 0 8px; color: var(--color-sub); }
+.genre-points { margin: 0; padding-left: 1.2em; font-size: 14px; }
+
+.genre-form {
+  margin-top: auto;
+  border-top: 1px dashed var(--color-line);
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.form-title { margin: 0; font-weight: 700; font-size: 14px; }
+.genre-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-sub); }
+.req { display: inline-block; margin-left: 6px; font-size: 11px; color: #fff; background: var(--color-error); border-radius: 4px; padding: 0 5px; width: fit-content; }
+.genre-form input {
+  font: inherit;
+  font-size: 16px; /* スマホで勝手に拡大されないように16px */
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  color: var(--color-text);
+}
+.genre-form input:focus { outline: 2px solid var(--color-main); outline-offset: 1px; border-color: transparent; }
+.form-error { color: var(--color-error); font-size: 13px; margin: 0; min-height: 0; }
+.form-error:empty, .form-done:empty { display: none; }
+.form-done { color: var(--color-ok); font-size: 13px; margin: 0; background: #ebf8f1; padding: 10px; border-radius: 8px; }
+
+/* ---------- フッター ---------- */
+.site-footer { text-align: center; color: var(--color-sub); font-size: 13px; padding: 24px; border-top: 1px solid var(--color-line); }
+
+/* ---------- チャットボット ---------- */
+.chat-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 40px);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 100;
+}
+.chat-panel[hidden] { display: none; }
+.chat-header {
+  background: linear-gradient(135deg, var(--color-main), var(--color-accent));
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chat-sub { margin: 0; font-size: 12px; opacity: .85; }
+.chat-title { margin: 0; font-weight: 800; }
+.chat-close { background: none; border: 0; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--color-bg); }
+.msg { max-width: 85%; padding: 10px 12px; border-radius: 14px; font-size: 14px; white-space: pre-wrap; }
+.msg-bot { background: #fff; border: 1px solid var(--color-line); align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg-user { background: var(--color-main); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-quick { display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; border-top: 1px solid var(--color-line); }
+.chat-quick button {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--color-main);
+  color: var(--color-main);
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.chat-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--color-line); }
+.chat-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 8px 10px; border: 1px solid var(--color-line); border-radius: 8px; }
+.chat-form button { font: inherit; font-weight: 700; background: var(--color-main); color: #fff; border: 0; border-radius: 8px; padding: 0 14px; cursor: pointer; }
+
+/* ---------- スマホ表示 ---------- */
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; padding: 32px 16px; gap: 24px; }
+  .hero-image { order: -1; }
+  .pc-only { display: none; }
+  .genre-list { grid-template-columns: 1fr; }
+  .header-inner { flex-wrap: wrap; gap: 8px; }
+  .genre-nav { order: 3; flex-basis: 100%; }
+  .header-cta { margin-left: auto; }
+  .chat-panel { right: 16px; bottom: 16px; height: 70vh; }
+}
