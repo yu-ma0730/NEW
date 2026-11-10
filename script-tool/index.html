@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台本メーカー</title>
+<style>
+  :root {
+    --bg: #f6f3ee;
+    --card: #ffffff;
+    --ink: #24201c;
+    --muted: #7a716a;
+    --line: #e4ddd4;
+    --accent: #c2410c;
+    --accent-soft: #fdeee4;
+    --ok: #15803d;
+    --ok-soft: #e6f4ea;
+    --shadow: 0 1px 3px rgba(40, 30, 20, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171513;
+      --card: #221f1c;
+      --ink: #f1ece6;
+      --muted: #a69c93;
+      --line: #3a3530;
+      --accent: #fb923c;
+      --accent-soft: #3a2518;
+      --ok: #4ade80;
+      --ok-soft: #173222;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px 120px; }
+
+  /* ===== ヘッダーと切り替えスイッチ ===== */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
+  .app-title { font-size: 15px; font-weight: 700; margin: 0 0 8px; letter-spacing: .02em; }
+  .switch {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--line); border-radius: 999px; padding: 4px; gap: 4px;
+  }
+  .switch button {
+    border: 0; border-radius: 999px; padding: 10px 0;
+    font: inherit; font-size: 15px; font-weight: 700;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .switch button[aria-selected="true"] { background: var(--card); color: var(--accent); box-shadow: var(--shadow); }
+
+  /* ===== ステップ（入力ブロック） ===== */
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    margin-top: 16px; box-shadow: var(--shadow);
+    transition: opacity .2s, border-color .2s;
+  }
+  .step, #result, .rework, .final { scroll-margin-top: 130px; }
+  .step-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+  .num {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .step h2 { font-size: 16px; margin: 0; flex: 1; }
+  .badge { font-size: 12px; color: var(--muted); display: none; }
+  fieldset { border: 0; margin: 0; padding: 12px 16px 16px; min-width: 0; }
+  .step.locked { opacity: .55; }
+  .step.locked .badge { display: inline; }
+  .step.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .field { margin-top: 12px; }
+  .field:first-child { margin-top: 0; }
+  .label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+  /* チップ型の選択肢 */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips label { position: relative; }
+  .chips input { position: absolute; opacity: 0; pointer-events: none; }
+  .chips span {
+    display: inline-block; padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: 14px; cursor: pointer; user-select: none;
+  }
+  .chips input:checked + span { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .chips input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips.big span { padding: 12px 18px; font-size: 15px; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%; font: inherit; font-size: 16px; /* 16px未満だとiPhoneで勝手にズームされる */
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .name-row { display: flex; gap: 8px; }
+  .name-row input { flex: 1; }
+  .icon-btn {
+    flex: none; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+
+  /* ===== ボタン ===== */
+  .btn {
+    display: block; width: 100%; border: 0; border-radius: 12px;
+    padding: 16px; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-ok { background: var(--ok); color: #fff; }
+  .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .generate-area { margin-top: 24px; }
+
+  /* ===== 結果 ===== */
+  #result { display: none; margin-top: 24px; }
+  #result.show { display: block; }
+  .result-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+  .result-card h3 { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
+  .titles { margin: 0 0 14px; padding-left: 1.2em; font-weight: 700; }
+  .summary { font-size: 13px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+  .scene { margin-top: 18px; }
+  .scene-title { font-weight: 700; font-size: 15px; border-left: 4px solid var(--accent); padding-left: 8px; margin-bottom: 8px; }
+  .line { display: grid; grid-template-columns: 5.5em 1fr; gap: 8px; padding: 4px 0; font-size: 15px; }
+  .who { color: var(--muted); font-size: 13px; padding-top: 2px; word-break: break-all; }
+  .who.hero { color: var(--accent); font-weight: 700; }
+  .who.partner { color: #2563eb; font-weight: 700; }
+  .who.third { color: #9333ea; font-weight: 700; }
+  @media (prefers-color-scheme: dark) {
+    .who.partner { color: #60a5fa; }
+    .who.third { color: #c084fc; }
+  }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 14px; text-align: right; }
+
+  .rework { display: none; margin-top: 14px; background: var(--card); border: 1px solid var(--accent); border-radius: 14px; padding: 14px; }
+  .rework.show { display: block; }
+  .rework p { margin: 0 0 10px; font-weight: 700; }
+  .rework-list { display: grid; gap: 8px; }
+  .rework-list button {
+    text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 10px; padding: 12px 14px; font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .rework-list button small { display: block; color: var(--muted); font-size: 12px; }
+
+  .final { display: none; margin-top: 14px; background: var(--ok-soft); border-radius: 14px; padding: 14px; }
+  .final.show { display: block; }
+  .final p { margin: 0 0 10px; color: var(--ok); font-weight: 700; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px;
+    font-size: 14px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+
+  .placeholder { text-align: center; padding: 60px 16px; color: var(--muted); }
+  .placeholder .big { font-size: 40px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <p class="app-title">台本メーカー</p>
+    <div class="switch" role="tablist">
+      <button type="button" role="tab" id="tab-video" aria-selected="true">🎬 動画台本</button>
+      <button type="button" role="tab" id="tab-blog" aria-selected="false">📝 ブログ</button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= 動画台本ページ ================= -->
+<div class="wrap" id="page-video">
+
+  <!-- 1. 台本の種類 -->
+  <section class="step" data-step="1">
+    <div class="step-head"><span class="num">1</span><h2>台本の種類</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="chips big">
+        <label><input type="radio" name="genre" value="uwaki" checked><span>💔 浮気</span></label>
+        <label><input type="radio" name="genre" value="furin"><span>💍 不倫</span></label>
+        <label><input type="radio" name="genre" value="naresome"><span>💞 馴れ初め</span></label>
+        <label><input type="radio" name="genre" value="yome"><span>🏠 嫁姑</span></label>
+      </div>
+      <p class="hint">種類を変えると、下の舞台設定などがおすすめの値に変わります。</p>
+    </fieldset>
+  </section>
+
+  <!-- 2. 主人公のペルソナ -->
+  <section class="step" data-step="2">
+    <div class="step-head"><span class="num">2</span><h2>主人公のペルソナ</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="field">
+        <span class="label">性別</span>
+        <div class="chips">
+          <label><input type="radio" name="heroGender" value="女性" checked><span>女性</span></label>
+          <label><input type="radio" name="heroGender" value="男性"><span>男性</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="heroName">名前（自動生成・書きかえOK）</label>
+        <div class="name-row">
+          <input type="text" id="heroName">
+          <button type="button" class="icon-btn" data-reroll="hero">🎲 別の名前</button>
+        </div>
+      </div>
+      <div class="row field">
+        <div>
+          <label class="label" for="heroAge">年齢</label>
+          <input type="number" id="heroAge" min="15" max="90" value="32" inputmode="numeric">
+        </div>
+        <div>
+          <label class="label" for="heroJob">職業</label>
+          <select id="heroJob"></select>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- 3. 舞台設定 -->
+  <section class="step" data-step="3">
+    <div class="step-head"><span class="num">3</span><h2>舞台設定</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="field">
+        <span class="label">二人の関係</span>
+        <div class="chips">
+          <label><input type="radio" name="rel" value="未婚"><span>未婚（まだ出会う前）</span></label>
+          <label><input type="radio" name="rel" value="交際中" checked><span>付き合っている</span></label>
+          <label><input type="radio" name="rel" value="婚約中"><span>婚約中</span></label>
+          <label><input type="radio" name="rel" value="既婚"><span>既婚</span></label>
+        </div>
+      </div>
+      <div class="row field">
+        <div>
+          <label class="label" for="years" id="yearsLabel">付き合って何年？</label>
+          <select id="years"></select>
+        </div>
+        <div>
+          <label class="label" for="kids">子ども</label>
+          <select id="kids">
+            <option value="0">なし</option>
+            <option value="1">1人</option>
+            <option value="2">2人</option>
+            <option value="3">3人</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="living">住まい</label>
+        <select id="living">
+          <option value="別々">別々に暮らしている</option>
+          <option value="同居">二人で暮らしている</option>
+          <option value="義実家">相手の実家で同居</option>
+        </select>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- 4. 相手のペルソナ -->
+  <section class="step" data-step="4">
+    <div class="step-head"><span class="num">4</span><h2>相手のペルソナ</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="field">
+        <span class="label">性別</span>
+        <div class="chips">
+          <label><input type="radio" name="partnerGender" value="男性" checked><span>男性</span></label>
+          <label><input type="radio" name="partnerGender" value="女性"><span>女性</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="partnerName">名前（自動生成・書きかえOK）</label>
+        <div class="name-row">
+          <input type="text" id="partnerName">
+          <button type="button" class="icon-btn" data-reroll="partner">🎲 別の名前</button>
+        </div>
+      </div>
+      <div class="row field">
+        <div>
+          <label class="label" for="partnerAge">年齢</label>
+          <input type="number" id="partnerAge" min="15" max="90" value="34" inputmode="numeric">
+        </div>
+        <div>
+          <label class="label" for="partnerJob">職業</label>
+          <select id="partnerJob"></select>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- 5. 相手の設定 -->
+  <section class="step" data-step="5">
+    <div class="step-head"><span class="num">5</span><h2>相手の設定</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="field">
+        <span class="label">相手の性格（いくつでも）</span>
+        <div class="chips" id="traits"></div>
+      </div>
+      <div class="field">
+        <label class="label" for="keySel" id="keyLabel">浮気相手の立場</label>
+        <select id="keySel"></select>
+      </div>
+      <div class="field" id="thirdNameField">
+        <label class="label" for="thirdName" id="thirdNameLabel">浮気相手の名前</label>
+        <div class="name-row">
+          <input type="text" id="thirdName">
+          <button type="button" class="icon-btn" data-reroll="third">🎲 別の名前</button>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- 6. 展開と結末 -->
+  <section class="step" data-step="6">
+    <div class="step-head"><span class="num">6</span><h2>展開と結末</h2><span class="badge">🔒 確定</span></div>
+    <fieldset>
+      <div class="field">
+        <span class="label">雰囲気</span>
+        <div class="chips">
+          <label><input type="radio" name="tone" value="スカッと" checked><span>スカッと</span></label>
+          <label><input type="radio" name="tone" value="感動"><span>感動</span></label>
+          <label><input type="radio" name="tone" value="切ない"><span>切ない</span></label>
+          <label><input type="radio" name="tone" value="コミカル"><span>コミカル</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">結末</span>
+        <div class="chips" id="endings"></div>
+      </div>
+      <div class="field">
+        <span class="label">長さ</span>
+        <div class="chips">
+          <label><input type="radio" name="length" value="1"><span>短め</span></label>
+          <label><input type="radio" name="length" value="2" checked><span>ふつう</span></label>
+          <label><input type="radio" name="length" value="3"><span>長め</span></label>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- 一番下：ストーリー作成ボタン -->
+  <div class="generate-area">
+    <button type="button" class="btn btn-primary" id="generateBtn">✨ ストーリーを作成</button>
+  </div>
+
+  <!-- 結果 -->
+  <section id="result">
+    <div class="result-card">
+      <h3>タイトル案</h3>
+      <ol class="titles" id="titles"></ol>
+      <div class="summary" id="summary"></div>
+      <div id="script"></div>
+      <p class="meta" id="meta"></p>
+    </div>
+
+    <div class="btn-row" id="decideRow">
+      <button type="button" class="btn btn-ok" id="acceptBtn">✅ これで作る</button>
+      <button type="button" class="btn btn-ghost" id="reworkBtn">🔁 練り直す</button>
+    </div>
+
+    <div class="rework" id="rework">
+      <p>どこから練り直しますか？</p>
+      <div class="rework-list">
+        <button type="button" data-from="1">① 台本の種類から<small>最初から全部やり直す</small></button>
+        <button type="button" data-from="2">② 主人公のペルソナから<small>名前・性別・年齢・職業</small></button>
+        <button type="button" data-from="3">③ 舞台設定から<small>関係・年数・子ども・住まい</small></button>
+        <button type="button" data-from="4">④ 相手のペルソナから<small>相手の名前・性別・年齢・職業</small></button>
+        <button type="button" data-from="5">⑤ 相手の設定から<small>性格・キーパーソン</small></button>
+        <button type="button" data-from="6">⑥ 展開と結末から<small>雰囲気・結末・長さ</small></button>
+        <button type="button" data-from="same">🎲 設定はそのまま、別パターンで作る<small>セリフや展開の組み合わせだけを変える</small></button>
+      </div>
+    </div>
+
+    <div class="final" id="final">
+      <p>✅ この台本で確定しました</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="copyBtn">📋 コピー</button>
+        <button type="button" class="btn btn-ghost" id="downloadBtn">⬇️ テキスト保存</button>
+      </div>
+      <div style="margin-top:10px">
+        <button type="button" class="btn btn-ghost" id="reopenBtn">🔁 やっぱり練り直す</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= ブログページ（後で作る） ================= -->
+<div class="wrap" id="page-blog" hidden>
+  <div class="placeholder">
+    <div class="big">📝</div>
+    <p><strong>ブログ作成ツールは準備中です</strong></p>
+    <p>上のスイッチで「動画台本」に戻れます。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ====================================================================
+  // データ（名前・職業・選択肢）
+  // ====================================================================
+  const SURNAMES = ['佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤','吉田','山田','松本','井上','木村','林','清水','山口','森','池田','橋本','石川','前田','藤田','岡田','長谷川','村上','近藤','坂本','遠藤'];
+  const GIVEN = {
+    '女性': ['美咲','結衣','彩花','由美','真由','愛','優子','沙織','麻衣','里奈','千尋','奈々','恵','香織','陽菜','葵','美穂','明日香','玲奈','早紀','理恵','綾乃','茜','舞','智子','花','咲良','瞳','涼子','未来'],
+    '男性': ['翔太','大輔','健太','拓也','直樹','亮','大樹','誠','和也','雄太','悠斗','蓮','颯太','達也','俊介','翼','健一','浩二','隆','博之','慎也','一輝','航','陸','優斗','聡','修','剛','涼介','智也']
+  };
+  const JOBS = ['会社員','営業職','事務職','エンジニア','公務員','看護師','保育士','教師','美容師','医師','飲食店勤務','販売員','自営業','フリーランス','専業主婦','専業主夫','パート','学生'];
+
+  const TRAITS = ['優しい','真面目','口がうまい','逆ギレしやすい','嘘が下手','見栄っ張り','マザコン','束縛が強い','一途','不器用'];
+
+  // 種類ごとの「キーパーソン」と「結末」の選択肢
+  const GENRE = {
+    uwaki: {
+      keyLabel: '浮気相手の立場', thirdLabel: '浮気相手の名前', showThird: true,
+      keys: ['職場の後輩','職場の上司','元恋人','マッチングアプリで知り合った人','主人公の友人','幼なじみ'],
+      endings: ['ざまぁ（制裁）','別れて新しい人生','やり直す（再構築）','実は誤解だった'],
+      defaults: { rel: '交際中', years: 3, kids: 0, living: '同居', traits: ['口がうまい'] }
+    },
+    furin: {
+      keyLabel: '不倫相手の立場', thirdLabel: '不倫相手の名前', showThird: true,
+      keys: ['職場の後輩','職場の上司','元恋人','マッチングアプリで知り合った人','主人公の友人','ママ友・パパ友'],
+      endings: ['慰謝料で制裁','離婚して新しい人生','やり直す（再構築）','実は誤解だった'],
+      defaults: { rel: '既婚', years: 7, kids: 1, living: '同居', traits: ['見栄っ張り'] }
+    },
+    naresome: {
+      keyLabel: '出会い方', thirdLabel: '', showThird: false,
+      keys: ['同じ職場','学生時代の同級生','友人の紹介','マッチングアプリ','偶然の出会い'],
+      endings: ['付き合い始める','プロポーズ','結婚して今','一度別れて再会'],
+      defaults: { rel: '未婚', years: 0, kids: 0, living: '別々', traits: ['優しい','不器用'] }
+    },
+    yome: {
+      keyLabel: '義母（姑）のタイプ', thirdLabel: '義母の名前', showThird: true,
+      keys: ['何でも口を出す','嫌味が多い','孫に執着する','息子にべったり'],
+      endings: ['夫が味方になる','別居・距離を置く','和解する','姑にざまぁ'],
+      defaults: { rel: '既婚', years: 3, kids: 1, living: '義実家', traits: ['マザコン'] }
+    }
+  };
+
+  // ====================================================================
+  // 小さな道具
+  // ====================================================================
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const shuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  const radio = (name) => (document.querySelector(`input[name="${name}"]:checked`) || {}).value;
+  const setRadio = (name, value) => { const el = document.querySelector(`input[name="${name}"][value="${value}"]`); if (el) el.checked = true; };
+  const opposite = (g) => (g === '女性' ? '男性' : '女性');
+
+  function randomName(gender, surname) {
+    return (surname || pick(SURNAMES)) + ' ' + pick(GIVEN[gender]);
+  }
+  function splitName(full) {
+    const s = (full || '').trim().split(/\s+/);
+    if (s.length >= 2) return { sei: s[0], mei: s.slice(1).join('') };
+    return { sei: '', mei: s[0] || '名無し' };
+  }
+
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._id);
+    toast._id = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ====================================================================
+  // 画面の初期化
+  // ====================================================================
+  function fillSelect(sel, items, selected) {
+    sel.innerHTML = items.map((v) => {
+      const val = typeof v === 'object' ? v.value : v;
+      const label = typeof v === 'object' ? v.label : v;
+      return `<option value="${val}"${String(val) === String(selected) ? ' selected' : ''}>${label}</option>`;
+    }).join('');
+  }
+
+  fillSelect($('#heroJob'), JOBS, '会社員');
+  fillSelect($('#partnerJob'), JOBS, '会社員');
+  const yearItems = [{ value: 0, label: '1年未満' }];
+  for (let i = 1; i <= 40; i++) yearItems.push({ value: i, label: `${i}年` });
+  fillSelect($('#years'), yearItems, 3);
+
+  $('#traits').innerHTML = TRAITS.map((t) =>
+    `<label><input type="checkbox" name="trait" value="${t}"><span>${t}</span></label>`).join('');
+
+  // 種類を切り替えたときに、関連する選択肢とおすすめ値を入れ替える
+  function applyGenre(g, useDefaults) {
+    const G = GENRE[g];
+    $('#keyLabel').textContent = G.keyLabel;
+    fillSelect($('#keySel'), G.keys, G.keys[0]);
+    $('#thirdNameField').hidden = !G.showThird;
+    $('#thirdNameLabel').textContent = G.thirdLabel;
+    $('#endings').innerHTML = G.endings.map((e, i) =>
+      `<label><input type="radio" name="ending" value="${e}"${i === 0 ? ' checked' : ''}><span>${e}</span></label>`).join('');
+
+    if (useDefaults) {
+      const d = G.defaults;
+      setRadio('rel', d.rel);
+      $('#years').value = d.years;
+      $('#kids').value = d.kids;
+      $('#living').value = d.living;
+      $$('input[name="trait"]').forEach((c) => { c.checked = d.traits.includes(c.value); });
+      setRadio('tone', g === 'naresome' ? '感動' : 'スカッと');
+    }
+    rerollThird();
+    updateYearsLabel();
+  }
+
+  function updateYearsLabel() {
+    const rel = radio('rel');
+    $('#yearsLabel').textContent =
+      rel === '既婚' ? '結婚して何年？' :
+      rel === '未婚' ? '出会ってから付き合うまで' : '付き合って何年？';
+  }
+
+  function rerollHero() { $('#heroName').value = randomName(radio('heroGender')); }
+  function rerollPartner() { $('#partnerName').value = randomName(radio('partnerGender')); }
+  function rerollThird() {
+    const g = radio('genre');
+    if (g === 'yome') {
+      // 義母は相手と同じ名字
+      const sei = splitName($('#partnerName').value).sei || pick(SURNAMES);
+      $('#thirdName').value = randomName('女性', sei);
+    } else {
+      // 浮気・不倫相手は「相手」と異なる性別をひとまず想定
+      $('#thirdName').value = randomName(opposite(radio('partnerGender')));
+    }
+  }
+
+  // ====================================================================
+  // イベント
+  // ====================================================================
+  $$('input[name="genre"]').forEach((el) => el.addEventListener('change', () => applyGenre(radio('genre'), true)));
+  $$('input[name="heroGender"]').forEach((el) => el.addEventListener('change', () => {
+    rerollHero();
+    // 主人公の性別を変えたら、相手はひとまず反対の性別にする
+    setRadio('partnerGender', opposite(radio('heroGender')));
+    rerollPartner();
+    rerollThird();
+  }));
+  $$('input[name="partnerGender"]').forEach((el) => el.addEventListener('change', () => { rerollPartner(); rerollThird(); }));
+  $$('input[name="rel"]').forEach((el) => el.addEventListener('change', updateYearsLabel));
+  $$('[data-reroll]').forEach((b) => b.addEventListener('click', () => {
+    ({ hero: rerollHero, partner: rerollPartner, third: rerollThird })[b.dataset.reroll]();
+  }));
+
+  // ブログ ↔ 動画台本 の切り替え
+  function showPage(which) {
+    $('#tab-video').setAttribute('aria-selected', which === 'video');
+    $('#tab-blog').setAttribute('aria-selected', which === 'blog');
+    $('#page-video').hidden = which !== 'video';
+    $('#page-blog').hidden = which !== 'blog';
+    window.scrollTo(0, 0);
+  }
+  $('#tab-video').addEventListener('click', () => showPage('video'));
+  $('#tab-blog').addEventListener('click', () => showPage('blog'));
+
+  // ====================================================================
+  // ステップのロック（確定）・ロック解除
+  // ====================================================================
+  const steps = $$('.step');
+  function lockAll() {
+    steps.forEach((s) => { s.classList.add('locked'); s.classList.remove('focus'); s.querySelector('fieldset').disabled = true; });
+  }
+  function unlockFrom(n) {
+    steps.forEach((s) => {
+      const k = Number(s.dataset.step);
+      const open = k >= n;
+      s.classList.toggle('locked', !open);
+      s.classList.toggle('focus', k === n);
+      s.querySelector('fieldset').disabled = !open;
+    });
+  }
+
+  // ====================================================================
+  // 入力内容をまとめる
+  // ====================================================================
+  function readSettings() {
+    const hero = { ...splitName($('#heroName').value), gender: radio('heroGender'), age: Number($('#heroAge').value) || 30, job: $('#heroJob').value };
+    const partner = { ...splitName($('#partnerName').value), gender: radio('partnerGender'), age: Number($('#partnerAge').value) || 30, job: $('#partnerJob').value };
+    const third = { ...splitName($('#thirdName').value) };
+    return {
+      genre: radio('genre'),
+      hero, partner, third,
+      rel: radio('rel'),
+      years: Number($('#years').value),
+      kids: Number($('#kids').value),
+      living: $('#living').value,
+      traits: $$('input[name="trait"]:checked').map((c) => c.value),
+      key: $('#keySel').value,
+      tone: radio('tone'),
+      ending: radio('ending'),
+      length: Number(radio('length'))
+    };
+  }
+
+  // ====================================================================
+  // 台本を組み立てる（テンプレートの組み合わせ）
+  // 行の形式: ['N', 'ナレーション'] / ['H', '主人公のセリフ'] / ['P', '相手のセリフ'] / ['T', '第三者のセリフ']
+  // ====================================================================
+  function buildContext(s) {
+    const H = s.hero, P = s.partner, T = s.third;
+    const I = H.gender === '女性' ? '私' : '僕';
+    const IP = P.gender === '女性' ? '私' : '僕';
+    const yText = s.years === 0 ? '1年足らず' : `${s.years}年`;
+    let PL; // 主人公から見た相手の呼び方
+    if (s.rel === '既婚') PL = P.gender === '男性' ? '夫' : '妻';
+    else if (s.rel === '婚約中') PL = '婚約者';
+    else if (s.rel === '交際中') PL = P.gender === '男性' ? '彼氏' : '彼女';
+    else PL = '';
+    let HL3; // 第三者から見た主人公の呼び方
+    if (s.rel === '既婚') HL3 = H.gender === '女性' ? '奥さん' : '旦那さん';
+    else HL3 = H.gender === '女性' ? '彼女さん' : '彼氏さん';
+    const shock = H.gender === '女性' ? '（……嘘でしょ）' : '（……嘘だろ）';
+    const has = (t) => s.traits.includes(t);
+    return { ...s, H, P, T, I, IP, yText, PL, HL3, shock, has };
+  }
+
+  // 相手の性格を紹介する一文
+  function traitLines(c) {
+    const P = c.P.mei, I = c.I;
+    const map = {
+      '優しい': `${P}は、誰にでも分けへだてなく優しい人だった。`,
+      '真面目': `${P}は真面目で、約束は必ず守る人だった。`,
+      '口がうまい': `${P}は口がうまく、いつも人の輪の中心にいた。`,
+      '逆ギレしやすい': `ただ、${P}には都合が悪くなるとすぐ声を荒らげる一面があった。`,
+      '嘘が下手': `${P}は嘘が下手で、隠し事をするとすぐ顔に出る。`,
+      '見栄っ張り': `${P}は見栄っ張りで、人からどう見られるかをいつも気にしていた。`,
+      'マザコン': `${P}は何かにつけて「母さんが言うには」と口にする人だった。`,
+      '束縛が強い': `${P}は、${I}の交友関係に何かと口を出したがった。`,
+      '一途': `${P}は一度決めたら、まっすぐ突き進む一途な人だった。`,
+      '不器用': `${P}は不器用で、気持ちを言葉にするのが苦手だった。`
+    };
+    return c.traits.slice(0, 2).map((t) => ['N', map[t]]);
+  }
+
+  // 問い詰められたときの相手の反応（性格で変わる）
+  function reaction(c) {
+    if (c.has('逆ギレしやすい')) return [['P', '「は？ 勝手にスマホ見たの？ そっちのほうがおかしいだろ！」'], ['N', `逆上する${c.P.mei}を見て、${c.I}の気持ちはすっと冷めていった。`]];
+    if (c.has('口がうまい')) return [['P', `「誤解だって。${c.T.mei}さんの相談に乗ってただけだよ」`], ['N', 'すらすらと出てくる言い訳。まるで、前から用意していたかのようだった。']];
+    if (c.has('嘘が下手')) return [['P', '「え、いや、その……ち、違うんだ……」'], ['N', `${c.P.mei}の目は、面白いほど泳いでいた。`]];
+    if (c.has('見栄っ張り')) return [['P', '「頼む、このことは誰にも言わないでくれ……！」'], ['N', `${c.P.mei}が真っ先に心配したのは、${c.I}ではなく自分の体裁だった。`]];
+    return [['P', '「……ごめん」'], ['N', `${c.P.mei}は、それ以上何も言わなかった。`]];
+  }
+
+  function closing(c) {
+    const words = {
+      'スカッと': '裏切りの代償は、いつか必ず自分に返ってくる。',
+      '感動': '本当に大切なものは、失いかけて初めて気づくのかもしれない。',
+      '切ない': 'あの頃の二人には、もう二度と戻れない。それでも、人生は続いていく。',
+      'コミカル': '……人生、本当に何が起こるかわからない。'
+    };
+    const ask = {
+      uwaki: 'あなたなら、このあとどうしますか？',
+      furin: 'あなたなら、このあとどうしますか？',
+      naresome: 'あなたの馴れ初めも、ぜひ教えてください。',
+      yome: 'あなたの家の嫁姑エピソードも、ぜひ教えてください。'
+    }[c.genre];
+    return [
+      ['N', words[c.tone]],
+      ['N', `最後までご視聴ありがとうございました。この動画が良かったと思ったら、高評価とチャンネル登録をお願いします。${ask}コメント欄でお待ちしています。`]
+    ];
+  }
+
+  // ---------- 浮気・不倫 ----------
+  function cheatingScenes(c) {
+    const { H, P, T, I, PL, HL3 } = c;
+    const married = c.rel === '既婚';
+    const relIntro =
+      married ? `${PL}の${P.mei}とは結婚して${c.yText}。${c.kids > 0 ? `${c.kids}人の子どもにも恵まれ、` : ''}穏やかな毎日を送っていた。` :
+      c.rel === '婚約中' ? `婚約者の${P.mei}との結婚式を半年後に控え、${I}は幸せの真っただ中にいた。` :
+      c.rel === '交際中' ? `${PL}の${P.mei}とは付き合って${c.yText}。${c.living === '同居' ? '一緒に暮らし始め、' : ''}結婚の話もちらほら出始めていた。` :
+      `${P.mei}とは、友達以上恋人未満の関係が続いていた。`;
+
+    const intro = [
+      () => [['N', `${H.mei}、${H.age}歳。${H.job}。`], ['N', relIntro], ...traitLines(c), ['N', '——あの日、すべてが崩れるまでは。']],
+      () => [['H', `「${P.mei}と一緒なら、きっと大丈夫」`], ['N', `${H.age}歳の${H.mei}は、本気でそう信じていた。`], ['N', relIntro], ...traitLines(c)]
+    ];
+
+    const doubt = [
+      () => [['N', `最近、${P.mei}はスマホを肌身離さず持ち歩くようになった。`], ['N', 'お風呂にまで持って入る。テーブルに置くときは、いつも画面を伏せたままだ。']],
+      () => [['N', `帰ってきた${P.mei}から、知らない香水の匂いがした。`], ['H', '「……なんか、いい匂いするね」'], ['P', '「え？ ああ、電車が混んでたからかな」']],
+      () => [['P', '「ごめん、今週末も仕事が入っちゃって」'], ['N', `これで3週連続。${I}は笑顔で「頑張ってね」と送り出すしかなかった。`]],
+      () => [['N', 'クレジットカードの明細に、見覚えのないレストランの名前があった。'], ['N', `${I}の誕生日にすら行ったことのない、高級店だった。`]],
+      ...(married && c.kids > 0 ? [() => [['N', `子どもの運動会の日まで、${P.mei}は「急な出張」だと言って姿を見せなかった。`], ['N', `「パパ（ママ）は？」と聞く子どもに、${I}は何と答えればいいのか分からなかった。`]]] : [])
+    ];
+
+    const reveal = [
+      () => [['N', `ある夜、${P.mei}のスマホに通知が表示された。`], ['N', `『今日もありがとう。早く会いたいな』——送り主は「${T.mei}」。${c.key}だった。`], ['H', c.shock]],
+      () => [['N', '仕事帰り、偶然通りかかった駅前のカフェ。'], ['N', `窓際の席で笑い合っていたのは、${P.mei}と、${c.key}の${T.mei}だった。`], ['H', c.shock]],
+      () => [['N', `${T.mei}のSNSに投稿された一枚の写真。`], ['N', `そこに写り込んでいた腕時計は、${I}が${P.mei}に贈ったものだった。`], ['N', `相手は${c.key}の${T.mei}だった。`]]
+    ];
+    const evidence = () => [['N', `${I}は震える手で、証拠を一つずつ集め始めた。`], ['N', '日時、場所、やり取りのスクリーンショット。泣くのは、全部終わってからだ。']];
+
+    const confront = [
+      () => [['H', `「${T.mei}さんって、誰？」`], ...reaction(c), ['H', '「言い訳はいいよ。全部、知ってるから」'], ['N', `${I}はテーブルの上に、集めた証拠を静かに並べた。`]],
+      () => [['N', `${I}は、${P.mei}と${T.mei}を同じ店に呼び出した。`], ['T', `「え……どうして${HL3}がここに……」`], ...reaction(c)],
+      ...(married ? [() => [['N', `${I}の隣には、知人に紹介してもらった弁護士が座っている。`], ['H', '「ここから先のお話は、弁護士さんを通してください」'], ['N', `${P.mei}の顔から、さっと血の気が引いた。`]]] : [])
+    ];
+
+    const endMap = {
+      'ざまぁ（制裁）': () => [['N', `${P.mei}の嘘は、共通の友人たちにも知れ渡った。`], ['N', `気づけば、${P.mei}の周りには誰もいなくなっていた。`], ['P', '「なあ……もう一度だけ、やり直せないか？」'], ['H', H.gender === '女性' ? '「ごめん。もう、あなたに使う時間はないの」' : '「悪いけど、もう君に使う時間はないんだ」']],
+      '慰謝料で制裁': () => [['N', `${P.mei}と${T.mei}には、それぞれ慰謝料が請求された。`], ['N', `${T.mei}が既婚者と知りながら関係を続けていたことは、周囲にも知られることになった。`], ['P', '「頼む、考え直してくれ……！」'], ['H', '「考えたよ。何度も。そのうえで出した答えだから」']],
+      '別れて新しい人生': () => [['N', `${I}は、${P.mei}との関係に自分の手で終止符を打った。`], ['N', '半年後——'], ['N', `${I}は新しい仕事に打ち込み、少しずつ笑顔を取り戻していた。`], ['H', '「あのとき、勇気を出してよかった」']],
+      '離婚して新しい人生': () => [['N', `離婚届に判を押した日、空は嫌になるほど晴れていた。`], ['N', '一年後——'], ['N', `${c.kids > 0 ? '子どもと二人、' : ''}${I}は小さな部屋で、新しい生活を始めていた。`], ['H', '「やっと、自分の人生を生きている気がする」']],
+      'やり直す（再構築）': () => [['P', '「本当にすまなかった。全部、自分が弱かったせいだ」'], ['N', `${P.mei}は${T.mei}との関係を断ち、スマホのパスワードも${I}に伝えた。`], ['N', '失った信頼は、簡単には戻らない。それでも——'], ['H', '「次はないからね」'], ['N', `${I}たちは、もう一度だけ前を向くことにした。`]],
+      '実は誤解だった': () => [['N', `ところが、${T.mei}の口から出たのは意外な言葉だった。`], ['T', `「違うんです。${P.mei}さん、${HL3}へのサプライズの相談をしてくれていて……」`], ['N', `${P.mei}の鞄から出てきたのは、${married ? '結婚記念日のために用意した小さな箱' : '小さな指輪の箱'}だった。`], ['N', `疑ってしまった自分を恥じながらも、${I}の目からは涙があふれた。`]]
+    };
+
+    return [
+      { title: '導入', pool: intro, fixed: 1 },
+      { title: '違和感', pool: doubt },
+      { title: '発覚', pool: reveal, fixed: 1, extra: evidence },
+      { title: '対決', pool: confront },
+      { title: '結末', pool: [endMap[c.ending]], fixed: 1 },
+      { title: 'エンディング', pool: [() => closing(c)], fixed: 1 }
+    ];
+  }
+
+  // ---------- 馴れ初め ----------
+  function naresomeScenes(c) {
+    const { H, P, I, IP } = c;
+    const intro = [
+      () => [['N', `${H.mei}、${H.age}歳。${H.job}。`], ['N', '恋愛なんて、もうしばらくいいと思っていた。']],
+      () => [['N', `「運命の出会いなんて、ドラマの中だけの話」——${H.age}歳の${H.mei}は、ずっとそう思っていた。`]]
+    ];
+    const meetMap = {
+      '同じ職場': [['N', `${P.mei}と初めて話したのは、職場の飲み会で隣の席になったときだった。`], ['P', `「${H.mei}さんって、いつも一番最後まで残って仕事してますよね」`]],
+      '学生時代の同級生': [['N', `${P.mei}は、学生時代の同級生だった。`], ['N', '久しぶりの同窓会。少し大人びた横顔に、思わず目が止まった。'], ['P', `「……${H.mei}？ うわ、懐かしい！」`]],
+      '友人の紹介': [['N', `友人に「絶対合うと思う」と半ば強引にセッティングされた食事会。そこにいたのが${P.mei}だった。`], ['P', '「あ、はじめまして。……なんか、緊張しますね」']],
+      'マッチングアプリ': [['N', `なんとなく始めたマッチングアプリ。そこで${P.mei}とマッチした。`], ['N', '最初のメッセージは、驚くほど丁寧な長文だった。']],
+      '偶然の出会い': [['N', `突然の雨。駅の改札で立ち尽くしていた${I}に、${P.mei}が声をかけてきた。`], ['P', '「よかったら、駅前まで一緒に入っていきます？」']]
+    };
+    const meet = [() => [...meetMap[c.key], ...traitLines(c)]];
+    const closer = [
+      () => [['N', 'それから、二人で会う回数が少しずつ増えていった。'], ['H', `「${P.mei}さんって、意外とよく笑うんですね」`], ['P', `「え、そうかな。${H.mei}さんといると、なんか楽で」`]],
+      () => [['N', `ある日、仕事で大きなミスをして落ち込んでいた${I}。`], ['N', `何も言わずに温かい缶コーヒーを差し出してくれたのが、${P.mei}だった。`]],
+      () => [['N', `好きな映画、苦手な食べ物、子どもの頃の夢。話せば話すほど、${P.mei}のことをもっと知りたくなった。`]]
+    ];
+    const trouble = [
+      () => [['N', `ある日、${P.mei}が誰かと親しげに話している姿を見てしまった。`], ['N', '胸が、ちくりと痛んだ。'], ['H', `（……${I}、${P.mei}さんのことが好きなんだ）`]],
+      () => [['N', '連絡が、ふっと途絶えた。既読がつかないまま、三日が過ぎた。'], ['P', '「ごめん。実家の親が倒れて、連絡する余裕がなかった」'], ['N', `${I}は、${P.mei}の声を聞いて初めて、自分がどれだけ不安だったかに気づいた。`]],
+      () => [['N', `${P.mei}の遠方への転勤が決まった。`], ['P', '「……来月から、向こうに行くことになった」'], ['N', `${I}は、「おめでとう」と言うのが精一杯だった。`]]
+    ];
+    const bashful = c.has('不器用') ? [['N', `不器用な${P.mei}が、何度も言葉を選びながら口を開いた。`]] : [];
+    const endMap = {
+      '付き合い始める': () => [...bashful, ['P', `「${H.mei}さん。${IP}と、付き合ってください」`], ['H', '「……はい。よろしくお願いします」'], ['N', '帰り道、二人の手はどちらからともなくつながっていた。']],
+      'プロポーズ': () => [['N', `付き合って${c.years > 0 ? c.yText : 'しばらく'}。いつものレストランで、${P.mei}が急に姿勢を正した。`], ...bashful, ['P', '「これからの人生、ずっと隣にいてほしい」'], ['N', `差し出された小さな箱。${I}は涙で、指輪がよく見えなかった。`]],
+      '結婚して今': () => [['N', `そして今、${I}の隣には${P.mei}がいる。`], ['N', '出会った日のことを話すと、二人とも笑ってしまう。'], ['P', '「あのとき声をかけて、本当によかった」']],
+      '一度別れて再会': () => [['N', `${P.mei}は夢を追って、遠い街へ旅立った。二人は、別々の道を選んだ。`], ['N', '五年後——'], ['N', '出会ったあの場所で、聞き覚えのある声がした。'], ['P', `「……久しぶり、${H.mei}」`]]
+    };
+    return [
+      { title: '導入', pool: intro, fixed: 1 },
+      { title: '出会い', pool: meet, fixed: 1 },
+      { title: '距離が縮まる', pool: closer },
+      { title: 'すれ違い', pool: trouble },
+      { title: '結末', pool: [endMap[c.ending]], fixed: 1 },
+      { title: 'エンディング', pool: [() => closing(c)], fixed: 1 }
+    ];
+  }
+
+  // ---------- 嫁姑 ----------
+  function yomeScenes(c) {
+    const { H, P, T, I, PL } = c;
+    const livingText = c.living === '義実家' ? `${P.mei}の実家で、義母の${T.mei}と同居している。` : `義母の${T.mei}の家は、車で10分の距離にある。`;
+    const intro = [
+      () => [['N', `${H.mei}、${H.age}歳。${PL}の${P.mei}と結婚して${c.yText}。`], ['N', livingText], ...traitLines(c), ['N', '義母との関係は、最初からうまくいっていたわけではない。']]
+    ];
+    const typeMap = {
+      '何でも口を出す': [['T', `「あら、また冷凍食品？ ${P.mei}は手作りじゃないと食べないのよ」`], ['N', '料理、掃除、洗濯物の干し方。義母は、すべてに口を出した。']],
+      '嫌味が多い': [['T', `「${H.mei}さんって、ほんとにのんびりしてるのねぇ。うらやましいわぁ」`], ['N', '笑顔のまま投げられる言葉は、じわじわと心を削っていった。']],
+      '孫に執着する': c.kids > 0
+        ? [['T', '「この子の教育は、私に任せておけばいいの」'], ['N', `義母は、${I}に断りなく子どもの習い事まで決めてきた。`]]
+        : [['T', '「孫の顔は、いつになったら見られるのかしら」'], ['N', '親戚が集まるたびに、その言葉が繰り返された。']],
+      '息子にべったり': [['T', `「${P.mei}ちゃん、今日もお母さんのご飯食べていくでしょ？」`], ['N', `義母にとって、${P.mei}はいつまでも「小さな息子」のままだった。`]]
+    };
+    const harass = [
+      () => typeMap[c.key],
+      () => [['N', `ある日、${I}の部屋の引き出しが、少しだけ開いていた。`], ['N', '中を見られた——そう確信するのに、時間はかからなかった。']],
+      () => [['T', `「うちの家のやり方に合わせてもらわないとね、${H.mei}さん」`], ['N', '「うちの家」。その言葉に、自分はまだ家族ではないのだと思い知らされた。']]
+    ];
+    const husband = [
+      () => c.has('マザコン')
+        ? [['P', '「母さんも悪気はないんだからさ。うまくやってよ」'], ['N', `${P.mei}に相談しても、返ってくるのは決まってこの一言だった。`]]
+        : [['P', '「……ごめん。そこまでとは気づいてなかった」'], ['N', `${P.mei}は、困ったように頭をかいた。`]],
+      () => [['N', `${I}はこれまでの出来事を、日付と一緒にノートへ書き留めていた。`], ['N', 'いつか、必要になる日が来る気がしていた。']]
+    ];
+    const clash = [
+      () => [['N', `決定的だったのは、${I}の両親が遊びに来た日のことだった。`], ['T', '「あら、ご実家はずいぶん質素なお暮らしなのねぇ」'], ['N', `その瞬間、${I}の中で何かが切れた。`], ['H', '「お義母さん。今の言葉、取り消してください」']],
+      () => [['H', `「${P.mei}。これ、読んでほしい」`], ['N', `${I}が差し出したのは、書き溜めてきたノートだった。`], ['N', `ページをめくる${P.mei}の手が、少しずつ震えていった。`]]
+    ];
+    const endMap = {
+      '夫が味方になる': () => [['P', '「母さん。もうやめてくれ。俺の家族は、こっちなんだ」'.replace('俺', P.gender === '男性' ? '俺' : '私')], ['N', `初めて聞く、${P.mei}のはっきりとした声だった。`], ['T', '「な……っ」'], ['N', `義母は、それ以上何も言えなかった。`]],
+      '別居・距離を置く': () => [['N', `${I}たちは、義実家から少し離れた街に部屋を借りた。`], ['N', '引っ越しの日、義母は最後まで見送りに出てこなかった。'], ['H', '「距離を置くのは、逃げじゃない。自分たちを守るためなんだ」']],
+      '和解する': () => [['N', 'ある夜、義母がぽつりと口を開いた。'], ['T', '「……私もね、昔、お姑さんにずいぶん泣かされたのよ」'], ['N', `初めて聞く話だった。${I}と義母の間にあった壁が、少しだけ低くなった気がした。`]],
+      '姑にざまぁ': () => [['N', `数日後、親戚の集まりで${I}のノートの内容が話題にのぼった。`], ['N', '義母がしてきたことは、親戚中の知るところとなった。'], ['T', '「ち、違うのよ、私はただ……」'], ['N', '誰も、義母の言い訳に耳を貸さなかった。']]
+    };
+    return [
+      { title: '導入', pool: intro, fixed: 1 },
+      { title: '義母の言動', pool: harass },
+      { title: `${PL}の態度`, pool: husband },
+      { title: '山場', pool: clash },
+      { title: '結末', pool: [endMap[c.ending]], fixed: 1 },
+      { title: 'エンディング', pool: [() => closing(c)], fixed: 1 }
+    ];
+  }
+
+  function makeTitles(c) {
+    const { P, PL } = c;
+    const tag = `【${c.tone}】`;
+    if (c.genre === 'uwaki' || c.genre === 'furin') {
+      const who = PL || P.mei;
+      return [
+        `${tag}${c.yText}${c.rel === '既婚' ? '連れ添った' : '付き合った'}${who}が${c.key}と${c.genre === 'furin' ? '不倫' : '浮気'}→${c.ending}`,
+        `${tag}「仕事で遅くなる」が口癖の${who}。スマホの通知を見た結果…`,
+        `${tag}${who}の裏切りを知った私が、静かに証拠を集めた話`.replace('私', c.I)
+      ];
+    }
+    if (c.genre === 'naresome') {
+      return [
+        `${tag}${c.key}で出会った二人の馴れ初め→${c.ending}`,
+        `${tag}恋愛はもういいと思っていた私が、${P.mei}と出会うまで`.replace('私', c.I),
+        `${tag}「運命なんてない」と思っていた二人の物語`
+      ];
+    }
+    return [
+      `${tag}${c.key}義母との${c.living === '義実家' ? '同居' : '近居'}生活→${c.ending}`,
+      `${tag}義母の嫌がらせを書き溜めたノート。${PL}に見せた結果…`,
+      `${tag}「うちの家のやり方」に耐え続けた${c.I}の反撃`
+    ];
+  }
+
+  function generate(s) {
+    const c = buildContext(s);
+    const scenes = c.genre === 'naresome' ? naresomeScenes(c) : c.genre === 'yome' ? yomeScenes(c) : cheatingScenes(c);
+    const out = scenes.map((sc) => {
+      const n = sc.fixed || Math.min(sc.pool.length, c.length);
+      // ランダムに選び、元の並び順（話の流れ）を保つ
+      const idx = shuffle(sc.pool.map((_, i) => i)).slice(0, n).sort((a, b) => a - b);
+      const lines = idx.flatMap((i) => sc.pool[i]());
+      if (sc.extra && c.length >= 2) lines.push(...sc.extra());
+      return { title: sc.title, lines };
+    });
+    return { titles: makeTitles(c), scenes: out, ctx: c };
+  }
+
+  // ====================================================================
+  // 表示
+  // ====================================================================
+  let current = null;
+
+  function esc(t) { return String(t).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
+  function speaker(c, k) {
+    if (k === 'N') return { name: 'ナレーション', cls: '' };
+    if (k === 'H') return { name: c.H.mei, cls: 'hero' };
+    if (k === 'P') return { name: c.P.mei, cls: 'partner' };
+    return { name: c.genre === 'yome' ? '義母' : c.T.mei, cls: 'third' };
+  }
+
+  function summaryText(c) {
+    const g = { uwaki: '浮気', furin: '不倫', naresome: '馴れ初め', yome: '嫁姑' }[c.genre];
+    const rel = c.rel === '既婚' ? `既婚（${c.yText}）` : c.rel === '交際中' ? `交際中（${c.yText}）` : c.rel;
+    return [
+      `種類：${g}　雰囲気：${c.tone}　結末：${c.ending}`,
+      `主人公：${c.H.sei} ${c.H.mei}（${c.H.gender}・${c.H.age}歳・${c.H.job}）`,
+      `相手：${c.P.sei} ${c.P.mei}（${c.P.gender}・${c.P.age}歳・${c.P.job}）${c.traits.length ? '／' + c.traits.join('・') : ''}`,
+      `舞台：${rel}　子ども${c.kids ? c.kids + '人' : 'なし'}　${GENRE[c.genre].keyLabel}：${c.key}`
+    ];
+  }
+
+  function render(r) {
+    const c = r.ctx;
+    $('#titles').innerHTML = r.titles.map((t) => `<li>${esc(t)}</li>`).join('');
+    $('#summary').innerHTML = summaryText(c).map(esc).join('<br>');
+    $('#script').innerHTML = r.scenes.map((sc, i) => `
+      <div class="scene">
+        <div class="scene-title">シーン${i + 1}：${esc(sc.title)}</div>
+        ${sc.lines.map(([k, text]) => {
+          const sp = speaker(c, k);
+          return `<div class="line"><span class="who ${sp.cls}">${esc(sp.name)}</span><span>${esc(text)}</span></div>`;
+        }).join('')}
+      </div>`).join('');
+    const chars = r.scenes.reduce((a, sc) => a + sc.lines.reduce((b, l) => b + l[1].length, 0), 0);
+    $('#meta').textContent = `本文 約${chars}文字`;
+  }
+
+  function asText(r) {
+    const c = r.ctx;
+    const lines = ['■タイトル案', ...r.titles.map((t, i) => `${i + 1}. ${t}`), '', '■設定', ...summaryText(c), ''];
+    r.scenes.forEach((sc, i) => {
+      lines.push(`【シーン${i + 1}：${sc.title}】`);
+      sc.lines.forEach(([k, text]) => lines.push(`${speaker(c, k).name}：${text}`));
+      lines.push('');
+    });
+    return lines.join('\n');
+  }
+
+  // ====================================================================
+  // ボタンの動き
+  // ====================================================================
+  const resultEl = $('#result'), reworkEl = $('#rework'), finalEl = $('#final'), decideRow = $('#decideRow');
+  const genBtn = $('#generateBtn');
+
+  function runGenerate() {
+    current = generate(readSettings());
+    render(current);
+    lockAll();
+    genBtn.disabled = true;
+    genBtn.textContent = '✨ ストーリーを作成';
+    resultEl.classList.add('show');
+    reworkEl.classList.remove('show');
+    finalEl.classList.remove('show');
+    decideRow.hidden = false;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  genBtn.addEventListener('click', runGenerate);
+
+  $('#acceptBtn').addEventListener('click', () => {
+    decideRow.hidden = true;
+    reworkEl.classList.remove('show');
+    finalEl.classList.add('show');
+    finalEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  $('#reworkBtn').addEventListener('click', () => {
+    reworkEl.classList.toggle('show');
+    if (reworkEl.classList.contains('show')) reworkEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  $('#reopenBtn').addEventListener('click', () => {
+    finalEl.classList.remove('show');
+    decideRow.hidden = false;
+    reworkEl.classList.add('show');
+    reworkEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  $$('#rework [data-from]').forEach((b) => b.addEventListener('click', () => {
+    const from = b.dataset.from;
+    if (from === 'same') { runGenerate(); toast('別パターンで作り直しました'); return; }
+    const n = Number(from);
+    unlockFrom(n);
+    genBtn.disabled = false;
+    genBtn.textContent = '✨ この設定で作り直す';
+    reworkEl.classList.remove('show');
+    document.querySelector(`.step[data-step="${n}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(`${n}番から先を変更できます`);
+  }));
+
+  $('#copyBtn').addEventListener('click', async () => {
+    const text = asText(current);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('コピーしました');
+    } catch (e) {
+      // 古いブラウザ向けの予備手段
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('コピーしました'); } catch (_) { toast('コピーできませんでした'); }
+      ta.remove();
+    }
+  });
+
+  $('#downloadBtn').addEventListener('click', () => {
+    const blob = new Blob([asText(current)], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    // 日本語のファイル名は環境によって「download」に置き換わるため、英数字にする
+    const d = new Date(), z = (n) => String(n).padStart(2, '0');
+    a.download = `daihon_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.txt`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // 最初の表示
+  rerollHero();
+  rerollPartner();
+  applyGenre('uwaki', true);
+})();
+</script>
+</body>
+</html>
