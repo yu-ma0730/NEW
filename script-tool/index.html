@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>台本メーカー</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>動画台本メーカー</title>
 <style>
   :root {
     --bg: #f6f3ee;
@@ -40,133 +40,97 @@
     line-height: 1.6;
     -webkit-text-size-adjust: 100%;
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px 120px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px calc(110px + env(safe-area-inset-bottom)); }
 
-  /* ===== ヘッダーと切り替えスイッチ ===== */
-  header {
-    position: sticky; top: 0; z-index: 10;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
-  }
+  /* ===== ヘッダー（タイトルと進み具合） ===== */
+  header { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); }
   .header-inner { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
-  .app-title { font-size: 15px; font-weight: 700; margin: 0 0 8px; letter-spacing: .02em; }
-  .switch {
-    display: grid; grid-template-columns: 1fr 1fr;
-    background: var(--line); border-radius: 999px; padding: 4px; gap: 4px;
-  }
-  .switch button {
-    border: 0; border-radius: 999px; padding: 10px 0;
-    font: inherit; font-size: 15px; font-weight: 700;
-    background: transparent; color: var(--muted); cursor: pointer;
-  }
-  .switch button[aria-selected="true"] { background: var(--card); color: var(--accent); box-shadow: var(--shadow); }
+  .app-title { font-size: 15px; font-weight: 700; margin: 0; }
+  .progress { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .dots { display: flex; gap: 6px; flex: 1; }
+  .dots i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+  .dots i.done { background: var(--accent); opacity: .45; }
+  .dots i.now { background: var(--accent); }
+  .dots i.lock { background: var(--muted); opacity: .35; }
+  .count { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-  /* ===== ステップ（入力ブロック） ===== */
-  .step {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    margin-top: 16px; box-shadow: var(--shadow);
-    transition: opacity .2s, border-color .2s;
-  }
-  .step, #result, .rework, .final { scroll-margin-top: 130px; }
-  .step-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
-  .num {
-    flex: none; width: 26px; height: 26px; border-radius: 50%;
-    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
-    display: grid; place-items: center;
-  }
-  .step h2 { font-size: 16px; margin: 0; flex: 1; }
-  .badge { font-size: 12px; color: var(--muted); display: none; }
-  fieldset { border: 0; margin: 0; padding: 12px 16px 16px; min-width: 0; }
-  .step.locked { opacity: .55; }
-  .step.locked .badge { display: inline; }
-  .step.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  /* ===== 入力ステップ（1画面に1つ） ===== */
+  .step { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-top: 16px; box-shadow: var(--shadow); }
+  .step.active { display: block; }
+  .step-head { display: flex; align-items: center; gap: 10px; padding: 16px 16px 0; }
+  .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; display: grid; place-items: center; }
+  .step h2 { font-size: 18px; margin: 0; flex: 1; }
+  fieldset { border: 0; margin: 0; padding: 14px 16px 18px; min-width: 0; }
 
-  .field { margin-top: 12px; }
+  .field { margin-top: 14px; }
   .field:first-child { margin-top: 0; }
   .label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
-  .hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 
-  /* チップ型の選択肢 */
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chips label { position: relative; }
   .chips input { position: absolute; opacity: 0; pointer-events: none; }
-  .chips span {
-    display: inline-block; padding: 8px 14px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--bg);
-    font-size: 14px; cursor: pointer; user-select: none;
-  }
+  .chips span { display: inline-block; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; cursor: pointer; user-select: none; }
   .chips input:checked + span { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
   .chips input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .chips.big span { padding: 12px 18px; font-size: 15px; }
 
   input[type="text"], input[type="number"], select {
     width: 100%; font: inherit; font-size: 16px; /* 16px未満だとiPhoneで勝手にズームされる */
-    padding: 10px 12px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
   }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .name-row { display: flex; gap: 8px; }
-  .name-row input { flex: 1; }
-  .icon-btn {
-    flex: none; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-    border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
-  }
+  .name-row input { flex: 1; min-width: 0; }
+  .icon-btn { flex: none; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
 
-  /* ===== ボタン ===== */
-  .btn {
-    display: block; width: 100%; border: 0; border-radius: 12px;
-    padding: 16px; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
-  }
+  /* ===== 画面下に固定のボタン ===== */
+  .bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--bg); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+  .bottom-inner { max-width: 640px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; }
+  .btn { border: 0; border-radius: 12px; padding: 14px 8px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
   .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
   .btn-ok { background: var(--ok); color: #fff; }
   .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
-  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-  .generate-area { margin-top: 24px; }
 
-  /* ===== 結果 ===== */
-  #result { display: none; margin-top: 24px; }
-  #result.show { display: block; }
-  .result-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
-  .result-card h3 { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
-  .titles { margin: 0 0 14px; padding-left: 1.2em; font-weight: 700; }
-  .summary { font-size: 13px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
-  .scene { margin-top: 18px; }
-  .scene-title { font-weight: 700; font-size: 15px; border-left: 4px solid var(--accent); padding-left: 8px; margin-bottom: 8px; }
-  .line { display: grid; grid-template-columns: 5.5em 1fr; gap: 8px; padding: 4px 0; font-size: 15px; }
+  /* ===== 結果画面 ===== */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--line); border-radius: 999px; padding: 4px; gap: 4px; margin-top: 16px; }
+  .tabs button { border: 0; border-radius: 999px; padding: 9px 0; font: inherit; font-size: 14px; font-weight: 700; background: transparent; color: var(--muted); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--accent); box-shadow: var(--shadow); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); margin-top: 12px; }
+  .card h3 { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+  .titles { margin: 0 0 16px; padding-left: 1.2em; font-weight: 700; }
+  .summary { font-size: 14px; line-height: 1.8; }
+  .summary dt { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .summary dd { margin: 0; }
+
+  .scene-nav { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; scrollbar-width: none; }
+  .scene-nav::-webkit-scrollbar { display: none; }
+  .scene-nav button { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .scene-nav button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .scene-title { font-weight: 700; font-size: 16px; border-left: 4px solid var(--accent); padding-left: 8px; margin: 0 0 10px; }
+  .scene + .scene { margin-top: 22px; }
+  .line { display: grid; grid-template-columns: 5.5em 1fr; gap: 8px; padding: 5px 0; font-size: 15px; }
   .who { color: var(--muted); font-size: 13px; padding-top: 2px; word-break: break-all; }
   .who.hero { color: var(--accent); font-weight: 700; }
   .who.partner { color: #2563eb; font-weight: 700; }
   .who.third { color: #9333ea; font-weight: 700; }
-  @media (prefers-color-scheme: dark) {
-    .who.partner { color: #60a5fa; }
-    .who.third { color: #c084fc; }
-  }
-  .meta { font-size: 12px; color: var(--muted); margin-top: 14px; text-align: right; }
+  @media (prefers-color-scheme: dark) { .who.partner { color: #60a5fa; } .who.third { color: #c084fc; } }
+  .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .pager .btn { padding: 10px 8px; font-size: 14px; font-weight: 600; }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 12px; text-align: right; }
 
-  .rework { display: none; margin-top: 14px; background: var(--card); border: 1px solid var(--accent); border-radius: 14px; padding: 14px; }
-  .rework.show { display: block; }
-  .rework p { margin: 0 0 10px; font-weight: 700; }
+  .final-note { display: none; background: var(--ok-soft); color: var(--ok); font-weight: 700; border-radius: 12px; padding: 10px 14px; margin-top: 16px; font-size: 14px; }
+  .final-note.show { display: block; }
+
+  /* ===== 練り直し画面 ===== */
   .rework-list { display: grid; gap: 8px; }
-  .rework-list button {
-    text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-    border-radius: 10px; padding: 12px 14px; font: inherit; font-size: 15px; cursor: pointer;
-  }
+  .rework-list button { text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 12px 14px; font: inherit; font-size: 15px; cursor: pointer; }
   .rework-list button small { display: block; color: var(--muted); font-size: 12px; }
 
-  .final { display: none; margin-top: 14px; background: var(--ok-soft); border-radius: 14px; padding: 14px; }
-  .final.show { display: block; }
-  .final p { margin: 0 0 10px; color: var(--ok); font-weight: 700; }
-
-  .toast {
-    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-    background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px;
-    font-size: 14px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s;
-  }
+  .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 14px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
   .toast.show { opacity: 1; }
-
-  .placeholder { text-align: center; padding: 60px 16px; color: var(--muted); }
-  .placeholder .big { font-size: 40px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -174,20 +138,20 @@
 
 <header>
   <div class="header-inner">
-    <p class="app-title">台本メーカー</p>
-    <div class="switch" role="tablist">
-      <button type="button" role="tab" id="tab-video" aria-selected="true">🎬 動画台本</button>
-      <button type="button" role="tab" id="tab-blog" aria-selected="false">📝 ブログ</button>
+    <p class="app-title">🎬 動画台本メーカー</p>
+    <div class="progress" id="progress">
+      <div class="dots" id="dots"></div>
+      <span class="count" id="count"></span>
     </div>
   </div>
 </header>
 
-<!-- ================= 動画台本ページ ================= -->
-<div class="wrap" id="page-video">
-
+<main class="wrap">
+  <!-- ===== 入力画面（1画面に1ステップ） ===== -->
+  <div id="view-form">
   <!-- 1. 台本の種類 -->
   <section class="step" data-step="1">
-    <div class="step-head"><span class="num">1</span><h2>台本の種類</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">1</span><h2>台本の種類</h2></div>
     <fieldset>
       <div class="chips big">
         <label><input type="radio" name="genre" value="uwaki" checked><span>💔 浮気</span></label>
@@ -195,13 +159,13 @@
         <label><input type="radio" name="genre" value="naresome"><span>💞 馴れ初め</span></label>
         <label><input type="radio" name="genre" value="yome"><span>🏠 嫁姑</span></label>
       </div>
-      <p class="hint">種類を変えると、下の舞台設定などがおすすめの値に変わります。</p>
+      <p class="hint">種類を変えると、次の画面以降の設定がおすすめの値に変わります。</p>
     </fieldset>
   </section>
 
   <!-- 2. 主人公のペルソナ -->
   <section class="step" data-step="2">
-    <div class="step-head"><span class="num">2</span><h2>主人公のペルソナ</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">2</span><h2>主人公のペルソナ</h2></div>
     <fieldset>
       <div class="field">
         <span class="label">性別</span>
@@ -232,7 +196,7 @@
 
   <!-- 3. 舞台設定 -->
   <section class="step" data-step="3">
-    <div class="step-head"><span class="num">3</span><h2>舞台設定</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">3</span><h2>舞台設定</h2></div>
     <fieldset>
       <div class="field">
         <span class="label">二人の関係</span>
@@ -271,7 +235,7 @@
 
   <!-- 4. 相手のペルソナ -->
   <section class="step" data-step="4">
-    <div class="step-head"><span class="num">4</span><h2>相手のペルソナ</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">4</span><h2>相手のペルソナ</h2></div>
     <fieldset>
       <div class="field">
         <span class="label">性別</span>
@@ -302,7 +266,7 @@
 
   <!-- 5. 相手の設定 -->
   <section class="step" data-step="5">
-    <div class="step-head"><span class="num">5</span><h2>相手の設定</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">5</span><h2>相手の設定</h2></div>
     <fieldset>
       <div class="field">
         <span class="label">相手の性格（いくつでも）</span>
@@ -324,7 +288,7 @@
 
   <!-- 6. 展開と結末 -->
   <section class="step" data-step="6">
-    <div class="step-head"><span class="num">6</span><h2>展開と結末</h2><span class="badge">🔒 確定</span></div>
+    <div class="step-head"><span class="num">6</span><h2>展開と結末</h2></div>
     <fieldset>
       <div class="field">
         <span class="label">雰囲気</span>
@@ -350,28 +314,43 @@
     </fieldset>
   </section>
 
-  <!-- 一番下：ストーリー作成ボタン -->
-  <div class="generate-area">
-    <button type="button" class="btn btn-primary" id="generateBtn">✨ ストーリーを作成</button>
   </div>
 
-  <!-- 結果 -->
-  <section id="result">
-    <div class="result-card">
-      <h3>タイトル案</h3>
-      <ol class="titles" id="titles"></ol>
-      <div class="summary" id="summary"></div>
-      <div id="script"></div>
-      <p class="meta" id="meta"></p>
+  <!-- ===== 結果画面 ===== -->
+  <div id="view-result" hidden>
+    <div class="final-note" id="finalNote">✅ この台本で確定しました。下のボタンでコピー・保存できます。</div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-script" aria-selected="true">📜 台本</button>
+      <button type="button" role="tab" id="tab-info" aria-selected="false">🏷 タイトル案・設定</button>
     </div>
 
-    <div class="btn-row" id="decideRow">
-      <button type="button" class="btn btn-ok" id="acceptBtn">✅ これで作る</button>
-      <button type="button" class="btn btn-ghost" id="reworkBtn">🔁 練り直す</button>
+    <div id="panel-script">
+      <div class="scene-nav" id="sceneNav"></div>
+      <div class="card">
+        <div id="sceneBody"></div>
+        <div class="pager">
+          <button type="button" class="btn btn-ghost" id="prevScene">◀ 前のシーン</button>
+          <button type="button" class="btn btn-ghost" id="nextScene">次のシーン ▶</button>
+        </div>
+      </div>
     </div>
 
-    <div class="rework" id="rework">
-      <p>どこから練り直しますか？</p>
+    <div id="panel-info" hidden>
+      <div class="card">
+        <h3>タイトル案</h3>
+        <ol class="titles" id="titles"></ol>
+        <h3>設定</h3>
+        <dl class="summary" id="summary"></dl>
+        <p class="meta" id="meta"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 練り直し画面 ===== -->
+  <div id="view-rework" hidden>
+    <div class="card">
+      <h3>どこから練り直しますか？</h3>
+      <p class="hint" style="margin:0 0 12px">選んだところより前の設定は、そのまま残ります。</p>
       <div class="rework-list">
         <button type="button" data-from="1">① 台本の種類から<small>最初から全部やり直す</small></button>
         <button type="button" data-from="2">② 主人公のペルソナから<small>名前・性別・年齢・職業</small></button>
@@ -382,28 +361,13 @@
         <button type="button" data-from="same">🎲 設定はそのまま、別パターンで作る<small>セリフや展開の組み合わせだけを変える</small></button>
       </div>
     </div>
-
-    <div class="final" id="final">
-      <p>✅ この台本で確定しました</p>
-      <div class="btn-row">
-        <button type="button" class="btn btn-ghost" id="copyBtn">📋 コピー</button>
-        <button type="button" class="btn btn-ghost" id="downloadBtn">⬇️ テキスト保存</button>
-      </div>
-      <div style="margin-top:10px">
-        <button type="button" class="btn btn-ghost" id="reopenBtn">🔁 やっぱり練り直す</button>
-      </div>
-    </div>
-  </section>
-</div>
-
-<!-- ================= ブログページ（後で作る） ================= -->
-<div class="wrap" id="page-blog" hidden>
-  <div class="placeholder">
-    <div class="big">📝</div>
-    <p><strong>ブログ作成ツールは準備中です</strong></p>
-    <p>上のスイッチで「動画台本」に戻れます。</p>
   </div>
-</div>
+</main>
+
+<!-- ===== 画面下のボタン（画面ごとに中身が変わる） ===== -->
+<nav class="bottom-bar">
+  <div class="bottom-inner" id="bottomBar"></div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -560,32 +524,84 @@
     ({ hero: rerollHero, partner: rerollPartner, third: rerollThird })[b.dataset.reroll]();
   }));
 
-  // ブログ ↔ 動画台本 の切り替え
-  function showPage(which) {
-    $('#tab-video').setAttribute('aria-selected', which === 'video');
-    $('#tab-blog').setAttribute('aria-selected', which === 'blog');
-    $('#page-video').hidden = which !== 'video';
-    $('#page-blog').hidden = which !== 'blog';
-    window.scrollTo(0, 0);
-  }
-  $('#tab-video').addEventListener('click', () => showPage('video'));
-  $('#tab-blog').addEventListener('click', () => showPage('blog'));
 
   // ====================================================================
-  // ステップのロック（確定）・ロック解除
+  // 画面の切り替え（入力ステップ → 結果 → 練り直し）
   // ====================================================================
-  const steps = $$('.step');
-  function lockAll() {
-    steps.forEach((s) => { s.classList.add('locked'); s.classList.remove('focus'); s.querySelector('fieldset').disabled = true; });
+  const STEP_NAMES = ['台本の種類', '主人公', '舞台設定', '相手', '相手の設定', '展開と結末'];
+  const TOTAL = 6;
+  const state = {
+    view: 'form',   // 'form' | 'result' | 'rework'
+    step: 1,        // 今表示している入力ステップ
+    minStep: 1,     // 練り直し時、これより前のステップは確定済み（戻れない）
+    scene: 0,       // 結果画面で表示中のシーン（-1 = 全部）
+    final: false,   // 「これで作る」で確定したか
+    tab: 'script'
+  };
+
+  function renderProgress() {
+    const prog = $('#progress');
+    prog.hidden = state.view !== 'form';
+    if (state.view !== 'form') return;
+    $('#dots').innerHTML = Array.from({ length: TOTAL }, (_, i) => {
+      const k = i + 1;
+      const cls = k < state.minStep ? 'lock' : k < state.step ? 'done' : k === state.step ? 'now' : '';
+      return `<i class="${cls}"></i>`;
+    }).join('');
+    $('#count').textContent = `${state.step} / ${TOTAL}　${STEP_NAMES[state.step - 1]}`;
   }
-  function unlockFrom(n) {
-    steps.forEach((s) => {
-      const k = Number(s.dataset.step);
-      const open = k >= n;
-      s.classList.toggle('locked', !open);
-      s.classList.toggle('focus', k === n);
-      s.querySelector('fieldset').disabled = !open;
-    });
+
+  function button(label, cls, onClick, disabled) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn ${cls}`;
+    b.textContent = label;
+    b.disabled = !!disabled;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function renderBottom() {
+    const bar = $('#bottomBar');
+    bar.innerHTML = '';
+    if (state.view === 'form') {
+      const reworking = state.minStep > 1 || current;
+      bar.append(button('← 戻る', 'btn-ghost', () => goStep(state.step - 1), state.step <= state.minStep));
+      if (state.step < TOTAL) bar.append(button('次へ →', 'btn-primary', () => goStep(state.step + 1)));
+      else bar.append(button(reworking ? '✨ 作り直す' : '✨ ストーリーを作成', 'btn-primary', runGenerate));
+    } else if (state.view === 'result') {
+      if (!state.final) {
+        bar.append(button('🔁 練り直す', 'btn-ghost', () => show('rework')));
+        bar.append(button('✅ これで作る', 'btn-ok', accept));
+      } else {
+        bar.append(button('🔁 練り直す', 'btn-ghost', () => show('rework')));
+        bar.append(button('📋 コピー', 'btn-ghost', copyText));
+        bar.append(button('⬇️ 保存', 'btn-ghost', downloadText));
+      }
+    } else {
+      bar.append(button('← 台本に戻る', 'btn-ghost', () => show('result')));
+    }
+  }
+
+  function show(view) {
+    state.view = view;
+    $('#view-form').hidden = view !== 'form';
+    $('#view-result').hidden = view !== 'result';
+    $('#view-rework').hidden = view !== 'rework';
+    renderProgress();
+    renderBottom();
+    window.scrollTo(0, 0);
+  }
+
+  function goStep(n) {
+    if (n < state.minStep || n > TOTAL) return;
+    // 名前が空のまま進もうとしたら、自動で入れておく
+    if (!$('#heroName').value.trim()) rerollHero();
+    if (!$('#partnerName').value.trim()) rerollPartner();
+    if (!$('#thirdName').value.trim()) rerollThird();
+    state.step = n;
+    $$('.step').forEach((s) => s.classList.toggle('active', Number(s.dataset.step) === n));
+    show('form');
   }
 
   // ====================================================================
@@ -860,10 +876,48 @@
     return { titles: makeTitles(c), scenes: out, ctx: c };
   }
 
-  // ====================================================================
-  // 表示
-  // ====================================================================
-  let current = null;
+
+  function renderScene() {
+    const r = current, c = r.ctx;
+    const lineHtml = (sc, i) => `
+      <div class="scene">
+        <p class="scene-title">シーン${i + 1}：${esc(sc.title)}</p>
+        ${sc.lines.map(([k, text]) => {
+          const sp = speaker(c, k);
+          return `<div class="line"><span class="who ${sp.cls}">${esc(sp.name)}</span><span>${esc(text)}</span></div>`;
+        }).join('')}
+      </div>`;
+    const all = state.scene === -1;
+    $('#sceneNav').innerHTML =
+      r.scenes.map((sc, i) => `<button type="button" data-scene="${i}" aria-selected="${state.scene === i}">${i + 1} ${esc(sc.title)}</button>`).join('') +
+      `<button type="button" data-scene="-1" aria-selected="${all}">すべて表示</button>`;
+    $('#sceneBody').innerHTML = all ? r.scenes.map(lineHtml).join('') : lineHtml(r.scenes[state.scene], state.scene);
+    $('#prevScene').disabled = all || state.scene === 0;
+    $('#nextScene').disabled = all || state.scene === r.scenes.length - 1;
+    const sel = $('#sceneNav [aria-selected="true"]');
+    if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+
+  function setScene(i) { state.scene = i; renderScene(); window.scrollTo(0, 0); }
+
+  function setTab(t) {
+    state.tab = t;
+    $('#tab-script').setAttribute('aria-selected', t === 'script');
+    $('#tab-info').setAttribute('aria-selected', t === 'info');
+    $('#panel-script').hidden = t !== 'script';
+    $('#panel-info').hidden = t !== 'info';
+  }
+
+  function render(r) {
+    const c = r.ctx;
+    $('#titles').innerHTML = r.titles.map((t) => `<li>${esc(t)}</li>`).join('');
+    $('#summary').innerHTML = summaryText(c).map((line) => `<dd>${esc(line)}</dd>`).join('');
+    const chars = r.scenes.reduce((a, sc) => a + sc.lines.reduce((b, l) => b + l[1].length, 0), 0);
+    $('#meta').textContent = `本文 約${chars}文字・${r.scenes.length}シーン`;
+    state.scene = 0;
+    setTab('script');
+    renderScene();
+  }
 
   function esc(t) { return String(t).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
   function speaker(c, k) {
@@ -884,22 +938,6 @@
     ];
   }
 
-  function render(r) {
-    const c = r.ctx;
-    $('#titles').innerHTML = r.titles.map((t) => `<li>${esc(t)}</li>`).join('');
-    $('#summary').innerHTML = summaryText(c).map(esc).join('<br>');
-    $('#script').innerHTML = r.scenes.map((sc, i) => `
-      <div class="scene">
-        <div class="scene-title">シーン${i + 1}：${esc(sc.title)}</div>
-        ${sc.lines.map(([k, text]) => {
-          const sp = speaker(c, k);
-          return `<div class="line"><span class="who ${sp.cls}">${esc(sp.name)}</span><span>${esc(text)}</span></div>`;
-        }).join('')}
-      </div>`).join('');
-    const chars = r.scenes.reduce((a, sc) => a + sc.lines.reduce((b, l) => b + l[1].length, 0), 0);
-    $('#meta').textContent = `本文 約${chars}文字`;
-  }
-
   function asText(r) {
     const c = r.ctx;
     const lines = ['■タイトル案', ...r.titles.map((t, i) => `${i + 1}. ${t}`), '', '■設定', ...summaryText(c), ''];
@@ -911,58 +949,28 @@
     return lines.join('\n');
   }
 
+
   // ====================================================================
   // ボタンの動き
   // ====================================================================
-  const resultEl = $('#result'), reworkEl = $('#rework'), finalEl = $('#final'), decideRow = $('#decideRow');
-  const genBtn = $('#generateBtn');
+  let current = null;
 
   function runGenerate() {
     current = generate(readSettings());
+    state.final = false;
+    $('#finalNote').classList.remove('show');
     render(current);
-    lockAll();
-    genBtn.disabled = true;
-    genBtn.textContent = '✨ ストーリーを作成';
-    resultEl.classList.add('show');
-    reworkEl.classList.remove('show');
-    finalEl.classList.remove('show');
-    decideRow.hidden = false;
-    resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    show('result');
   }
 
-  genBtn.addEventListener('click', runGenerate);
+  function accept() {
+    state.final = true;
+    $('#finalNote').classList.add('show');
+    renderBottom();
+    window.scrollTo(0, 0);
+  }
 
-  $('#acceptBtn').addEventListener('click', () => {
-    decideRow.hidden = true;
-    reworkEl.classList.remove('show');
-    finalEl.classList.add('show');
-    finalEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-
-  $('#reworkBtn').addEventListener('click', () => {
-    reworkEl.classList.toggle('show');
-    if (reworkEl.classList.contains('show')) reworkEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-  $('#reopenBtn').addEventListener('click', () => {
-    finalEl.classList.remove('show');
-    decideRow.hidden = false;
-    reworkEl.classList.add('show');
-    reworkEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-
-  $$('#rework [data-from]').forEach((b) => b.addEventListener('click', () => {
-    const from = b.dataset.from;
-    if (from === 'same') { runGenerate(); toast('別パターンで作り直しました'); return; }
-    const n = Number(from);
-    unlockFrom(n);
-    genBtn.disabled = false;
-    genBtn.textContent = '✨ この設定で作り直す';
-    reworkEl.classList.remove('show');
-    document.querySelector(`.step[data-step="${n}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast(`${n}番から先を変更できます`);
-  }));
-
-  $('#copyBtn').addEventListener('click', async () => {
+  async function copyText() {
     const text = asText(current);
     try {
       await navigator.clipboard.writeText(text);
@@ -974,9 +982,9 @@
       try { document.execCommand('copy'); toast('コピーしました'); } catch (_) { toast('コピーできませんでした'); }
       ta.remove();
     }
-  });
+  }
 
-  $('#downloadBtn').addEventListener('click', () => {
+  function downloadText() {
     const blob = new Blob([asText(current)], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -985,12 +993,31 @@
     a.download = `daihon_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.txt`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  $('#tab-script').addEventListener('click', () => setTab('script'));
+  $('#tab-info').addEventListener('click', () => setTab('info'));
+  $('#sceneNav').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-scene]');
+    if (b) setScene(Number(b.dataset.scene));
   });
+  $('#prevScene').addEventListener('click', () => setScene(state.scene - 1));
+  $('#nextScene').addEventListener('click', () => setScene(state.scene + 1));
+
+  $$('#view-rework [data-from]').forEach((b) => b.addEventListener('click', () => {
+    const from = b.dataset.from;
+    if (from === 'same') { runGenerate(); toast('別パターンで作り直しました'); return; }
+    const n = Number(from);
+    state.minStep = n;
+    goStep(n);
+    if (n > 1) toast(`①〜${'①②③④⑤⑥'[n - 2]}はそのまま。ここから変更できます`);
+  }));
 
   // 最初の表示
   rerollHero();
   rerollPartner();
   applyGenre('uwaki', true);
+  goStep(1);
 })();
 </script>
 </body>
