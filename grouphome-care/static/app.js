@@ -63,6 +63,27 @@ function bindMic(btn, textarea) {
     toast("話してください。終わったら ■ を押します。");
   });
 }
+const VOICE_EXAMPLES = {
+  vital: "体温36.8度、血圧120の80、脈72、サチュレーション97", meal: "朝ごはん全部、昼は半分、夜は食べなかった",
+  med: "朝の薬は飲んだ", excretion: "おしっこあり、便はやわらかい", case: "穏やかに過ごされ、お風呂に入った",
+  handover: "大事、夜中に何度か起きていた", diary: "晴れ、避難訓練をした",
+};
+function listenOnce(btn, onText) {
+  if (!btn) return;
+  if (!SR) {
+    btn.addEventListener("click", () => toast("この端末のブラウザは音声入力に未対応です。キーボードのマイクボタンを使ってください。", true));
+    return;
+  }
+  let rec = null;
+  btn.addEventListener("click", () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = "ja-JP"; rec.continuous = false; rec.interimResults = false;
+    rec.onresult = (e) => { const t = Array.from(e.results).filter((r) => r.isFinal).map((r) => r[0].transcript).join("、"); if (t) onText(t); };
+    rec.onerror = (e) => toast("音声入力エラー：" + e.error, true);
+    rec.onend = () => { rec = null; btn.classList.remove("rec"); btn.textContent = "🎤 話して入力"; };
+    rec.start(); btn.classList.add("rec"); btn.textContent = "■ 聞いています…（押すと終わり）";
+  });
+}
 const memoBox = (id, value = "", ph = "ここに書く、または 🎤 を押して話す") =>
   `<div class="memo-wrap"><textarea id="${id}" placeholder="${esc(ph)}">${esc(value)}</textarea>
    <button type="button" class="mic" data-mic="${id}" aria-label="音声入力">🎤</button></div>`;
@@ -152,7 +173,7 @@ VIEWS.record = async (arg) => {
   const p = new URLSearchParams(arg || "");
   if (!S.rec || p.has("new") || p.has("resident")) {
     S.rec = { step: 1, resident_id: null, type: null, fields: {}, phrases: [], memo: "", text: "", checks: [], handover: false,
-              date: p.get("date") || todayStr(), time: nowTime(), drafted: false };
+              date: p.get("date") || todayStr(), time: nowTime(), drafted: false, voiceKeys: [], heard: "", voiceOk: false };
     if (p.get("resident")) { S.rec.resident_id = Number(p.get("resident")) || null; S.rec.step = 2; }
     if (p.has("new") || p.has("resident")) history.replaceState(null, "", "#/record");
   }
@@ -186,7 +207,7 @@ async function renderRecord() {
       <div class="tiles">${types.map(([k, d]) => `<button class="tile ${doneTypes.has(k) ? "done" : ""}" data-type="${k}"><span class="ic">${d.icon}</span>${esc(d.label)}${doneTypes.has(k) ? "<small>✓ 記録済み</small>" : (S.meta.daily_required.includes(k) && R.resident_id ? "<small>毎日必要</small>" : "")}</button>`).join("")}</div>`;
     $("#bk").addEventListener("click", () => { R.step = 1; renderRecord(); });
     $$("[data-type]").forEach((b) => b.addEventListener("click", () => {
-      Object.assign(R, { type: b.dataset.type, step: 3, fields: {}, phrases: [], memo: "", text: "", checks: [], drafted: false, handover: b.dataset.type === "handover" });
+      Object.assign(R, { type: b.dataset.type, step: 3, fields: {}, phrases: [], memo: "", text: "", checks: [], drafted: false, handover: b.dataset.type === "handover", voiceKeys: [], heard: "", voiceOk: false });
       renderRecord();
     }));
     return;
@@ -194,6 +215,13 @@ async function renderRecord() {
   const def = S.meta.forms[R.type];
   app().innerHTML = `<button class="small" id="bk">← 種類を選びなおす</button>
     <h1>${def.icon} ${esc(def.label)}｜${esc(R.resident_id ? residentName(R.resident_id) + "さん" : "事業所全体")}</h1>${stepBar(3)}
+    <div class="card voice-card">
+      <button class="primary big" id="vbtn">🎤 話して入力</button>
+      <p class="sub">例：「${esc(VOICE_EXAMPLES[R.type] || "")}」　話し終わると、下の欄に自動で入ります。</p>
+      ${R.heard ? `<div class="notice info">聞き取った言葉：「${esc(R.heard)}」<br>
+        <button type="button" class="small" id="vcopy">この言葉をそのままメモに入れる</button></div>` : ""}
+      ${R.voiceKeys.length ? `<div class="notice warn">🎤 色の付いた欄は音声で入れた値です。聞き間違いがないか必ず確認してください。</div>` : ""}
+    </div>
     <div class="card">
       <div class="row"><div class="grow"><label class="field">日付</label><input type="date" id="f-date" value="${esc(R.date)}" max="${esc(todayStr())}"></div>
       <div class="grow"><label class="field">時刻</label><input type="time" id="f-time" value="${esc(R.time)}"></div></div>
@@ -230,19 +258,34 @@ async function renderRecord() {
     b.classList.toggle("on");
   }));
   $("#mk").addEventListener("click", () => safe(makeDraft));
+  listenOnce($("#vbtn"), (heard) => safe(async () => {
+    const r = await POST("/api/ai/parse", { type: R.type, text: heard });
+    R.fields = { ...R.fields, ...r.fields };
+    R.voiceKeys = [...new Set([...R.voiceKeys, ...r.filled])];
+    if (r.rest) R.memo = R.memo ? R.memo.replace(/[。\s]*$/, "。") + r.rest : r.rest;
+    R.heard = r.heard; R.voiceOk = false; R.drafted = false;
+    renderRecord();
+    toast(r.filled.length ? `${r.filled.length}個の欄に入れました。確認してください。` : "欄に入る値は見つかりませんでした。メモに入れました。");
+  }));
+  $("#vcopy")?.addEventListener("click", () => {
+    R.memo = R.memo ? R.memo.replace(/[。\s]*$/, "。") + R.heard : R.heard;
+    $("#f-memo").value = R.memo; toast("メモに入れました");
+  });
   if (R.drafted) renderDraft();
 }
 
 function fieldHtml(f) {
   const v = S.rec.fields[f.key];
+  const voice = S.rec.voiceKeys.includes(f.key);
+  const vtag = voice ? ` <span class="badge submitted">🎤 確認してください</span>` : "";
   if (f.kind === "number") {
-    return `<label class="field">${esc(f.label)}</label>
-      <input type="number" inputmode="decimal" step="${esc(f.step || "1")}" data-field="${f.key}" value="${esc(v || "")}">
+    return `<label class="field">${esc(f.label)}${vtag}</label>
+      <input type="number" inputmode="decimal" step="${esc(f.step || "1")}" data-field="${f.key}" value="${esc(v || "")}" class="${voice ? "voice" : ""}">
       ${f.quick ? `<div class="choices" style="margin-top:6px">${f.quick.map((q) => `<button type="button" class="chip ${v === q ? "on" : ""}" data-field="${f.key}" data-val="${esc(q)}">${esc(q)}</button>`).join("")}</div>` : ""}`;
   }
   const on = (o) => (f.kind === "multi" ? (v || []).includes(o) : v === o);
-  return `<label class="field">${esc(f.label)}${f.kind === "multi" ? "<span class='sub'>（いくつでも）</span>" : ""}</label>
-    <div class="choices">${f.options.map((o) => `<button type="button" class="chip ${on(o) ? "on" : ""}" data-field="${f.key}" data-val="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+  return `<label class="field">${esc(f.label)}${f.kind === "multi" ? "<span class='sub'>（いくつでも）</span>" : ""}${vtag}</label>
+    <div class="choices ${voice ? "voice" : ""}">${f.options.map((o) => `<button type="button" class="chip ${on(o) ? "on" : ""}" data-field="${f.key}" data-val="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
 }
 
 async function makeDraft() {
@@ -260,16 +303,19 @@ function renderDraft() {
     ${R.checks.map((c) => `<div class="notice warn">⚠️ ${esc(c)}</div>`).join("")}
     ${R.suggest ? `<a class="btn" href="#/incidents/new">⚠️ 事故・ヒヤリ報告を書く</a>` : ""}
     <textarea id="f-text" style="min-height:160px;margin-top:10px">${esc(R.text)}</textarea>
+    ${R.voiceKeys.length ? `<label class="check-line notice warn"><input type="checkbox" id="f-vok" ${R.voiceOk ? "checked" : ""}> 🎤で入った値が正しいことを確認しました</label>` : ""}
     <div class="row" style="margin-top:12px"><button class="primary big grow" id="sv">💾 保存して提出（管理者が確認）</button></div>
     <div class="row" style="margin-top:8px"><button class="grow" id="sv-d">下書きで保存</button></div>
   </div>`;
   $("#f-text").addEventListener("input", (e) => (R.text = e.target.value));
+  $("#f-vok")?.addEventListener("change", (e) => (R.voiceOk = e.target.checked));
   $("#sv").addEventListener("click", () => safe(() => saveRecord(false)));
   $("#sv-d").addEventListener("click", () => safe(() => saveRecord(true)));
 }
 async function saveRecord(draft) {
   const R = S.rec;
   if (!R.text.trim()) throw new Error("文章が空です。「文章にする」を押すか、直接書いてください。");
+  if (R.voiceKeys.length && !R.voiceOk) throw new Error("🎤で入った値を確認して、「確認しました」にチェックを付けてください。");
   await POST("/api/records", { resident_id: R.resident_id, type: R.type, date: R.date, time: R.time, fields: R.fields, memo: R.memo,
     text: R.text, handover: R.handover, draft });
   const who = R.resident_id;

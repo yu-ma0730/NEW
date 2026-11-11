@@ -102,6 +102,37 @@ class AppTest(unittest.TestCase):
         self.assertTrue(r["suggest_incident"])
         self.assertTrue(r["checks"][0].startswith("まだ入力されていない項目"))
 
+    # --- 話した言葉から欄を埋める ---
+    def test_speech_fills_vitals(self):
+        r = ai.parse_speech("vital", "体温36.8度、血圧120の80、脈72、SpO2 97%")
+        self.assertEqual(r["fields"], {"temp": "36.8", "bp_high": "120", "bp_low": "80", "pulse": "72", "spo2": "97"})
+        self.assertEqual(r["rest"], "")
+        self.assertEqual(ai.parse_speech("vital", "熱は36度5分")["fields"]["temp"], "36.5")
+        self.assertEqual(ai.parse_speech("vital", "３７．６度")["fields"]["temp"], "37.6")  # 全角も読む
+
+    def test_speech_keeps_unread_words_unchanged(self):
+        r = ai.parse_speech("vital", "熱は36度5分でした。少し咳が出ていた")
+        self.assertEqual(r["rest"], "少し咳が出ていた")
+        r = ai.parse_speech("vital", "今日は散歩した")
+        self.assertEqual(r["fields"], {})
+        self.assertEqual(r["rest"], "今日は散歩した")
+
+    def test_speech_other_types(self):
+        self.assertEqual(ai.parse_speech("meal", "朝ごはん全部、昼は半分、夜は食べなかった")["fields"],
+                         {"breakfast": "全部", "lunch": "半分", "dinner": "食べない"})
+        self.assertEqual(ai.parse_speech("med", "寝る前の薬を拒否された")["fields"], {"timing": ["寝る前"], "result": "飲まなかった"})
+        self.assertEqual(ai.parse_speech("excretion", "おしっこあり、便はやわらかい")["fields"], {"urine": "あり", "stool": "やわらかい"})
+        self.assertEqual(ai.parse_speech("excretion", "便は出ていない")["fields"], {"stool": "なし"})
+        r = ai.parse_speech("case", "穏やかに過ごされ、お風呂に入った")
+        self.assertEqual(r["fields"], {"mood": "おだやか", "activity": ["入浴"]})
+        self.assertEqual(r["rest"], "穏やかに過ごされ、お風呂に入った")  # 様子の記録は全文をメモに残す
+
+    def test_speech_api(self):
+        c = self.c("staff1")
+        s, r = c.post("/api/ai/parse", {"type": "vital", "text": "体温37.1度"})
+        self.assertEqual((s, r["fields"]), (200, {"temp": "37.1"}))
+        self.assertEqual(c.post("/api/ai/parse", {"type": "zzz", "text": "x"})[0], 400)
+
     # --- 記録 → 承認 → 履歴 ---
     def test_record_flow_with_approval_and_audit(self):
         staff, boss = self.c("staff1"), self.c("sabikan")

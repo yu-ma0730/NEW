@@ -237,6 +237,14 @@ def ai_draft(h, conn, user, body, q):
         raise ApiError(400, "記録の種類が正しくありません。")
 
 
+@route("POST", "/api/ai/parse")
+def ai_parse(h, conn, user, body, q):
+    try:
+        return ai.parse_speech(body.get("type"), body.get("text", ""))
+    except ValueError:
+        raise ApiError(400, "記録の種類が正しくありません。")
+
+
 RECORD_SELECT = ("SELECT r.*, res.name resident_name, cu.name created_by_name, au.name approved_by_name FROM records r "
                  "LEFT JOIN residents res ON res.id=r.resident_id LEFT JOIN users cu ON cu.id=r.created_by "
                  "LEFT JOIN users au ON au.id=r.approved_by ")

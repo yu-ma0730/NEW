@@ -114,3 +114,6 @@ table.matrix td.cell { cursor: pointer; font-weight: 700; height: 44px; }
   .card { border: 0; padding: 0; }
   textarea { border: 1px solid #999; min-height: 0; height: auto; overflow: visible; }
 }
+.voice-card { border: 2px solid var(--primary); background: var(--primary-soft); }
+#vbtn.rec { background: var(--error); border-color: var(--error); animation: pulse 1.2s infinite; }
+input.voice, .choices.voice { outline: 3px solid var(--warn); outline-offset: 3px; border-radius: 12px; }

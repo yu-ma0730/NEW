@@ -191,3 +191,107 @@ def summarize_handovers(rows):
         g["items"].append({"id": r["id"], "date": r["date"], "time": r["time"], "type": r["type"],
                            "text": r["text"], "by": r["created_by_name"], "important": important})
     return sorted(groups.values(), key=lambda g: (not g["important"], g["resident"]))
+
+
+# ---------------- 話した言葉から項目を読み取る ----------------
+# 例：「体温36.8度、血圧120の80、脈72」→ 体温・血圧・脈拍の欄に入れる。
+# 値を読み取った部分（、。で区切ったひとまとまり）はメモに入れず、残りは書き換えずにメモへ。
+# 読み取った値は、画面で職員が確認しないと保存できない。
+_Z2H = str.maketrans("０１２３４５６７８９．／％", "0123456789./%")
+_MEALS = {"breakfast": "朝", "lunch": "昼", "dinner": "夜夕晩"}
+_MEAL_WORDS = [(r"全部|全量|完食", "全部"), (r"8割|八割", "8割"), (r"半分", "半分"), (r"少し|ちょっと", "少し"),
+               (r"食べな|食べてな|食べられな", "食べない"), (r"不在|いなかった", "不在")]
+_OPTION_WORDS = {"おだやか": r"おだやか|穏やか", "元気": r"元気", "不安そう": r"不安", "イライラ": r"イライラ|いらいら",
+                 "ねむそう": r"ねむそう|眠そう", "通院": r"通院|病院", "入浴": r"入浴|お風呂", "買い物": r"買い物",
+                 "家族の面会": r"面会", "大事": r"大事|重要"}
+
+
+def parse_speech(rtype, text):
+    if rtype not in FORM_DEFS:
+        raise ValueError("unknown record type")
+    t = (text or "").translate(_Z2H)
+    fields, spans = {}, []
+
+    def take(key, value, m):
+        fields[key] = value
+        spans.append(m.span())
+
+    if rtype == "vital":
+        m = re.search(r"(?P<w>3[4-9]|4[0-2])(?:\.(?P<d>\d))?\s*(?:度|℃)\s*(?:(?P<b>\d)\s*分)?", t) \
+            or re.search(r"(?:体温|熱|ねつ)\D{0,3}?(?P<w>3[4-9]|4[0-2])(?:\.(?P<d>\d))?(?P<b>)", t)
+        if m:
+            dec = m.group("d") or m.group("b")
+            take("temp", f"{m.group('w')}.{dec}" if dec else m.group("w"), m)
+        m = re.search(r"血圧\D{0,4}?(\d{2,3})\s*(?:の|/|と|、|,|-|ー|に|下)\s*(\d{2,3})", t)
+        if m:
+            fields["bp_high"], fields["bp_low"] = m.group(1), m.group(2)
+            spans.append(m.span())
+        m = re.search(r"(?:脈拍|脈|みゃく)\D{0,3}?(\d{2,3})", t)
+        if m:
+            take("pulse", m.group(1), m)
+        m = re.search(r"(?:SpO2|spo2|SPO2|サチュレーション|サチュ|酸素)\D{0,4}?(\d{2,3})", t)
+        if m:
+            take("spo2", m.group(1), m)
+        for pat, val in [(r"いつもどおり|いつも通り|変わりな", "いつもどおり"), (r"元気がな|元気な", "元気がない"),
+                         (r"ぐあいが悪|具合が悪|調子が悪", "ぐあいが悪そう")]:
+            m = re.search(pat, t)
+            if m:
+                take("condition", val, m)
+                break
+    elif rtype == "meal":
+        heads_all = "".join(_MEALS.values())
+        words = "|".join(p for p, _ in _MEAL_WORDS)
+        for key, heads in _MEALS.items():
+            m = re.search(rf"[{heads}](?:ごはん|ご飯|食)?[^、。,{heads_all}]{{0,6}}?({words})", t)
+            if m:
+                take(key, next(v for p, v in _MEAL_WORDS if re.match(p, m.group(1))), m)
+        m = re.search(r"水分[^、。,]{0,6}?(よく|たくさん|少な|ふつう|普通)", t)
+        if m:
+            take("water", {"よく": "よく飲んだ", "たくさん": "よく飲んだ", "少な": "少ない"}.get(m.group(1), "ふつう"), m)
+    elif rtype == "med":
+        if re.search(r"薬|服薬", t):
+            timing = []
+            for pat, val in [(r"朝", "朝"), (r"昼", "昼"), (r"夕|晩", "夕"), (r"寝る前|眠前|就寝前", "寝る前"), (r"頓服", "頓服")]:
+                m = re.search(pat, t)
+                if m:
+                    timing.append(val)
+                    spans.append(m.span())
+            if timing:
+                fields["timing"] = timing
+            for pat, val in [(r"飲まなかった|飲めなかった|飲まない|拒否", "飲まなかった"), (r"一部|半分|少し残", "一部飲んだ"),
+                             (r"飲んだ|飲みました|飲めた|服薬した|服用", "飲んだ")]:
+                m = re.search(pat, t)
+                if m:
+                    take("result", val, m)
+                    break
+    elif rtype == "excretion":
+        m = re.search(r"(?:おしっこ|排尿|尿)[^、。,]{0,6}?(失禁|なし|ない|出ていない|出なかった|あり|ある|出た)", t) \
+            or re.search(r"(?:おしっこ|排尿|尿)()", t)
+        if m:
+            g = m.group(1) or "あり"
+            take("urine", "失禁あり" if g == "失禁" else "なし" if re.match(r"な|出てい|出なか", g) else "あり", m)
+        m = re.search(r"(?:うんち|排便|便)[^、。,]{0,6}?(やわらか|柔らか|軟|下痢|かた|硬|なし|ない|出ていない|出なかった|ふつう|普通|あり|出た)", t) \
+            or re.search(r"(?:うんち|排便|便)()", t)
+        if m:
+            g = m.group(1) or "ふつう"
+            take("stool", "やわらかい" if re.match(r"やわ|柔|軟|下痢", g) else "かたい" if re.match(r"かた|硬", g)
+                 else "なし" if re.match(r"な|出てい|出なか", g) else "ふつう", m)
+    else:
+        for f in FORM_DEFS[rtype]["fields"]:
+            for opt in f["options"]:
+                m = re.search(_OPTION_WORDS.get(opt, re.escape(opt)), t)
+                if not m:
+                    continue
+                if f["kind"] == "multi":
+                    fields.setdefault(f["key"], []).append(opt)
+                elif f["key"] not in fields:
+                    fields[f["key"]] = opt
+
+    if rtype in ("case", "handover", "diary"):
+        rest = (text or "").strip()  # 様子の記録は、話した言葉をすべてそのままメモに残す
+    else:
+        pieces = [(m.start(), m.end(), m.group()) for m in re.finditer(r"[^、。,\n]+[、。,\n]?", t)]
+        rest = "".join(p for a, b, p in pieces if not any(sa < b and sb > a for sa, sb in spans)).strip(" 、,")
+        if not re.search(r"[^\s、。,]{2,}", rest):
+            rest = ""
+    return {"fields": fields, "filled": list(fields), "rest": rest, "heard": text or ""}
