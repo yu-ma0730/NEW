@@ -14,7 +14,7 @@ import re
 # 記録の種類と入力項目。画面（app.js）もこの定義を使うので、ここを直せば画面も変わる。
 FORM_DEFS = {
     "vital": {"label": "バイタル", "icon": "🌡️", "required": ["temp"], "fields": [
-        {"key": "temp", "label": "体温（℃）", "kind": "number", "step": "0.1", "quick": ["35.8", "36.0", "36.3", "36.5", "36.8", "37.0", "37.5"]},
+        {"key": "temp", "label": "体温（℃）", "kind": "number", "step": "0.1"},
         {"key": "bp_high", "label": "血圧 上（mmHg）", "kind": "number"},
         {"key": "bp_low", "label": "血圧 下（mmHg）", "kind": "number"},
         {"key": "pulse", "label": "脈拍（回/分）", "kind": "number"},
