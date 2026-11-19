@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book Explorer</title>
+  <meta name="description" content="Webスクレイピングで収集した書籍データを検索・絞り込み・可視化するダッシュボード">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div>
+        <h1>Book Explorer</h1>
+        <p class="sub" id="source">データを読み込み中…</p>
+      </div>
+      <div class="top-actions">
+        <label class="btn ghost" title="scraper.py が出力した books.json を読み込みます">
+          JSONを読み込む
+          <input type="file" id="file" accept=".json,application/json" hidden>
+        </label>
+        <button class="btn" id="download" type="button">CSVで書き出し</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="notice" id="notice" hidden></p>
+
+    <section class="kpis" aria-label="集計">
+      <div class="kpi"><span class="kpi-label">表示中の冊数</span><span class="kpi-value" id="k-count">–</span></div>
+      <div class="kpi"><span class="kpi-label">平均価格</span><span class="kpi-value" id="k-price">–</span></div>
+      <div class="kpi"><span class="kpi-label">平均評価</span><span class="kpi-value" id="k-rating">–</span></div>
+      <div class="kpi"><span class="kpi-label">カテゴリ数</span><span class="kpi-value" id="k-cats">–</span></div>
+    </section>
+
+    <section class="panel filters" aria-label="絞り込み">
+      <div class="field grow">
+        <label for="q">書名で検索</label>
+        <input id="q" type="search" placeholder="例: love, history, life" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="cat">カテゴリ</label>
+        <select id="cat"><option value="">すべて</option></select>
+      </div>
+      <div class="field">
+        <label for="rating">評価</label>
+        <select id="rating">
+          <option value="0">すべて</option>
+          <option value="5">★5 のみ</option>
+          <option value="4">★4 以上</option>
+          <option value="3">★3 以上</option>
+          <option value="2">★2 以上</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="pmin">価格（£）</label>
+        <div class="range">
+          <input id="pmin" type="number" min="0" step="1" placeholder="下限" inputmode="decimal">
+          <span>〜</span>
+          <input id="pmax" type="number" min="0" step="1" placeholder="上限" inputmode="decimal">
+        </div>
+      </div>
+      <div class="field">
+        <label for="sort">並び替え</label>
+        <select id="sort">
+          <option value="title">書名（A→Z）</option>
+          <option value="price-asc">価格が安い順</option>
+          <option value="price-desc">価格が高い順</option>
+          <option value="rating-desc">評価が高い順</option>
+        </select>
+      </div>
+      <button class="btn ghost reset" id="reset" type="button">条件をクリア</button>
+    </section>
+
+    <section class="charts">
+      <div class="panel">
+        <h2>カテゴリ別の冊数（上位10）</h2>
+        <p class="hint">バーをクリックするとそのカテゴリで絞り込みます</p>
+        <div id="chart-cat" class="bars"></div>
+      </div>
+      <div class="panel">
+        <h2>価格の分布</h2>
+        <div id="chart-price" class="hist"></div>
+      </div>
+      <div class="panel">
+        <h2>評価の分布</h2>
+        <div id="chart-rating" class="bars"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="list-head">
+        <h2>書籍一覧</h2>
+        <span class="hint" id="page-info"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>条件に合う本がありません。条件を緩めてみてください。</p>
+      <nav class="pager" aria-label="ページ送り">
+        <button class="btn ghost" id="prev" type="button">← 前へ</button>
+        <button class="btn ghost" id="next" type="button">次へ →</button>
+      </nav>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    データ出典: <a href="https://books.toscrape.com/" target="_blank" rel="noopener">Books to Scrape</a>（スクレイピング練習用のデモサイト。価格・評価は架空の値です）
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
